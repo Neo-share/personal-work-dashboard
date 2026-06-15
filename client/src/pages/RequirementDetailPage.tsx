@@ -138,7 +138,9 @@ export default function RequirementDetailPage() {
         result.mode === 'agent_window' ? 'Agent Window' : '经典编辑器';
       message.success(
         result.mode === 'agent_window'
-          ? `已切换到「${result.branch ?? '当前分支'}」并新建 Agent`
+          ? result.switched
+            ? `已切换到「${result.branch}」并在 Cursor 中打开`
+            : `已在 Cursor 中打开（${result.branch ?? '当前分支'}）`
           : result.switched
             ? `已切换到「${result.branch}」并在 ${target} 中打开`
             : `已在 ${target} 中导航到仓库（${result.branch ?? '当前分支'}）`,

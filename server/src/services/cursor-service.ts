@@ -1,8 +1,7 @@
 import { execFile } from 'node:child_process';
 import fs from 'node:fs';
-import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
-import simpleGit from 'simple-git';
+import simpleGit, { type SimpleGit } from 'simple-git';
 import { getDb } from '../db/index.js';
 import { getRepositoryById } from './repository-service.js';
 
@@ -21,23 +20,6 @@ export class CursorOpenError extends Error {
   }
 }
 
-function buildNewAgentDeeplinkUrl(repoPath: string): string {
-  const folderUri = pathToFileURL(repoPath).href;
-  const payload = {
-    commands: [
-      {
-        command: 'cursor.openOrFocusGlassWindow',
-        args: { agentsWindowOpenSource: 'project-manager' },
-      },
-      {
-        command: 'newAgent',
-        args: { folderUri, source: 'project-manager' },
-      },
-    ],
-  };
-  return `cursor://vscode/runCommands?${encodeURIComponent(JSON.stringify(payload))}`;
-}
-
 function buildClassicWindowArgs(repoPath: string, reuseWindow: boolean): string[] {
   const args: string[] = [];
   if (reuseWindow) {
@@ -47,13 +29,12 @@ function buildClassicWindowArgs(repoPath: string, reuseWindow: boolean): string[
   return args;
 }
 
-async function openAgentWindow(repoPath: string): Promise<void> {
-  const deeplinkUrl = buildNewAgentDeeplinkUrl(repoPath);
+async function launchCursor(args: string[]): Promise<void> {
   let lastError: unknown;
 
   for (const command of CURSOR_BIN_CANDIDATES) {
     try {
-      await execFileAsync(command, [deeplinkUrl]);
+      await execFileAsync(command, args);
       return;
     } catch (error) {
       lastError = error;
@@ -61,7 +42,44 @@ async function openAgentWindow(repoPath: string): Promise<void> {
   }
 
   const detail = lastError instanceof Error ? lastError.message : String(lastError);
-  throw new CursorOpenError(`无法打开 Cursor Agent Window，请确认已安装 cursor 命令。${detail}`);
+  throw new CursorOpenError(`无法调用 cursor 命令，请确认已安装 Cursor CLI。${detail}`);
+}
+
+/** 与手动执行 `cursor <repoPath>`（A4）一致：默认打开/聚焦，不强制 -n/--glass。 */
+async function openAgentWithCursor(repoPath: string): Promise<void> {
+  await launchCursor([repoPath]);
+}
+
+async function checkoutTargetBranch(git: SimpleGit, targetBranch: string): Promise<boolean> {
+  const status = await git.status();
+  if (status.current === targetBranch) {
+    return false;
+  }
+  if (!status.isClean()) {
+    throw new CursorOpenError(
+      `工作区有未提交改动，无法切换到分支「${targetBranch}」。请先在 Cursor 或终端处理改动。`,
+    );
+  }
+
+  try {
+    await git.checkout(targetBranch);
+    return true;
+  } catch {
+    // 尝试基于远程分支创建/切换本地分支
+    try {
+      await git.checkout(['-B', targetBranch, `origin/${targetBranch}`]);
+      return true;
+    } catch {
+      try {
+        await git.checkout(['--track', `origin/${targetBranch}`]);
+        return true;
+      } catch {
+        throw new CursorOpenError(
+          `无法切换到分支「${targetBranch}」，请确认本地或 origin 上存在该分支。`,
+        );
+      }
+    }
+  }
 }
 
 async function launchClassicCursor(repoPath: string): Promise<void> {
@@ -69,13 +87,11 @@ async function launchClassicCursor(repoPath: string): Promise<void> {
   let lastError: unknown;
 
   for (const args of argSets) {
-    for (const command of CURSOR_BIN_CANDIDATES) {
-      try {
-        await execFileAsync(command, args);
-        return;
-      } catch (error) {
-        lastError = error;
-      }
+    try {
+      await launchCursor(args);
+      return;
+    } catch (error) {
+      lastError = error;
     }
   }
 
@@ -128,29 +144,15 @@ export async function openRepositoryInCursor(input: {
   const git = simpleGit(repo.path);
 
   if (targetBranch) {
-    const status = await git.status();
-    if (status.current !== targetBranch) {
-      if (!status.isClean()) {
-        throw new CursorOpenError(
-          `工作区有未提交改动，无法切换到分支「${targetBranch}」。请先在 Cursor 或终端处理改动。`,
-        );
-      }
-      try {
-        await git.checkout(targetBranch);
-        switched = true;
-      } catch {
-        throw new CursorOpenError(
-          `无法切换到分支「${targetBranch}」，请确认本地存在该分支。`,
-        );
-      }
-    }
+    switched = await checkoutTargetBranch(git, targetBranch);
   }
 
   const mode = input.mode ?? 'agent_window';
 
   await syncRepositoryGitState(repo.id, repo.path);
+  const afterBranch = targetBranch ?? repo.currentBranch;
   if (mode === 'agent_window') {
-    await openAgentWindow(repo.path);
+    await openAgentWithCursor(repo.path);
   } else {
     await launchClassicCursor(repo.path);
   }
@@ -159,7 +161,7 @@ export async function openRepositoryInCursor(input: {
   return {
     ok: true,
     path: repo.path,
-    branch: afterStatus.current ?? targetBranch ?? null,
+    branch: afterStatus.current ?? afterBranch ?? null,
     switched,
     mode,
   };
