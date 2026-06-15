@@ -1,0 +1,44 @@
+---
+description: 个人驾驶舱 monorepo 通用硬性约束
+alwaysApply: true
+---
+
+# 项目通用约束
+
+## Monorepo
+
+- 包管理：**pnpm workspace**（`client` / `server` / `shared`）
+- 内部依赖：`"@project-manager/shared": "workspace:*"`
+- 包依赖方向（禁止反向）：
+  - `shared` ← `server`、`client`
+  - `client` 可引用 `server/src/trpc/router` **仅作类型**（见 `client/src/lib/trpc.ts`）
+
+## 语言与模块
+
+- TypeScript，`strict: true`
+- ESM（`"type": "module"`）
+- **最小改动**：只改任务相关文件，不重构无关代码
+- **禁止自动 git commit**：除非用户明确要求
+
+## 数据流（必须遵守）
+
+```
+router (Zod 校验) → service (业务 + SQL) → shared types (返回形状)
+前端: trpc.*.useQuery/useMutation → invalidate 相关 query
+```
+
+- 关联类 mutation（add/remove Repository/Person/Milestone/Link）在 router 内须调用 `touchRequirement(requirementId)`；新增同类接口时同样调用
+
+## Git 提交信息
+
+用户要求 commit 时：
+
+- 简体中文祈使句，概括暂存区变更
+- 格式：`AI: #<ID> <message>`
+- ID 从当前分支最近 commit 消息提取；无法提取则用 `000000`
+
+## 修改后验证
+
+1. `pnpm build` 无报错
+2. 改 schema：删 `server/data/project-manager.db` 后重启（无 migration）
+3. 改 tRPC：确认 `client/src/lib/trpc.ts` 与 router 类型一致

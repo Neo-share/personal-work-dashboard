@@ -1,0 +1,14 @@
+---
+description: shared 包类型硬性约束
+globs:
+  - "shared/**/*"
+alwaysApply: false
+---
+
+# Shared 约束
+
+- **唯一领域类型源**：`shared/src/types.ts`
+- 无运行时逻辑；不添加第三方 runtime 依赖
+- 中文标签常量（如 `REQUIREMENT_STATUS_LABELS`）与类型定义同文件维护
+- 新增 enum/interface 后确保 `pnpm --filter @project-manager/shared build` 通过（dev 时 watch 会自动编译）
+- 改类型后同步更新：server service 映射、router Zod schema、client 展示

@@ -1,0 +1,32 @@
+---
+description: client 包前端硬性约束
+globs:
+  - "client/**/*"
+alwaysApply: false
+---
+
+# Client 约束
+
+## 技术栈
+
+- React 函数组件；页面使用 **default export**
+- UI：**Ant Design 5**（Table, Form, Modal, Drawer, Spin, Tag 等）
+- 数据：**tRPC + TanStack Query**（`trpc.xxx.useQuery` / `useMutation`）
+- 路由：`react-router-dom`，路由注册在 `client/src/App.tsx`
+
+## 路径与样式
+
+- 路径别名：`@/` → `client/src/`
+- 样式：`client/src/styles/global.css` + CSS 变量
+- 布局 class 复用：`.app-shell`, `.content-card`, `.panel-grid`, `.list-row`, `.detail-grid`, `.empty-hint`
+
+## 数据与文案
+
+- mutation 成功后：`trpc.useUtils()` → `utils.xxx.invalidate()`
+- UI 文案用中文；枚举标签优先 `shared` 常量或 `client/src/utils/labels.ts`
+
+## 新增页面
+
+1. `client/src/pages/XxxPage.tsx`
+2. `client/src/App.tsx` 注册 `navItems` + `<Route>`
+3. 若需助手导航：扩展 `NavigationActionType`、`assistant-service.ts`、`useNavigationAction.ts`

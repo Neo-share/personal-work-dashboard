@@ -1,0 +1,39 @@
+---
+description: server 包后端硬性约束
+globs:
+  - "server/**/*"
+alwaysApply: false
+---
+
+# Server 约束
+
+## 分层
+
+- `server/src/trpc/router.ts`：**仅** Zod input + 调 service + 必要时 `touchRequirement`
+- 业务逻辑：`server/src/services/*-service.ts`
+- SQL / 连接：`server/src/db/`
+
+## 导入
+
+- 相对路径 import **必须带 `.js` 后缀**（TS ESM），例：`from '../db/index.js'`
+
+## 数据库映射
+
+- SQLite 列 **snake_case** → TS **camelCase**（在 service 的 `mapXxx()` 转换）
+- JSON 列（`tech_tags`, `env_scripts`, `payload`）：写 `JSON.stringify`，读 `JSON.parse`
+- `is_dirty`：INTEGER 0/1 ↔ boolean
+
+## Schema 变更
+
+- 无 migration；`schema.ts` 仅在 `getDb()` 时 `CREATE TABLE IF NOT EXISTS`
+- 改表结构后需删 `server/data/` 或手动迁移，勿假设 ALTER 已执行
+
+## 新增 API
+
+1. 在对应 `*-service.ts` 实现
+2. 在 `router.ts` 注册 procedure
+3. 关联 mutation 后调用 `touchRequirement`
+
+## 助手
+
+- `assistant-service.ts` 为规则引擎，**非 LLM**；勿引入 LLM 调用除非用户明确要求

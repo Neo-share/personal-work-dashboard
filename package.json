@@ -1,0 +1,14 @@
+{
+  "name": "project-manager",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.15.9",
+  "scripts": {
+    "dev": "concurrently \"pnpm --filter @project-manager/shared dev\" \"pnpm --filter @project-manager/server dev\" \"pnpm --filter @project-manager/client dev\"",
+    "build": "pnpm --filter @project-manager/shared build && pnpm --filter @project-manager/server build && pnpm --filter @project-manager/client build",
+    "start": "pnpm --filter @project-manager/server start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
