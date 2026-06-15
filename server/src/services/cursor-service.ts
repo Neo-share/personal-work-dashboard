@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
 import fs from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 import simpleGit from 'simple-git';
 import { getDb } from '../db/index.js';
@@ -20,33 +21,51 @@ export class CursorOpenError extends Error {
   }
 }
 
-function buildAgentWindowArgs(repoPath: string, reuseWindow: boolean): string[] {
-  const args: string[] = [];
-  if (reuseWindow) {
-    args.push('-r', '--reuse-window');
-  }
-  args.push('--glass', repoPath);
-  return args;
+function buildNewAgentDeeplinkUrl(repoPath: string): string {
+  const folderUri = pathToFileURL(repoPath).href;
+  const payload = {
+    commands: [
+      {
+        command: 'cursor.openOrFocusGlassWindow',
+        args: { agentsWindowOpenSource: 'project-manager' },
+      },
+      {
+        command: 'newAgent',
+        args: { folderUri, source: 'project-manager' },
+      },
+    ],
+  };
+  return `cursor://vscode/runCommands?${encodeURIComponent(JSON.stringify(payload))}`;
 }
 
 function buildClassicWindowArgs(repoPath: string, reuseWindow: boolean): string[] {
   const args: string[] = [];
   if (reuseWindow) {
-    args.push('-r', '--reuse-window');
+    args.push('--reuse-window');
   }
   args.push('--classic', repoPath);
   return args;
 }
 
-async function launchCursor(
-  repoPath: string,
-  mode: 'agent_window' | 'classic',
-): Promise<void> {
-  const argSets =
-    mode === 'agent_window'
-      ? [buildAgentWindowArgs(repoPath, true), buildAgentWindowArgs(repoPath, false)]
-      : [buildClassicWindowArgs(repoPath, true), buildClassicWindowArgs(repoPath, false)];
+async function openAgentWindow(repoPath: string): Promise<void> {
+  const deeplinkUrl = buildNewAgentDeeplinkUrl(repoPath);
+  let lastError: unknown;
 
+  for (const command of CURSOR_BIN_CANDIDATES) {
+    try {
+      await execFileAsync(command, [deeplinkUrl]);
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  const detail = lastError instanceof Error ? lastError.message : String(lastError);
+  throw new CursorOpenError(`无法打开 Cursor Agent Window，请确认已安装 cursor 命令。${detail}`);
+}
+
+async function launchClassicCursor(repoPath: string): Promise<void> {
+  const argSets = [buildClassicWindowArgs(repoPath, true), buildClassicWindowArgs(repoPath, false)];
   let lastError: unknown;
 
   for (const args of argSets) {
@@ -62,7 +81,7 @@ async function launchCursor(
 
   for (const command of CURSOR_BIN_CANDIDATES) {
     try {
-      await execFileAsync(command, ['-r', '--reuse-window', repoPath]);
+      await execFileAsync(command, ['--reuse-window', repoPath]);
       return;
     } catch (error) {
       lastError = error;
@@ -70,7 +89,7 @@ async function launchCursor(
   }
 
   const detail = lastError instanceof Error ? lastError.message : String(lastError);
-  throw new CursorOpenError(`无法打开 Cursor Agent Window，请确认已安装 cursor 命令。${detail}`);
+  throw new CursorOpenError(`无法打开 Cursor 经典编辑器，请确认已安装 cursor 命令。${detail}`);
 }
 
 function syncRepositoryGitState(repositoryId: number, repoPath: string): Promise<void> {
@@ -130,7 +149,11 @@ export async function openRepositoryInCursor(input: {
   const mode = input.mode ?? 'agent_window';
 
   await syncRepositoryGitState(repo.id, repo.path);
-  await launchCursor(repo.path, mode);
+  if (mode === 'agent_window') {
+    await openAgentWindow(repo.path);
+  } else {
+    await launchClassicCursor(repo.path);
+  }
 
   const afterStatus = await git.status();
   return {
