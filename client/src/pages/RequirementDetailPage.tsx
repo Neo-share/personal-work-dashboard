@@ -142,8 +142,8 @@ export default function RequirementDetailPage() {
             ? `已切换到「${result.branch}」并在 Cursor 中打开`
             : `已在 Cursor 中打开（${result.branch ?? '当前分支'}）`
           : result.switched
-            ? `已切换到「${result.branch}」并在 ${target} 中打开`
-            : `已在 ${target} 中导航到仓库（${result.branch ?? '当前分支'}）`,
+            ? `已切换到「${result.branch}」并在新 ${target} 窗口中打开`
+            : `已在新 ${target} 窗口中打开（${result.branch ?? '当前分支'}）`,
       );
     },
     onError: (error) => {

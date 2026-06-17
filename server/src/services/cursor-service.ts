@@ -20,13 +20,8 @@ export class CursorOpenError extends Error {
   }
 }
 
-function buildClassicWindowArgs(repoPath: string, reuseWindow: boolean): string[] {
-  const args: string[] = [];
-  if (reuseWindow) {
-    args.push('--reuse-window');
-  }
-  args.push('--classic', repoPath);
-  return args;
+function buildClassicWindowArgs(repoPath: string): string[] {
+  return ['--new-window', '--classic', repoPath];
 }
 
 async function launchCursor(args: string[]): Promise<void> {
@@ -83,7 +78,7 @@ async function checkoutTargetBranch(git: SimpleGit, targetBranch: string): Promi
 }
 
 async function launchClassicCursor(repoPath: string): Promise<void> {
-  const argSets = [buildClassicWindowArgs(repoPath, true), buildClassicWindowArgs(repoPath, false)];
+  const argSets = [buildClassicWindowArgs(repoPath), ['--new-window', repoPath]];
   let lastError: unknown;
 
   for (const args of argSets) {
@@ -95,17 +90,8 @@ async function launchClassicCursor(repoPath: string): Promise<void> {
     }
   }
 
-  for (const command of CURSOR_BIN_CANDIDATES) {
-    try {
-      await execFileAsync(command, ['--reuse-window', repoPath]);
-      return;
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
   const detail = lastError instanceof Error ? lastError.message : String(lastError);
-  throw new CursorOpenError(`无法打开 Cursor 经典编辑器，请确认已安装 cursor 命令。${detail}`);
+  throw new CursorOpenError(`无法新开 Cursor 经典编辑器窗口，请确认已安装 cursor 命令。${detail}`);
 }
 
 function syncRepositoryGitState(repositoryId: number, repoPath: string): Promise<void> {
