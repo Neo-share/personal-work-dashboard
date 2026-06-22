@@ -13,7 +13,7 @@ import {
 } from 'antd';
 import type { Milestone, Priority, RequirementDetail, RequirementStatus } from '@project-manager/shared';
 import { isDevWorkDomain, WORK_DOMAIN_MODULES } from '@project-manager/shared';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { PersonFeishuLink } from '../components/PersonFeishuLink';
 import {
@@ -65,10 +65,31 @@ export default function RequirementDetailPage() {
 
   const detailQuery = trpc.requirements.detail.useQuery(
     { id: requirementId },
-    { enabled: Number.isFinite(requirementId) },
+    { enabled: Number.isFinite(requirementId), refetchOnWindowFocus: true },
   );
-  const repositoriesQuery = trpc.repositories.list.useQuery();
+  const repositoriesQuery = trpc.repositories.list.useQuery(undefined, {
+    refetchOnWindowFocus: true,
+  });
   const peopleQuery = trpc.people.list.useQuery();
+  const selectedRepositoryId = Form.useWatch('repositoryId', form);
+  const repoBranchesQuery = trpc.repositories.branches.useQuery(
+    { id: selectedRepositoryId },
+    {
+      enabled:
+        modalType === 'repo' &&
+        Number.isFinite(selectedRepositoryId) &&
+        selectedRepositoryId > 0,
+    },
+  );
+
+  useEffect(() => {
+    if (modalType !== 'repo' || !repoBranchesQuery.data?.currentBranch) {
+      return;
+    }
+    if (!form.getFieldValue('branch')) {
+      form.setFieldValue('branch', repoBranchesQuery.data.currentBranch);
+    }
+  }, [modalType, repoBranchesQuery.data, form]);
 
   const invalidate = async () => {
     await utils.requirements.detail.invalidate({ id: requirementId });
@@ -88,14 +109,20 @@ export default function RequirementDetailPage() {
       closeModal();
     },
   });
-  const removeRepoMutation = trpc.requirements.removeRepository.useMutation({ onSuccess: invalidate });
+  const removeRepoMutation = trpc.requirements.removeRepository.useMutation({
+    onSuccess: invalidate,
+    onError: (error) => message.error(error.message || '移除仓库关联失败'),
+  });
   const addPersonMutation = trpc.requirements.addPerson.useMutation({
     onSuccess: async () => {
       await invalidate();
       closeModal();
     },
   });
-  const removePersonMutation = trpc.requirements.removePerson.useMutation({ onSuccess: invalidate });
+  const removePersonMutation = trpc.requirements.removePerson.useMutation({
+    onSuccess: invalidate,
+    onError: (error) => message.error(error.message || '移除人员关联失败'),
+  });
   const addMilestoneMutation = trpc.requirements.addMilestone.useMutation({
     onSuccess: async () => {
       await invalidate();
@@ -627,13 +654,38 @@ export default function RequirementDetailPage() {
                     value: item.id,
                     label: item.name,
                   }))}
+                  onChange={() => form.setFieldValue('branch', undefined)}
                 />
               </Form.Item>
               <Form.Item name="responsibility" label="职责">
                 <Input />
               </Form.Item>
               <Form.Item name="branch" label="开发分支">
-                <Input />
+                <Select
+                  showSearch
+                  allowClear
+                  placeholder={
+                    selectedRepositoryId
+                      ? repoBranchesQuery.isLoading
+                        ? '加载分支中…'
+                        : '请选择开发分支'
+                      : '请先选择仓库'
+                  }
+                  disabled={!selectedRepositoryId}
+                  loading={repoBranchesQuery.isLoading}
+                  optionFilterProp="label"
+                  notFoundContent={
+                    repoBranchesQuery.error
+                      ? repoBranchesQuery.error.message
+                      : repoBranchesQuery.isLoading
+                        ? '加载中…'
+                        : '暂无本地分支'
+                  }
+                  options={(repoBranchesQuery.data?.branches ?? []).map((item) => ({
+                    value: item.name,
+                    label: item.notes ? `${item.name} · ${item.notes}` : item.name,
+                  }))}
+                />
               </Form.Item>
               <Form.Item name="status" label="状态">
                 <Input />
