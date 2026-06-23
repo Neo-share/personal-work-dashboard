@@ -85,7 +85,7 @@
         <tr><th>层</th><th>实现</th><th>职责</th></tr>
         <tr><td>IntentRouter</td><td><code>intent-router.ts</code></td><td>schedule / todo / recurring / recurring_schedule / revise_ai / unknown</td></tr>
         <tr><td>ToolRegistry</td><td><code>tool-registry.ts</code> + <code>tools/*</code></td><td>todo / schedule / recurring / MCP 工具注册与 Zod 校验</td></tr>
-        <tr><td>GuardrailEngine</td><td><code>guardrail-engine.ts</code></td><td>四层护栏（F3+）：输入归一化、扩展注入/敏感动作、路径脱敏；13 条单测</td></tr>
+        <tr><td>GuardrailEngine</td><td><code>guardrail-engine.ts</code></td><td>四层护栏（F3+）：输入归一化、扩展注入/敏感动作、路径脱敏；13 条单测 + 9 条 HTTP 集成（§4.3）</td></tr>
         <tr><td>ContextRetriever</td><td><code>context-retriever.ts</code> + <code>mcp-context-retriever.ts</code></td><td>会话、待办、日程统计、飞书文档片段</td></tr>
         <tr><td>MetricsLedger</td><td><code>metrics-ledger.ts</code></td><td>intent / tool / guardrail / mcp 指标</td></tr>
       </table>
@@ -108,6 +108,14 @@
         <tr><td>输出</td><td>内部文件路径</td><td>脱敏为 <code>[路径已隐藏]</code></td></tr>
       </table>
       <p><strong>2026-06 增强要点</strong>：<code>normalizeGuardrailText</code>（NFKC / 零宽字符 / 空白折叠）；约 24 条注入模式（中英双语、模板分隔符、越狱）；敏感动作输入层直拦（<code>sensitive_action</code>）；指标 <code>pw.guardrail.blocked</code>。</p>
+      <h3>4.3 自动化测试分层</h3>
+      <table>
+        <tr><th>层级</th><th>文件</th><th>覆盖范围</th></tr>
+        <tr><td>单元</td><td><code>guardrail-engine.test.ts</code> 等 15 文件</td><td>五层模块、工具、RAG、MCP 桥接（77 条）</td></tr>
+        <tr><td>编排集成</td><td><code>personal-orchestrator.test.ts</code> · <code>personal-assistant-golden.test.ts</code></td><td>Orchestrator + DB + refresh 契约（18 条）</td></tr>
+        <tr><td><strong>HTTP/SSE 集成</strong></td><td><code>chat.integration.test.ts</code></td><td>Fastify <code>inject</code> → <code>POST /api/chat</code> → SSE 事件 + DB 副作用（20 条：护栏 G1–G5 + 黄金话术 11 条）</td></tr>
+      </table>
+      <p>合计 <strong>97</strong> 条自动化用例；门禁 <code>pnpm agent:gate</code>（build + test:coverage）。详见 <a href="测试用例文档.html">测试用例文档</a> · <a href="测试报告.html">测试报告</a>。</p>
     </section>
 
     <section>
@@ -145,7 +153,7 @@
         <tr><td>后端</td><td>Fastify · tRPC · better-sqlite3</td></tr>
         <tr><td>助手</td><td>规则意图 + Tool 编排 · SSE</td></tr>
         <tr><td>LLM</td><td>OpenAI 兼容 API（<code>LLM_API_KEY</code> / <code>LLM_API_BASE</code> / <code>LLM_MODEL</code>）</td></tr>
-        <tr><td>测试</td><td>Vitest + v8 coverage · <code>pnpm agent:gate</code></td></tr>
+        <tr><td>测试</td><td>Vitest + v8 coverage · <code>pnpm agent:gate</code> · 97 条（含 HTTP/SSE 集成 20 条）</td></tr>
       </table>
       <p>启动：<code>pnpm install && pnpm dev</code> · 前端 :5175 · 后端 :3100</p>
     </section>
@@ -162,6 +170,14 @@
 ├── metrics-ledger.ts          指标
 ├── mcp/                       飞书 HTTP 桥接
 └── tools/                     todo / schedule / recurring / mcp
+
+server/src/routes/
+└── chat.ts                    SSE 对话（个人/开发域）
+
+server/src/test/
+├── setup.ts                   内存 SQLite 隔离
+├── chat-test-server.ts        集成测 Fastify 实例
+└── sse-parse.ts               SSE 载荷解析
 
 server/src/services/
 ├── todo-service.ts            待办 CRUD

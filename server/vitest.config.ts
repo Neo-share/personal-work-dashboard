@@ -21,7 +21,11 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary'],
-      include: ['src/assistant/**/*.ts', ...PERSONAL_WORKBENCH_SERVICES],
+      include: [
+        'src/assistant/**/*.ts',
+        'src/routes/chat.ts',
+        ...PERSONAL_WORKBENCH_SERVICES,
+      ],
       exclude: ['**/*.test.ts', 'src/assistant/fixtures/**'],
       // 初版阈值宽松，后续随单测增加再收紧
       thresholds: {

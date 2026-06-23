@@ -1,5 +1,7 @@
 import type { FastifyInstance } from 'fastify';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { GOLDEN_PHRASES } from '../assistant/fixtures/golden-phrases.js';
+import { ruleBasedIntentRouter } from '../assistant/intent-router.js';
 import { getDb } from '../db/index.js';
 import { createChatTestServer } from '../test/chat-test-server.js';
 import { parseSsePayloads } from '../test/sse-parse.js';
@@ -31,6 +33,18 @@ function findEvent(payloads: Record<string, unknown>[], type: string) {
   return payloads.find((p) => p.type === type);
 }
 
+function joinTextPayloads(payloads: Record<string, unknown>[]): string {
+  return payloads
+    .filter((p) => p.type === 'text')
+    .map((p) => String(p.content ?? ''))
+    .join('');
+}
+
+function refreshTargets(payloads: Record<string, unknown>[]): string[] {
+  const event = findEvent(payloads, 'refresh');
+  return Array.isArray(event?.refresh) ? (event.refresh as string[]) : [];
+}
+
 /**
  * POST /api/chat (context=personal) 集成测：
  * HTTP → SSE 事件序列 + DB 副作用（guardrail-enhancement §5 · ARCHITECTURE §8）
@@ -43,6 +57,7 @@ describe('POST /api/chat 个人助手集成', () => {
   });
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     await server.close();
   });
 
@@ -95,6 +110,27 @@ describe('POST /api/chat 个人助手集成', () => {
     expect(countTable('todos')).toBe(beforeTodos);
   });
 
+  it('G3 低置信度 + 敏感动作词 → SSE blocked sensitive_action_low_confidence', async () => {
+    vi.spyOn(ruleBasedIntentRouter, 'route').mockReturnValue({
+      type: 'todo',
+      confidence: 'low',
+      slots: { title: '删除全部' },
+      reason: '低置信度识别',
+    });
+
+    const beforeTodos = countTable('todos');
+    const { payloads } = await postPersonalChat(server, {
+      context: 'personal',
+      message: '今天怎么回事',
+    });
+
+    expect(findEvent(payloads, 'blocked')).toMatchObject({
+      type: 'blocked',
+      code: 'sensitive_action_low_confidence',
+    });
+    expect(countTable('todos')).toBe(beforeTodos);
+  });
+
   it('G3b 删除所有待办 → SSE blocked sensitive_action', async () => {
     const { payloads } = await postPersonalChat(server, {
       context: 'personal',
@@ -132,6 +168,20 @@ describe('POST /api/chat 个人助手集成', () => {
     });
   });
 
+  it('G5 回复含 server/data/ 路径 → SSE text 脱敏', async () => {
+    const { payloads } = await postPersonalChat(server, {
+      context: 'personal',
+      // LLM 未配置时标题取原话前 20 字，回复会带上 server/data/ 片段
+      message: '完成server/data/audit任务',
+    });
+
+    expect(findEvent(payloads, 'blocked')).toBeUndefined();
+    const text = joinTextPayloads(payloads);
+    expect(text).not.toContain('server/data/');
+    expect(text).toContain('[路径已隐藏]');
+    expect(findEvent(payloads, 'done')).toBeDefined();
+  });
+
   it('正常待办创建 → SSE text + refresh + done，todos 表增加', async () => {
     const beforeTodos = countTable('todos');
 
@@ -148,4 +198,64 @@ describe('POST /api/chat 个人助手集成', () => {
     expect(findEvent(payloads, 'done')).toBeDefined();
     expect(countTable('todos')).toBeGreaterThan(beforeTodos);
   });
+});
+
+/** 黄金话术：HTTP → SSE + DB 副作用（与 personal-assistant-golden.test.ts 对齐） */
+describe('POST /api/chat 黄金话术集成', () => {
+  let server: FastifyInstance;
+
+  beforeEach(async () => {
+    server = await createChatTestServer();
+  });
+
+  afterEach(async () => {
+    await server.close();
+  });
+
+  for (const [index, caseDef] of GOLDEN_PHRASES.entries()) {
+    it(`#${index + 1} ${caseDef.input}`, async () => {
+      const beforeTodos = countTable('todos');
+      const beforeSchedule = countTable('schedule_events');
+      const beforeRecurring = countTable('recurring_tasks');
+
+      const { payloads } = await postPersonalChat(server, {
+        context: 'personal',
+        message: caseDef.input,
+      });
+
+      expect(findEvent(payloads, 'blocked')).toBeUndefined();
+      expect(findEvent(payloads, 'done')).toBeDefined();
+
+      if (caseDef.replyIncludes) {
+        expect(joinTextPayloads(payloads)).toContain(caseDef.replyIncludes);
+      }
+
+      switch (caseDef.intent) {
+        case 'schedule':
+          expect(countTable('schedule_events')).toBeGreaterThan(beforeSchedule);
+          expect(countTable('todos')).toBe(beforeTodos);
+          expect(refreshTargets(payloads)).toContain('schedule');
+          break;
+        case 'todo':
+          expect(countTable('todos')).toBeGreaterThan(beforeTodos);
+          expect(refreshTargets(payloads)).toContain('todos');
+          break;
+        case 'recurring':
+          expect(countTable('recurring_tasks')).toBeGreaterThan(beforeRecurring);
+          expect(refreshTargets(payloads)).toContain('recurringTasks');
+          break;
+        case 'recurring_schedule':
+          expect(countTable('schedule_events')).toBeGreaterThan(beforeSchedule);
+          expect(countTable('recurring_tasks')).toBe(beforeRecurring);
+          expect(refreshTargets(payloads)).toContain('schedule');
+          break;
+        case 'unknown':
+          expect(countTable('todos')).toBe(beforeTodos);
+          expect(countTable('schedule_events')).toBe(beforeSchedule);
+          expect(countTable('recurring_tasks')).toBe(beforeRecurring);
+          expect(findEvent(payloads, 'refresh')).toBeUndefined();
+          break;
+      }
+    });
+  }
 });

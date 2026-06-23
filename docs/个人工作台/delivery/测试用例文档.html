@@ -10,7 +10,7 @@
   <div class="wrap">
     <header class="doc-header">
       <h1>个人 AI 助手工作台 — 测试用例文档</h1>
-      <p class="meta">向外交付物 · 合计 77 条 · 框架 Vitest · 核对日期 2026-06-23</p>
+      <p class="meta">向外交付物 · 合计 97 条 · 框架 Vitest · 核对日期 2026-06-23</p>
       <nav class="doc-nav">
         <a href="架构设计文档.html">架构设计</a>
         <a class="is-current" href="测试用例文档.html">测试用例</a>
@@ -23,16 +23,16 @@
       <p>本文列出个人工作台与助手核心模块的<strong>自动化测试用例</strong>。执行命令：<code>pnpm test</code>（仓库根目录）。</p>
       <table>
         <tr><th>项</th><th>说明</th></tr>
-        <tr><td>测试文件</td><td>15 个（<code>server/src/**/*.test.ts</code>）</td></tr>
-        <tr><td>用例总数</td><td>77</td></tr>
-        <tr><td>类型</td><td>单元测试 + 编排链路集成（黄金话术 E2E）</td></tr>
+        <tr><td>测试文件</td><td>16 个（<code>server/src/**/*.test.ts</code>）</td></tr>
+        <tr><td>用例总数</td><td>97</td></tr>
+        <tr><td>类型</td><td>单元测试 + 编排链路集成 + <strong>HTTP/SSE 集成</strong>（<code>chat.integration.test.ts</code>）</td></tr>
         <tr><td>不纳入</td><td>浏览器 E2E、LLM 在线评测、开发域 service 全量</td></tr>
       </table>
     </section>
 
     <section>
       <h2>2. 黄金话术（产品 §6.4，11 条）</h2>
-      <p>来源：<code>personal-assistant-golden.test.ts</code> + <code>intent-router.test.ts</code></p>
+      <p>来源：<code>personal-assistant-golden.test.ts</code>（service 层）+ <code>intent-router.test.ts</code> + <code>chat.integration.test.ts</code>（HTTP/SSE 层，§3.9）</p>
       <table>
         <tr><th>ID</th><th>输入</th><th>期望意图</th><th>期望行为摘要</th></tr>
         <tr><td>G01</td><td>明天下午3点开项目评审会</td><td>schedule</td><td>写入日程，不增待办；refresh 含 schedule</td></tr>
@@ -121,7 +121,22 @@
         <tr><td>MC-07~08</td><td>feishu-url</td><td>wiki/docx URL 提取；无链接空数组</td></tr>
       </table>
       <h3>3.8 黄金话术 E2E personal-assistant-golden.test.ts（11）</h3>
-      <p>与 §2 黄金话术一一对应；额外断言 DB 表计数变化与 refresh 契约。</p>
+      <p>与 §2 黄金话术一一对应；额外断言 DB 表计数变化与 refresh 契约（编排 + service 薄封装）。</p>
+      <h3>3.9 HTTP/SSE 集成 chat.integration.test.ts（20）</h3>
+      <p>经 Fastify <code>inject</code> 调用 <code>POST /api/chat</code>（<code>context=personal</code>），解析 SSE 事件序列并断言 DB 副作用。辅助：<code>test/chat-test-server.ts</code> · <code>test/sse-parse.ts</code>。</p>
+      <table>
+        <tr><th>ID</th><th>分组</th><th>用例摘要</th><th>验证点</th></tr>
+        <tr><td>CI-01</td><td>路由层</td><td>空消息</td><td>SSE <code>error</code>，无 blocked</td></tr>
+        <tr><td>CI-02</td><td>护栏 G1</td><td>超长输入</td><td>SSE <code>blocked</code> + <code>input_too_long</code>；无业务表写入</td></tr>
+        <tr><td>CI-03</td><td>护栏 G2</td><td>英文注入话术</td><td>SSE <code>blocked</code> + <code>prompt_injection</code></td></tr>
+        <tr><td>CI-04</td><td>护栏 G3</td><td>低置信度 + 敏感槽位</td><td>SSE <code>blocked</code> + <code>sensitive_action_low_confidence</code></td></tr>
+        <tr><td>CI-05</td><td>护栏 G3b</td><td>删除所有待办</td><td>SSE <code>blocked</code> + <code>sensitive_action</code></td></tr>
+        <tr><td>CI-06</td><td>护栏 G3c</td><td>SQL 破坏性语句</td><td>SSE <code>blocked</code> + <code>sensitive_action</code></td></tr>
+        <tr><td>CI-07</td><td>护栏 G4</td><td>伪造 modifyTodoId</td><td>SSE <code>blocked</code> + <code>invalid_modify_todo_id</code></td></tr>
+        <tr><td>CI-08</td><td>护栏 G5</td><td>回复含 server/data/ 路径</td><td>SSE <code>text</code> 脱敏为 <code>[路径已隐藏]</code></td></tr>
+        <tr><td>CI-09</td><td>主路径</td><td>正常待办创建</td><td>SSE <code>text</code> + <code>refresh</code> + <code>done</code>；todos 增加</td></tr>
+        <tr><td>CI-10~20</td><td>黄金话术</td><td>§2 G01~G11 经 HTTP</td><td>与 golden E2E 对齐：text 片段、DB 计数、refresh 契约</td></tr>
+      </table>
     </section>
 
     <section>
@@ -158,10 +173,10 @@
       <table>
         <tr><th>TL1</th><th>测试文件</th><th>用例数</th></tr>
         <tr><td>TL1-04 定时任务</td><td>recurring-task-service · metrics-ledger(scheduler)</td><td>5 + 3</td></tr>
-        <tr><td>TL1-05 助手五层</td><td>intent-router · orchestrator · guardrail · tool-registry · todo-tools · context · golden</td><td>13+7+13+5+3+2+11</td></tr>
+        <tr><td>TL1-05 助手五层</td><td>intent-router · orchestrator · guardrail · tool-registry · todo-tools · context · golden · <strong>chat.integration</strong></td><td>13+7+13+5+3+2+11+<strong>20</strong></td></tr>
         <tr><td>TL1-05 MCP</td><td>mcp-context · feishu-doc · feishu-url · register-tools</td><td>2+4+2+1</td></tr>
         <tr><td>TL1-09 RAG</td><td>internal-knowledge-retriever · ai-result-service</td><td>2 + 3</td></tr>
-        <tr><td colspan="2"><strong>合计</strong></td><td><strong>77</strong></td></tr>
+        <tr><td colspan="2"><strong>合计</strong></td><td><strong>97</strong></td></tr>
       </table>
     </section>
 
