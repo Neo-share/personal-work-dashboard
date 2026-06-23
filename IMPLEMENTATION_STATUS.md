@@ -295,8 +295,8 @@
 ## 13. 个人 AI 助手工作台（产品考题）
 
 > 产品 SSOT：[docs/个人工作台/个人工作台.md](./docs/个人工作台/个人工作台.md)  
-> L4 功能点：[个人工作台-功能点.md](./docs/个人工作台/个人工作台-功能点.md)  
-> **TL4 技术对照与完成状态 SSOT**：[个人工作台-技术功能点.md §实现状态总览](./docs/个人工作台/个人工作台-技术功能点.md#实现状态总览)  
+> L4 功能点与完成状态：[个人工作台-功能点.md §实现状态总览](./docs/个人工作台/个人工作台-功能点.md#实现状态总览)  
+> **TL4 技术对照**：[个人工作台-技术功能点.md](./docs/个人工作台/个人工作台-技术功能点.md)  
 > **未完成待办**：[TODO/personal-workbench-enhancement.md](./TODO/personal-workbench-enhancement.md)  
 > 五层契约：[shared/src/assistant-contract.ts](./shared/src/assistant-contract.ts) · [TODO/architecture-foundation.md](./TODO/architecture-foundation.md)
 

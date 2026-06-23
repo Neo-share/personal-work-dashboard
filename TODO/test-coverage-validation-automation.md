@@ -5,7 +5,7 @@
 > - 索引与依赖：[roadmap.md](./roadmap.md)
 > - 五层接口契约（单测对齐基准）：[architecture-foundation.md](./architecture-foundation.md) F0 · [shared/src/assistant-contract.ts](../shared/src/assistant-contract.ts)
 > - 门禁命令与 DoD：[agents/commands-checklist.md](../agents/commands-checklist.md)
-> - 个人工作台已验收回归：见 [个人工作台-技术功能点.md §已验收](../docs/个人工作台/个人工作台-技术功能点.md#实现状态总览)
+> - 个人工作台已验收回归：见 [个人工作台-功能点.md §实现状态总览](../docs/个人工作台/个人工作台-功能点.md#实现状态总览)
 > - TL4 测试范围对照：[个人工作台-技术功能点.md](../docs/个人工作台/个人工作台-技术功能点.md)
 > - 实现状态：[IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md)
 
@@ -71,7 +71,7 @@
 
 - [x] 覆盖率报告（Vitest v8，`server/coverage/`）
 - [x] `pnpm agent:gate` = `build && test:coverage`，失败阻断交付
-- [x] 黄金话术回归已接 `agent:gate`（见 [个人工作台-技术功能点.md §已验收](../docs/个人工作台/个人工作台-技术功能点.md#实现状态总览)）
+- [x] 黄金话术回归已接 `agent:gate`（见 [个人工作台-功能点.md §实现状态总览](../docs/个人工作台/个人工作台-功能点.md#实现状态总览)）
 
 ---
 
