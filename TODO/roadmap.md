@@ -38,7 +38,7 @@
 |------|------|----------|
 | 五层底座 F0–F4 | ✅ | [server/src/assistant/ARCHITECTURE.md](../server/src/assistant/ARCHITECTURE.md) |
 | RAG E1–E3 | ✅ | [个人工作台-功能点.md §L1-09](../docs/个人工作台/个人工作台-功能点.md#l1-09-后续迭代待办知识库rag) |
-| 测试 T1–T3 + gate | ✅ | [test-coverage-validation-automation.md](./test-coverage-validation-automation.md)（58 条 · assistant ~83%） |
+| 测试 T1–T3 + gate | ✅ | [test-coverage-validation-automation.md](./test-coverage-validation-automation.md)（70 条 · assistant ~92%） |
 | 护栏 F3 + G1–G5 | ✅ | [guardrail-enhancement.md](./guardrail-enhancement.md) |
 | 个人工作台 L1-01 ~ L1-08 | ✅ | [个人工作台-功能点.md §实现状态总览](../docs/个人工作台/个人工作台-功能点.md#实现状态总览) |
 

@@ -39,14 +39,16 @@
 | TL1-04 定时任务 | 物化规则 | `services/recurring-task-service.test.ts` | 5 |
 | TL1-04 调度 | tick + 物化联动 | `assistant/metrics-ledger.test.ts`（`describe('recurring-task-scheduler')`） | 3 |
 | TL1-05 意图分流 | 路由 + 黄金话术 | `assistant/intent-router.test.ts` · `services/personal-assistant-golden.test.ts` | 13 · 11 |
-| TL1-05 工具 | 白名单 + Zod + 注册 | `assistant/tool-registry.test.ts` · `assistant/tools/register-tools.test.ts` | 5 · 1 |
+| TL1-05 工具 | 白名单 + Zod + todo 工具 | `assistant/tool-registry.test.ts` · `assistant/tools/register-tools.test.ts` · `assistant/tools/todo-tools.test.ts` | 5 · 1 · 3 |
+| TL1-05 编排 | 护栏 / 分支 / revise | `assistant/personal-orchestrator.test.ts` | 7 |
+| TL1-05 上下文 | DB 上下文组装 | `assistant/context-retriever.test.ts` | 2 |
 | TL1-05 护栏 | G1–G5 | `assistant/guardrail-engine.test.ts` | 6 |
 | TL1-05 指标 | MetricsLedger | `assistant/metrics-ledger.test.ts`（`describe('InMemoryMetricsLedger')`） | 1 |
 | TL1-05 MCP（F4） | externalSnippets | `assistant/mcp-context-retriever.test.ts` · `assistant/mcp/feishu-doc-client.test.ts` · `assistant/mcp/feishu-url.test.ts` | 2 · 4 · 2 |
 | TL1-09 RAG | E1–E3 | `services/internal-knowledge-retriever.test.ts` · `services/ai-result-service.test.ts` | 2 · 3 |
 | TL1-09 RAG | E4 embedding | — | 待做 |
 
-**合计**：12 个测试文件 · **58** 条用例（`pnpm test` exit 0）。
+**合计**：15 个测试文件 · **70** 条用例（`pnpm test` exit 0）。
 
 ---
 
@@ -73,6 +75,9 @@
 - [x] `recurring-task-service` 物化（`recurring-task-service.test.ts`）
 - [x] `recurring-task-scheduler` tick（同文件 `metrics-ledger.test.ts` 内独立 `describe`）
 - [x] `PersonalGuardrailEngine` G1–G5（`guardrail-engine.test.ts`）
+- [x] `PersonalAssistantOrchestrator` 护栏 / 分支 / revise（`personal-orchestrator.test.ts`）
+- [x] `DbContextRetriever`（`context-retriever.test.ts`）
+- [x] `todo-tools` create / revise（`tools/todo-tools.test.ts`）
 - [x] 编排链路黄金话术（`personal-assistant-golden.test.ts`，11 条）
 - [x] RAG E1–E3（`internal-knowledge-retriever` · `ai-result-service`）
 - [x] MCP F4 HTTP 桥接（`mcp-context-retriever` · `feishu-doc-client` · `feishu-url`）
@@ -92,24 +97,25 @@
 
 | 范围 | 行覆盖 | 说明 |
 |------|--------|------|
-| `assistant/` 合计 | **~83%** | 五层 + MCP + tools |
-| `services/` 合计 | **~26%** | 仅个人工作台相关文件有测；开发域 service 多为 0%（§2 范围外） |
-| 全量（assistant + services） | **~41%** | 分母含未纳入范围的 dev 域文件 |
+| `assistant/` 合计 | **~92%** | 五层 + MCP + tools（含 orchestrator / context-retriever 专项单测） |
+| `services/` 合计 | **~30%** | 个人工作台相关文件有测；开发域 service 多为 0%（§2 范围外） |
+| 全量（assistant + services） | **~45%** | 分母含未纳入范围的 dev 域文件 |
 
-**已测但覆盖偏低的实现文件**（可选后续补测，非 T1–T3 阻塞项）：
+**范围内已补强**（2026-06-23）：`personal-orchestrator.test.ts` · `context-retriever.test.ts` · `tools/todo-tools.test.ts`。
+
+**可选后续补测**（非阻塞）：
 
 | 文件 | 约行覆盖 | 缺口 |
 |------|----------|------|
-| `personal-orchestrator.ts` | ~67% | 除 golden 外部分分支未单测 |
-| `context-retriever.ts` | 间接 | 无独立测试文件，经 golden 间接覆盖 |
-| `todo-tools.ts` | ~68% | 部分 execute 分支 |
+| `personal-orchestrator.ts` | ~85%+ | `buildReplyForIntent` 部分 intent 分支仍靠 golden |
+| `mcp-feishu-tools.ts` | ~63% | MCP tool execute 未单测 |
 
 ---
 
 ## 6. 验收
 
-- [x] `pnpm test` 稳定 exit 0（**58** 条）
-- [x] `pnpm test:coverage` 可生成报告（`assistant/` **~83%** 行覆盖）
+- [x] `pnpm test` 稳定 exit 0（**70** 条）
+- [x] `pnpm test:coverage` 可生成报告（`assistant/` **~92%** 行覆盖）
 - [x] `pnpm agent:gate` / `pnpm gate:pr` 接入 CI，失败阻断交付
 - [x] 与 [commands-checklist.md §交付前 DoD](../agents/commands-checklist.md) 一致
 
@@ -127,7 +133,7 @@
 |----|------|------|
 | RAG E4 embedding 单测 | ❌ | 见 [功能点 §待完成](../docs/个人工作台/个人工作台-功能点.md#待完成明细) |
 | E2E 浏览器全量 | ❌ | 交付说明 §5 已标注未做 |
-| `personal-orchestrator` 专项单测 | ❌ 可选 | 提高编排层分支覆盖 |
+| `mcp-feishu-tools` execute 单测 | ❌ 可选 | F4 桥接已测，ToolRegistry 注册已测 |
 | 收紧 coverage thresholds | ❌ 可选 | 待 dev 域 service 纳入或从 include 排除后再设 |
 
 ---
