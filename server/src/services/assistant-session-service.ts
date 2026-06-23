@@ -102,6 +102,41 @@ export function getOrCreateDefaultSession(): AssistantSession {
   return createAssistantSession('默认对话');
 }
 
+/** 解析当前会话：优先使用客户端指定 id，否则取最近活跃会话 */
+export function resolveAssistantSession(sessionId?: number): AssistantSession {
+  if (sessionId !== undefined) {
+    const db = getDb();
+    const row = db
+      .prepare(
+        `SELECT s.*, (SELECT COUNT(*) FROM assistant_messages WHERE session_id = s.id) as message_count
+         FROM assistant_sessions s WHERE s.id = ?`,
+      )
+      .get(sessionId) as
+      | {
+          id: number;
+          title: string;
+          todo_id: number | null;
+          created_at: string;
+          updated_at: string;
+          message_count: number;
+        }
+      | undefined;
+
+    if (row) {
+      return {
+        id: row.id,
+        title: row.title,
+        todoId: row.todo_id,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        messageCount: row.message_count,
+      };
+    }
+  }
+
+  return getOrCreateDefaultSession();
+}
+
 /** 历史对话左栏：有 AI 结果的待办线程 */
 export function listTodoAiThreads(): TodoAiThread[] {
   const db = getDb();

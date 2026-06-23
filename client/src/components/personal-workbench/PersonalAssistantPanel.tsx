@@ -4,6 +4,9 @@ import { Button, Form, Input, Modal, Select, message } from 'antd';
 import { useEffect, useState } from 'react';
 import { trpc } from '../../lib/trpc';
 
+const INITIAL_GREETING = '你好！我会先区分待办与日程，帮你创建内容或生成初步结果。';
+const NEW_SESSION_GREETING = '新对话已开始。我会先区分待办与日程，帮你创建内容或生成初步结果。';
+
 const QUICK_CHIPS = [
   '明天下午3点开项目评审会',
   '下周二上午10点面试产品经理',
@@ -33,11 +36,9 @@ export default function PersonalAssistantPanel({
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([
-    {
-      role: 'assistant',
-      content: '你好！我会先区分待办与日程，帮你创建内容或生成初步结果。',
-    },
+    { role: 'assistant', content: INITIAL_GREETING },
   ]);
+  const [activeSessionId, setActiveSessionId] = useState<number | undefined>();
   const [historyOpen, setHistoryOpen] = useState(false);
   const [selectedThreadId, setSelectedThreadId] = useState<number | null>(null);
   const [soulOpen, setSoulOpen] = useState(false);
@@ -59,18 +60,22 @@ export default function PersonalAssistantPanel({
     enabled: historyOpen,
   });
   const createSessionMutation = trpc.assistant.createSession.useMutation({
-    onSuccess: () => {
-      setMessages([
-        {
-          role: 'assistant',
-          content: '新对话已开始。我会先区分待办与日程。',
-        },
-      ]);
+    onSuccess: (session) => {
+      setActiveSessionId(session.id);
+      setInput('');
+      onExitModify?.();
+      setMessages([{ role: 'assistant', content: NEW_SESSION_GREETING }]);
       void sessionsQuery.refetch();
+      message.success('已开始新对话');
     },
+    onError: (err) => message.error(err.message || '新建对话失败'),
   });
 
-  const activeSessionId = sessionsQuery.data?.[0]?.id;
+  useEffect(() => {
+    if (activeSessionId !== undefined) return;
+    const first = sessionsQuery.data?.[0];
+    if (first) setActiveSessionId(first.id);
+  }, [sessionsQuery.data, activeSessionId]);
 
   useEffect(() => {
     if (soulOpen && soulQuery.data) {
@@ -207,6 +212,7 @@ export default function PersonalAssistantPanel({
           <Button
             type="text"
             size="small"
+            loading={createSessionMutation.isPending}
             onClick={() => createSessionMutation.mutate({ title: '新对话' })}
           >
             新建

@@ -22,7 +22,7 @@ import type { RecurringCreateResult } from './tools/recurring-tools.js';
 import type { TodoCreateResult, TodoReviseAiResult } from './tools/todo-tools.js';
 import {
   appendAssistantMessage,
-  getOrCreateDefaultSession,
+  resolveAssistantSession,
 } from '../services/assistant-session-service.js';
 
 function recordIntentMetric(route: IntentRouteResult): void {
@@ -171,7 +171,7 @@ function buildToolParams(
 export class PersonalAssistantOrchestrator implements PersonalOrchestrator {
   async handle(input: PersonalOrchestratorInput): Promise<PersonalOrchestratorOutput> {
     const text = input.message.trim();
-    const session = getOrCreateDefaultSession();
+    const session = resolveAssistantSession(input.sessionId);
     const toolRegistry = getPersonalToolRegistry();
     const toolCtx = { sessionId: session.id, metrics: inMemoryMetricsLedger };
 

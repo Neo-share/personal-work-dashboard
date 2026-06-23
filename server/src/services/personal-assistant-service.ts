@@ -12,7 +12,6 @@ export async function resolvePersonalAssistantIntent(
   message: string,
   options?: { modifyTodoId?: number; sessionId?: number },
 ): Promise<PersonalAssistantResolveResult> {
-  void options?.sessionId;
   return personalAssistantOrchestrator.handle({
     message,
     modifyTodoId: options?.modifyTodoId,
