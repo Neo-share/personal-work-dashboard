@@ -37,6 +37,7 @@
 | 产品目标与领域语义 | `PROJECT_MANAGER_PRODUCT_DESIGN.md` | `PROJECT_MANAGER_PLATFORM_PLAN.md` |
 | 分阶段技术方案 | `PROJECT_MANAGER_PLATFORM_PLAN.md` | `IMPLEMENTATION_STATUS.md` |
 | 个人工作台产品需求 | `docs/个人工作台/个人工作台.md` | `待办知识库-RAG方案.md` |
+| 个人工作台向外交付说明 | `docs/个人工作台/个人工作台-交付说明.md` | `个人工作台.md`、`个人工作台-功能点.md` |
 | 个人工作台 L4 功能点与完成状态 | `docs/个人工作台/个人工作台-功能点.md` §实现状态总览 | `个人工作台-技术功能点.md`、`IMPLEMENTATION_STATUS.md` §13、`TODO/personal-workbench-enhancement.md` |
 | 个人工作台 TL4 技术对照 | `docs/个人工作台/个人工作台-技术功能点.md` | `IMPLEMENTATION_STATUS.md` §13 |
 | 工作项跨域演进设计 | `PERSONAL_WORK_ARCHITECTURE.md` | — |

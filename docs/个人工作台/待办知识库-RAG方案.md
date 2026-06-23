@@ -125,20 +125,20 @@ reviseAiResult / 修改模式
 
 ### Phase E1 — 检索器骨架（无 LLM）
 
-- [ ] **E1.1** 新增 `server/src/services/internal-knowledge-retriever.ts`
-- [ ] **E1.2** 实现 R0 规则检索 API：`retrieveForTodo(todoId, intent)`
-- [ ] **E1.3** 单元测试：纪要待办能召回同日日程 + 历史同类型结果
+- [x] **E1.1** 新增 `server/src/services/internal-knowledge-retriever.ts`
+- [x] **E1.2** 实现 R0 规则检索 API：`retrieveForTodo(todoId, intent)`
+- [x] **E1.3** 单元测试：纪要待办能召回同日日程 + 历史同类型结果
 
 ### Phase E2 — 生成链路替换模板
 
-- [ ] **E2.1** 新增 `llm-ai-result-generator.ts`（或配置化 provider）
-- [ ] **E2.2** `createAiResultForTodo` 改为：retrieve → generate → 落库
-- [ ] **E2.3** 生成结果 metadata 记录 `snippetIds`（可追溯）
+- [x] **E2.1** 新增 `llm-ai-result-generator.ts`（或配置化 provider）
+- [x] **E2.2** `createAiResultForTodo` 改为：retrieve → generate → 落库
+- [x] **E2.3** 生成结果 metadata 记录 `snippetIds`（`todo_ai_results.provider`）
 
 ### Phase E3 — 修订链路
 
-- [ ] **E3.1** `reviseAiResult` 接入 retrieve(revise)
-- [ ] **E3.2** 修改模式 SSE 回复注明「已参考 vN 与日程上下文」
+- [x] **E3.1** `reviseAiResult` 接入 retrieve(revise)
+- [x] **E3.2** 修改模式 SSE 回复注明「已参考 vN 与日程上下文」
 
 ### Phase E4 — 可选 embedding（R1）
 
@@ -176,7 +176,7 @@ reviseAiResult / 修改模式
 
 ## 10. 与路线图关系
 
-- **前置**：个人工作台 Phase A–D 已闭环；完成状态见 [个人工作台-功能点.md §实现状态总览](./个人工作台-功能点.md#实现状态总览)  
+- **前置**：个人工作台 Phase A–F 与 Phase E1–E3 已闭环；完成状态见 [个人工作台-功能点.md §实现状态总览](./个人工作台-功能点.md#实现状态总览)  
 - **并行**：不阻塞 `architecture-foundation.md`；检索器接口与其 ContextRetriever 契约对齐，便于后续替换  
 - **后置**：`mcp-integration.md` 可在 Internal 检索之上 **叠加** External 片段，不替代本方案  
 

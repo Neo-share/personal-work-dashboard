@@ -4,7 +4,7 @@
 >
 > **读者优先级：AI Agent > 人类开发者**
 >
-> 对照 [PROJECT_MANAGER_PLATFORM_PLAN.md](./PROJECT_MANAGER_PLATFORM_PLAN.md) 与 [PROJECT_MANAGER_PRODUCT_DESIGN.md](./PROJECT_MANAGER_PRODUCT_DESIGN.md)，以**当前代码**为准。最后核对日期：2026-06-12。
+> 对照 [PROJECT_MANAGER_PLATFORM_PLAN.md](./PROJECT_MANAGER_PLATFORM_PLAN.md) 与 [PROJECT_MANAGER_PRODUCT_DESIGN.md](./PROJECT_MANAGER_PRODUCT_DESIGN.md)，以**当前代码**为准。最后核对日期：2026-06-23（个人工作台 §13 同步）。
 
 **图例**：✅ 已实现 · ⚠️ 部分实现 · ❌ 未实现
 
@@ -304,9 +304,8 @@
 
 | 模块 | 状态 | 说明 |
 |------|------|------|
-| TL1-01 ~ TL1-05、07、08 | ✅ | 见技术功能点各 TL1 节 |
-| TL1-06 AI 结果 | ⚠️ | 轮询已接；LLM 生成待 Phase E |
-| TL1-09 RAG | ❌ | Phase E 待做 |
+| TL1-01 ~ TL1-09（E1–E3） | ✅ | 见 [个人工作台-功能点.md §实现状态总览](./docs/个人工作台/个人工作台-功能点.md#实现状态总览) |
+| Phase E4 embedding（可选） | ❌ | 见 personal-workbench-enhancement |
 | 外部日历 OAuth | ❌ | 范围外，见 personal-workbench-enhancement |
 | MCP 外部文档 | ❌ | 见 `TODO/mcp-integration.md` |
 

@@ -56,7 +56,7 @@ export const trpc = createTRPCReact<AppRouter>();
 
 **`src/App.tsx`** 职责：
 
-- 双壳层路由：`/` 个人工作台，`/dev-dashboard` 及开发域页面走 `DevShell`
+- 双壳层路由：`/` 个人工作台（顶栏三 Tab：日程与事项 / 定时任务 / **开发域**），`/dev-dashboard` 及开发域页面走 `DevShell`
 - `<Routes>` 注册 9 个页面（含周报与个人工作台）
 - 全局挂载 `<ChatPanel />`（开发域助手 FAB + Drawer）
 

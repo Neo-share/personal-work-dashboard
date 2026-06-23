@@ -236,7 +236,7 @@ server/src/assistant/
 
 | 文档 | 关系 |
 |------|------|
-| [personal-workbench-enhancement.md](./personal-workbench-enhancement.md) | 未完成 Phase E；完成状态见 [功能点 §实现状态总览](../docs/个人工作台/个人工作台-功能点.md#实现状态总览) |
+| [personal-workbench-enhancement.md](./personal-workbench-enhancement.md) | Phase E1–E3 已收口；E4 embedding 可选待做；完成状态见 [功能点 §实现状态总览](../docs/个人工作台/个人工作台-功能点.md#实现状态总览) |
 | [guardrail-enhancement.md](./guardrail-enhancement.md) | GuardrailEngine **规则细则** |
 | [mcp-integration.md](./mcp-integration.md) | ContextRetriever 外部片段 |
 | [test-coverage-validation-automation.md](./test-coverage-validation-automation.md) | F0 契约冻结后，以 §3 接口为准编写单测与 gate；T1 框架可与 F0 并行 |

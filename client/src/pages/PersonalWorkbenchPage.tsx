@@ -90,6 +90,9 @@ export default function PersonalWorkbenchPage() {
             >
               定时任务
             </button>
+            <Link to="/dev-dashboard" className="pw-page-tab">
+              开发域
+            </Link>
           </div>
 
           <div className={`pw-tab-panel${tab === 'workspace' ? ' is-active' : ''}`}>
@@ -163,10 +166,6 @@ export default function PersonalWorkbenchPage() {
           }}
         />
       </div>
-
-      <Link to="/dev-dashboard" className="pw-dev-link">
-        开发域驾驶舱 →
-      </Link>
     </div>
   );
 }

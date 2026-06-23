@@ -18,16 +18,16 @@
 >
 > 方案详述见 **[待办知识库-RAG方案.md](../docs/个人工作台/待办知识库-RAG方案.md)**（不依赖 MCP / 外链）。
 
-| 编号 | L4 | 待办项 |
-|------|-----|--------|
-| E1 | 09.01–09.02 | 内部检索器 R0（规则：时间窗 + 标题 + result_type） |
-| E2 | 06.02 · 09.01 | AI 初步结果：retrieve → LLM 生成，替换纯模板 |
-| E3 | 09.03 | AI 多轮修改：召回版本 + 会话 + 日程上下文 |
-| E4 | — | （可选）本地 embedding 索引与 K1–K5 验收 |
+| 编号 | L4 | 待办项 | 状态 |
+|------|-----|--------|------|
+| E1 | 09.01–09.02 | 内部检索器 R0（规则：时间窗 + 标题 + result_type） | ✅ |
+| E2 | 06.02 · 09.01 | AI 初步结果：retrieve → LLM 生成，替换纯模板 | ✅ |
+| E3 | 09.03 | AI 多轮修改：召回版本 + 会话 + 日程上下文 | ✅ |
+| E4 | — | （可选）本地 embedding 索引与 K1–K5 验收 | ❌ |
 
-- [ ] **E1** 内部检索器 R0（规则：时间窗 + 标题 + result_type）
-- [ ] **E2** AI 初步结果：retrieve → LLM 生成，替换纯模板
-- [ ] **E3** AI 多轮修改：召回版本 + 会话 + 日程上下文
+- [x] **E1** 内部检索器 R0（`internal-knowledge-retriever.ts`）
+- [x] **E2** AI 初步结果：retrieve → LLM 生成（`ai-result-service.ts` · `llm-ai-result-generator.ts`）
+- [x] **E3** AI 多轮修改：召回版本 + 会话 + 日程上下文（`reviseAiResult`）
 - [ ] **E4**（可选）本地 embedding 索引与 K1–K5 验收
 
 ---
@@ -45,7 +45,9 @@
 
 | 区域 | 路径 |
 |------|------|
-| 检索扩展 | `server/src/assistant/context-retriever.ts` |
-| AI 生成 | `server/src/services/ai-result-service.ts` |
-| 修订 | `server/src/services/todo-service.ts` · `reviseAiResult` |
+| 检索 R0 | `server/src/services/internal-knowledge-retriever.ts` |
+| LLM 生成/修订 | `server/src/llm/llm-ai-result-generator.ts` |
+| AI 编排 | `server/src/services/ai-result-service.ts` |
+| 修订入口 | `server/src/trpc/router.ts` · `reviseAiResult` |
+| MCP 外部片段（叠加） | `server/src/assistant/mcp-context-retriever.ts` |
 | 方案 | [待办知识库-RAG方案.md](../docs/个人工作台/待办知识库-RAG方案.md) |

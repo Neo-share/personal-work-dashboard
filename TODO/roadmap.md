@@ -17,7 +17,7 @@
 | **guardrail-enhancement.md** | 四层护栏**规则细则**与验收场景 | `architecture-foundation` §3.3 仅保留接口 |
 | **test-coverage-validation-automation.md** | 测试框架、覆盖率与门禁接入计划（**以底座契约为准**） | 功能点 §实现状态总览 |
 | **mcp-integration.md** | 外部 MCP（飞书文档等）接入计划 | `architecture-foundation` §3.4 |
-| **personal-workbench-enhancement.md** | 个人工作台**未完成**功能点与 Phase E 待办 | 完成状态见 `个人工作台-功能点.md` §实现状态总览 |
+| **personal-workbench-enhancement.md** | 个人工作台**未完成**功能点（E4 可选 + 范围外） | 完成状态见 `个人工作台-功能点.md` §实现状态总览 |
 
 **产品需求**不在 `TODO/` 定义：`docs/个人工作台/个人工作台.md` 为个人工作台产品 SSOT；**技术 TL4 对照**见 `docs/个人工作台/个人工作台-技术功能点.md`。
 
@@ -32,8 +32,8 @@
 | P1 | [guardrail-enhancement.md](./guardrail-enhancement.md) | F0 + F3 | 规则细则与 G1–G5（**引擎已落地**，细则勾选见该文件） |
 | P1 | [test-coverage-validation-automation.md](./test-coverage-validation-automation.md) T2–T3 | F0 | 五层单测 + gate（**已完成**） |
 | P2 | [mcp-integration.md](./mcp-integration.md) | F4 + guardrail | Feishu Document MCP → `externalSnippets` |
-| P2 | [personal-workbench-enhancement.md](./personal-workbench-enhancement.md) Phase E | F1–F3 | 待办知识库 RAG（**唯一未收口 Phase**） |
-| — | [personal-workbench-enhancement.md](./personal-workbench-enhancement.md) Phase A–D / B4 / F | — | **已收口**（见 [功能点 §实现状态总览](../docs/个人工作台/个人工作台-功能点.md#实现状态总览)） |
+| P2 | [personal-workbench-enhancement.md](./personal-workbench-enhancement.md) Phase E4 | F1–F3 | 本地 embedding（**可选**；E1–E3 已收口） |
+| — | [personal-workbench-enhancement.md](./personal-workbench-enhancement.md) Phase A–E（E1–E3） | — | **已收口**（见 [功能点 §实现状态总览](../docs/个人工作台/个人工作台-功能点.md#实现状态总览)） |
 
 ---
 
@@ -68,7 +68,7 @@ flowchart LR
    - `test-coverage-validation-automation.md` **T1**（Vitest、`pnpm test`、gate 路径）可与 F0 **同步启动**，不依赖底座编码；
    - F0 冻结后，**以契约为准**并行推进 `guardrail-enhancement.md` 与 test **T2–T3**（IntentRouter / ToolRegistry / guardrail-engine 单测）。
 3. 护栏可用后接入 `mcp-integration.md`（**F4**），优先落地 Feishu Document MCP。
-4. 推进 `personal-workbench-enhancement.md` **Phase E**（RAG）；Phase A–F 其余项已收口。
+4. 可选推进 `personal-workbench-enhancement.md` **Phase E4**（embedding）；Phase E1–E3 与 A–F 其余项已收口。
 
 > **说明**：test 不等待五层底座 **F1–F4 编码完成**；仅 T2 中针对五层抽象的用例依赖 F0 契约冻结。现有 service（如 `recurring-task-scheduler`）单测可在 T1 后即写。
 

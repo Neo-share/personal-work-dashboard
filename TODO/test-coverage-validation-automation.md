@@ -28,7 +28,7 @@
 | TL1-05 工具 | 白名单 + Zod | `tool-registry.test.ts` |
 | TL1-05 护栏 | G1–G5 | `guardrail-engine.test.ts` |
 | TL1-05 指标 | MetricsLedger | `metrics-ledger.test.ts` |
-| TL1-09 RAG | — | Phase E 落地后新增 |
+| TL1-09 RAG | E1–E3 单测 | `internal-knowledge-retriever.test.ts` · `ai-result-service.test.ts`；E4 embedding 待做 |
 
 ---
 
