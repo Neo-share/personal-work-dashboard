@@ -20,11 +20,16 @@
 |------|----------|----------|
 | 新增页面 | `src/pages/XxxPage.tsx` | `src/App.tsx` |
 | 修改导航/布局壳 | `src/App.tsx` | `src/styles/global.css` |
-| 全局样式/主题 | `src/styles/global.css` | — |
+| 全局样式/主题 | `src/styles/global.css` | `src/main.tsx`（ConfigProvider） |
+| 个人工作台样式 | `src/styles/personal-workbench.css` | `PersonalWorkbenchPage.tsx` |
 | 列表/表格复用 | `src/components/RequirementList.tsx` | 各 Page |
-| 开发助手 UI | `src/components/ChatPanel.tsx` | — |
+| 开发助手 UI | `src/components/ChatPanel.tsx` | `DevShell` in `App.tsx` |
 | 个人工作台 | `src/pages/PersonalWorkbenchPage.tsx` | `src/components/personal-workbench/*` |
-| 个人助手 UI | `src/components/personal-workbench/PersonalAssistantPanel.tsx` | `src/pages/PersonalWorkbenchPage.tsx` |
+| 个人助手 UI | `src/components/personal-workbench/PersonalAssistantPanel.tsx` | `PersonalWorkbenchPage.tsx` |
+| 待办 / AI 结果 | `src/components/personal-workbench/TodoPanel.tsx` | `AiResultPanel.tsx` |
+| 日程时间线 | `src/components/personal-workbench/ScheduleTimeline.tsx` | `MiniCalendar.tsx` |
+| 周报预览 | `src/components/WeeklyReportPreview.tsx` | `WeeklyReportPage.tsx` |
+| 飞书快捷会话 | `src/components/PersonFeishuLink.tsx` | `src/utils/feishu.ts` |
 | 助手导航执行 | `src/hooks/useNavigationAction.ts` | — |
 | 中文标签 | `src/utils/labels.ts` | `../shared/src/types.ts` |
 | tRPC 客户端 | `src/lib/trpc.ts` | `src/main.tsx` |
@@ -43,14 +48,20 @@ client/
 ├── vite.config.ts
 ├── tsconfig.json
 └── src/
-    ├── main.tsx              bootstrap + Provider 栈
-    ├── App.tsx               路由 + 导航 + ChatPanel 挂载
+    ├── main.tsx              bootstrap + Provider 栈（含 ConfigProvider）
+    ├── App.tsx               路由 + DevShell + ChatPanel
     ├── lib/trpc.ts           createTRPCReact<AppRouter>
     ├── pages/                9 个页面（default export）
-    ├── components/           ChatPanel, RequirementList, personal-workbench/*
-    ├── hooks/                useNavigationAction
-    ├── utils/labels.ts       中文标签 helper
-    └── styles/global.css     全局 CSS 变量与布局 class
+    ├── components/
+    │   ├── ChatPanel.tsx
+    │   ├── RequirementList.tsx
+    │   ├── WeeklyReportPreview.tsx
+    │   ├── PersonFeishuLink.tsx
+    │   └── personal-workbench/   TodoPanel, ScheduleTimeline, RecurringTaskPanel,
+    │                               PersonalAssistantPanel, AiResultPanel, MiniCalendar
+    ├── hooks/useNavigationAction.ts
+    ├── utils/labels.ts, feishu.ts
+    └── styles/global.css, personal-workbench.css
 ```
 
 ---
@@ -59,17 +70,27 @@ client/
 
 | 路径 | 页面 | 主要 tRPC / API |
 |------|------|-----------------|
-| `/` | `PersonalWorkbenchPage` | `personalWorkbench.summary`, `todos.*`, `schedule.*`, `recurringTasks.*`, `assistant.*` |
+| `/` | `PersonalWorkbenchPage` | `personalWorkbench.summary`, `getSoulSettings`, `setSoulSettings`, `todos.*`, `schedule.*`, `recurringTasks.*`, `assistant.sessions`, `assistant.createSession`, `assistant.todoThreads` |
 | `/dev-dashboard` | `MyWorkbenchPage` | `workbench.summary` |
-| `/requirements` | `RequirementsPage` | `requirements.list`, `create`；`?riskOnly=1`, `?keyword=` |
+| `/requirements` | `RequirementsPage` | `requirements.list`, `create`；URL 见 §4.1 |
 | `/requirements/:id` | `RequirementDetailPage` | `requirements.detail` + 关联 mutations |
 | `/weekly-report` | `WeeklyReportPage` | `weeklyReport.generate` |
-| `/graph` | `GraphPage` | `graph.get`；`?requirementId=` |
-| `/repositories` | `RepositoriesPage` | `repositories.list`, `branches`, `setBranchNote`, `syncBranches`, `openInCursor` |
+| `/graph` | `GraphPage` | `graph.get`, `requirements.list`；`?requirementId=` |
+| `/repositories` | `RepositoriesPage` | `repositories.list`, `branches`, `setBranchNote`, `syncBranches`, `deleteBranch`, `openInCursor` |
 | `/people` | `PeoplePage` | `people.list`, `create`, `update`, `delete` |
-| `/scan` | `ScanCenterPage` | `settings.get/set*`, `repositories.scanWorkspace`, `latestScan` |
+| `/scan` | `ScanCenterPage` | `settings.getWorkspacePath`, `setWorkspacePath`, `getIgnoreDirs`, `setIgnoreDirs`, `repositories.scanWorkspace`, `latestScan` |
+| `/settings` | — | 重定向至 `/scan` |
 
-全局：`ChatPanel` → `POST /api/chat`（SSE，非 tRPC）
+**助手 API**（非 tRPC）：
+
+| 挂载位置 | 端点 | 请求体要点 |
+|----------|------|------------|
+| `DevShell` 内 `ChatPanel` | `POST /api/chat` | `{ message }` → SSE `text` / `action` / `done` |
+| `PersonalAssistantPanel` | `POST /api/chat` | `{ message, context: 'personal', sessionId?, modifyTodoId? }` → SSE `text` / `refresh` / `modifyMode` / `error` / `blocked` / `done` |
+
+### 4.1 RequirementsPage URL 筛选参数
+
+`status`, `domain`, `keyword`, `riskOnly`, `beforeTesting`, `personId`, `repositoryId`, `releaseFrom`, `releaseTo`（助手 `filterRequirements` 与页面表单共用同一套 searchParams）。
 
 ---
 
@@ -97,9 +118,10 @@ mutation 成功 → trpc.useUtils() → utils.xxx.invalidate()
 | 陷阱 | 说明 | 处理 |
 |------|------|------|
 | **AppRouter 跨包引用** | `lib/trpc.ts` 引 server 源码类型 | 改 server router 后 client 类型自动跟随；勿从 shared 导出 AppRouter |
-| **双助手并存** | 开发域 `ChatPanel` 与个人域 `PersonalAssistantPanel` 走同一 `/api/chat` | 区分 `context=dev/personal`，避免串用数据流 |
-| **个人域刷新依赖 refresh 指令** | 个人助手通过 SSE `refresh` 驱动 query 失效 | 新增助手能力时同步更新 refresh 目标与 invalidate |
-| **对话非 LLM** | ChatPanel 展示规则引擎回复 | 勿在前端接 OpenAI，除非用户明确要求 |
+| **双壳层 + 双助手** | `/` 为个人工作台（`PersonalAssistantPanel`）；开发域页面走 `DevShell` + `ChatPanel` | 同一 `/api/chat` 须区分 `context=dev/personal`，避免串用数据流 |
+| **ChatPanel 非全局** | `ChatPanel` 仅挂载于 `DevShell`，个人工作台页无开发助手 FAB | 开发域助手能力勿假设在个人工作台可用 |
+| **个人域刷新依赖 refresh 指令** | 个人助手通过 SSE `refresh` 驱动 query 失效 | 新增助手能力时同步更新 `PersonalWorkbenchPage.handleRefresh` 目标与 invalidate |
+| **前端不直连 LLM** | 对话均经 `/api/chat` 由服务端处理 | 勿在前端接 OpenAI，除非用户明确要求 |
 | **生产部署** | `pnpm build` → `client/dist/` | 需静态服务器托管；API 走反向代理 |
 
 ---
@@ -109,7 +131,7 @@ mutation 成功 → trpc.useUtils() → utils.xxx.invalidate()
 ### 8.1 新增页面
 
 1. `src/pages/XxxPage.tsx`（default export）
-2. `src/App.tsx` — `navItems` + `<Route>`
+2. `src/App.tsx` — 开发域页面包在 `<DevShell>` 内，并加入 `devNavItems` + `<Route>`
 3. 需要助手跳转时 — 改 `shared` 的 `NavigationActionType`、`server` 的 `assistant-service.ts`、`useNavigationAction.ts`
 
 ### 8.2 接新 tRPC 接口
@@ -120,7 +142,7 @@ mutation 成功 → trpc.useUtils() → utils.xxx.invalidate()
 
 ### 8.3 新增 URL 筛选
 
-- 用 `useSearchParams`（参考 `RequirementsPage` 的 `riskOnly` / `keyword`）
+- 用 `useSearchParams`（参考 `RequirementsPage` 的 `buildListFilters`）
 - 助手筛选通过 `useNavigationAction` 的 `filterRequirements` 写入 searchParams
 
 ### 8.4 展示新需求字段
@@ -131,9 +153,9 @@ mutation 成功 → trpc.useUtils() → utils.xxx.invalidate()
 
 ### 8.5 新增个人工作台能力
 
-1. 优先落在 `src/components/personal-workbench/*`
-2. 接入 `trpc.todos/schedule/recurringTasks/personalWorkbench` 对应 procedure
-3. mutation 成功后同步 invalidate `todos.list`、`schedule.listDay`、`recurringTasks.list`、`personalWorkbench.summary`
+1. 优先落在 `src/components/personal-workbench/*`，样式放 `personal-workbench.css`
+2. 接入 `trpc.todos/schedule/recurringTasks/personalWorkbench/assistant` 对应 procedure
+3. mutation 成功后同步 invalidate；若助手可触发变更，在 `handleRefresh` 中补充 `PersonalAssistantRefresh` 目标
 
 ---
 
