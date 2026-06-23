@@ -1,5 +1,7 @@
 import type { AiResultType, PersonalAssistantSoulSettings } from '@project-manager/shared';
 import { getDb } from '../db/index.js';
+import { isLlmConfigured } from '../llm/llm-config.js';
+import { generateAiResultWithLlm } from '../llm/llm-ai-result-generator.js';
 import { getPersonalAssistantSoulSettings } from './personal-assistant-soul-service.js';
 
 /** 异步生成延迟（毫秒），便于前端展示 pending 态并轮询 */
@@ -104,39 +106,71 @@ export function scheduleAiResultGeneration(
   }
   pendingGenerations.add(todoId);
   setTimeout(() => {
-    try {
-      const todo = getDb()
-        .prepare('SELECT ai_status FROM todos WHERE id = ?')
-        .get(todoId) as { ai_status: string } | undefined;
-      // 仅 pending 时写入，避免重复或已取消
-      if (todo?.ai_status === 'pending') {
-        createAiResultForTodo(todoId, resultType, title);
+    void (async () => {
+      try {
+        const todo = getDb()
+          .prepare('SELECT ai_status FROM todos WHERE id = ?')
+          .get(todoId) as { ai_status: string } | undefined;
+        // 仅 pending 时写入，避免重复或已取消
+        if (todo?.ai_status === 'pending') {
+          await createAiResultForTodo(todoId, resultType, title);
+        }
+      } finally {
+        pendingGenerations.delete(todoId);
       }
-    } finally {
-      pendingGenerations.delete(todoId);
-    }
+    })();
   }, AI_GENERATION_DELAY_MS);
 }
 
-export function createAiResultForTodo(
+type AiResultProvider = 'llm' | 'rule-template';
+
+/** 生成 HTML：已配置 LLM 时优先调用，失败则降级规则模板 */
+async function resolveAiResultHtml(
+  resultType: AiResultType,
+  title: string,
+  description?: string | null,
+): Promise<{ htmlContent: string; provider: AiResultProvider }> {
+  if (isLlmConfigured()) {
+    try {
+      const htmlContent = await generateAiResultWithLlm({ resultType, title, description });
+      return { htmlContent, provider: 'llm' };
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      console.error(`[ai-result] LLM 生成失败，降级模板: ${detail}`);
+    }
+  }
+  return {
+    htmlContent: generateAiHtml(resultType, title),
+    provider: 'rule-template',
+  };
+}
+
+export async function createAiResultForTodo(
   todoId: number,
   resultType: AiResultType,
   title: string,
-): { id: number; version: number; htmlContent: string } {
+): Promise<{ id: number; version: number; htmlContent: string }> {
   const db = getDb();
   const now = new Date().toISOString();
+  const todoRow = db
+    .prepare('SELECT description FROM todos WHERE id = ?')
+    .get(todoId) as { description: string | null } | undefined;
   const latest = db
     .prepare('SELECT MAX(version) as maxVersion FROM todo_ai_results WHERE todo_id = ?')
     .get(todoId) as { maxVersion: number | null };
   const version = (latest.maxVersion ?? 0) + 1;
-  const htmlContent = generateAiHtml(resultType, title);
+  const { htmlContent, provider } = await resolveAiResultHtml(
+    resultType,
+    title,
+    todoRow?.description,
+  );
 
   const result = db
     .prepare(
       `INSERT INTO todo_ai_results (todo_id, version, result_type, html_content, status, provider, created_at)
-       VALUES (?, ?, ?, ?, 'ready', 'rule-template', ?)`,
+       VALUES (?, ?, ?, ?, 'ready', ?, ?)`,
     )
-    .run(todoId, version, resultType, htmlContent, now);
+    .run(todoId, version, resultType, htmlContent, provider, now);
 
   db.prepare(
     `UPDATE todos SET ai_status = 'ready', ai_result_type = ?, updated_at = ? WHERE id = ?`,

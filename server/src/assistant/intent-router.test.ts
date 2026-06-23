@@ -22,14 +22,12 @@ describe('RuleBasedIntentRouter 黄金话术（契约 §3.1）', () => {
       expect(['high', 'medium']).toContain(route.confidence);
 
       if (caseDef.intent === 'schedule' || caseDef.intent === 'recurring_schedule') {
-        expect(route.slots.title).toBeTruthy();
+        expect(route.slots.startAt).toBeTruthy();
+        expect(route.slots.endAt).toBeTruthy();
       }
       if (caseDef.intent === 'recurring') {
         expect(route.slots.frequency).toBeTruthy();
         expect(route.slots.timeOfDay).toBeTruthy();
-      }
-      if (caseDef.intent === 'todo') {
-        expect(route.slots.title).toBeTruthy();
       }
 
       const tools = PERSONAL_INTENT_TOOL_MAP[caseDef.intent];
@@ -46,5 +44,11 @@ describe('RuleBasedIntentRouter 修改模式', () => {
     });
     expect(route.type).toBe('revise_ai');
     expect(route.slots.modifyTodoId).toBe(42);
+  });
+
+  it('路由阶段不设置标题（由编排层 LLM 提取）', () => {
+    const route = ruleBasedIntentRouter.route('本周五提醒我完成UI改版方案', GOLDEN_ROUTE_CONTEXT);
+    expect(route.type).toBe('todo');
+    expect(route.slots.title).toBeUndefined();
   });
 });

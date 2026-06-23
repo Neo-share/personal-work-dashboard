@@ -3,6 +3,8 @@ import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify';
 import Fastify from 'fastify';
 import { getDb } from './db/index.js';
 import { loadServerEnv } from './load-env.js';
+import { checkLlmHealth } from './llm/llm-health.js';
+import { isLlmConfigured } from './llm/llm-config.js';
 import { registerChatRoutes } from './routes/chat.js';
 import { startRecurringTaskScheduler } from './services/recurring-task-scheduler.js';
 import { createContext } from './trpc/context.js';
@@ -36,7 +38,12 @@ async function main() {
 
   await registerChatRoutes(server);
 
-  server.get('/health', async () => ({ ok: true }));
+  server.get('/health', async () => ({
+    ok: true,
+    llmConfigured: isLlmConfigured(),
+  }));
+
+  server.get('/health/llm', async () => checkLlmHealth());
 
   await server.listen({ port: PORT, host: '0.0.0.0' });
   startRecurringTaskScheduler();

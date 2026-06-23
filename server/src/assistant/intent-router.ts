@@ -114,14 +114,6 @@ function parseTimeFromText(text: string): { startAt: string; endAt: string } | n
   return { startAt, endAt: endDate.toISOString() };
 }
 
-function extractTitle(text: string, fallback: string): string {
-  const cleaned = text
-    .replace(/明天|后天|下周|本周|每天|每周|每月|提醒我|提醒|下午|上午|\d+点|\d+[:：]\d+/g, '')
-    .replace(/开|去|参加|安排|进行/g, '')
-    .trim();
-  return cleaned.slice(0, 30) || fallback;
-}
-
 function parseRecurringTime(text: string): string {
   const match = text.match(/(\d+)点/);
   if (match) {
@@ -147,8 +139,6 @@ function buildSlots(
 
   if (type === 'schedule' || type === 'recurring_schedule') {
     const time = parseTimeFromText(text);
-    const title = extractTitle(text, type === 'recurring_schedule' ? '例会' : '会议安排');
-    slots.title = title;
     if (time) {
       slots.startAt = time.startAt;
       slots.endAt = time.endAt;
@@ -161,7 +151,6 @@ function buildSlots(
 
   if (type === 'recurring') {
     const freq = hasRecurringIntent(text)!;
-    slots.title = extractTitle(text, '定时任务');
     slots.frequency = freq;
     slots.timeOfDay = parseRecurringTime(text);
     if (freq === 'weekly') slots.dayOfWeek = 4;
@@ -170,7 +159,6 @@ function buildSlots(
   }
 
   if (type === 'todo') {
-    slots.title = extractTitle(text, '待办事项');
     const time = parseTimeFromText(text);
     if (time) slots.dueAt = time.startAt;
     return slots;

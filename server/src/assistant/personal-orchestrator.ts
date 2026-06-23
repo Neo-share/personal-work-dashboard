@@ -10,6 +10,7 @@ import type {
   PersonalToolName,
 } from '@project-manager/shared';
 import { PERSONAL_INTENT_TOOL_MAP } from '@project-manager/shared';
+import { extractTitleWithLlm, MAX_ASSISTANT_TITLE_LENGTH } from '../llm/llm-title-extractor.js';
 import { dbContextRetriever } from './context-retriever.js';
 import { ruleBasedIntentRouter } from './intent-router.js';
 import {
@@ -134,7 +135,7 @@ function buildToolParams(
   switch (tool) {
     case 'todo.create':
       return {
-        title: slots.title ?? '待办事项',
+        title: slots.title ?? (message.trim().slice(0, MAX_ASSISTANT_TITLE_LENGTH) || '待办事项'),
         description: '来源：自然语言',
         dueAt: slots.dueAt,
         source: 'natural_language' as const,
@@ -240,17 +241,23 @@ export class PersonalAssistantOrchestrator implements PersonalOrchestrator {
       return { reply };
     }
 
+    const resolvedTitle = await extractTitleWithLlm(text, route.type);
+    const routeWithTitle: IntentRouteResult = {
+      ...route,
+      slots: { ...route.slots, title: resolvedTitle },
+    };
+
     const intentTools =
-      route.type === 'revise_ai'
+      routeWithTitle.type === 'revise_ai'
         ? (['todo.revise_ai'] as PersonalToolName[])
-        : PERSONAL_INTENT_TOOL_MAP[route.type as keyof typeof PERSONAL_INTENT_TOOL_MAP];
+        : PERSONAL_INTENT_TOOL_MAP[routeWithTitle.type as keyof typeof PERSONAL_INTENT_TOOL_MAP];
 
     let refresh: PersonalAssistantRefresh[] | undefined;
     let lastPayload: unknown;
     let createdTaskId: number | undefined;
 
     for (const toolName of intentTools) {
-      const params = buildToolParams(toolName, route, text, input.modifyTodoId, createdTaskId);
+      const params = buildToolParams(toolName, routeWithTitle, text, input.modifyTodoId, createdTaskId);
       const toolVerdict = personalGuardrailEngine.checkToolCall(toolName, params);
       if (!toolVerdict.allowed) {
         return buildBlocked(toolVerdict);
@@ -265,7 +272,7 @@ export class PersonalAssistantOrchestrator implements PersonalOrchestrator {
       }
     }
 
-    let reply = buildReplyForIntent(route, lastPayload);
+    let reply = buildReplyForIntent(routeWithTitle, lastPayload);
     const outputVerdict = personalGuardrailEngine.checkOutput(reply);
     if (!outputVerdict.allowed) {
       reply = sanitizeAssistantReply(reply);
@@ -276,7 +283,7 @@ export class PersonalAssistantOrchestrator implements PersonalOrchestrator {
     inMemoryMetricsLedger.record({
       name: 'pw.orchestrator.completed',
       ts: new Date().toISOString(),
-      tags: { type: route.type },
+      tags: { type: routeWithTitle.type },
     });
 
     const result: PersonalAssistantResult = { reply, refresh };
