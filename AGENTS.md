@@ -38,6 +38,7 @@
 | 分阶段技术方案 | `PROJECT_MANAGER_PLATFORM_PLAN.md` | `IMPLEMENTATION_STATUS.md` |
 | 个人工作台产品需求 | `docs/个人工作台/个人工作台.md` | `待办知识库-RAG方案.md` |
 | 个人工作台向外交付说明 | `docs/个人工作台/个人工作台-交付说明.md` | `个人工作台.md`、`个人工作台-功能点.md` |
+| 个人工作台 HTML 交付包 | `docs/个人工作台/delivery/*.html` | `个人工作台-交付说明.md` §10.1 |
 | 个人工作台 L4 功能点与完成状态 | `docs/个人工作台/个人工作台-功能点.md` §实现状态总览 | `个人工作台-技术功能点.md`、`IMPLEMENTATION_STATUS.md` §13 |
 | 个人助手五层架构 | `server/src/assistant/ARCHITECTURE.md` | `assistant-contract.ts`、`guardrail-enhancement.md` |
 | 个人工作台 TL4 技术对照 | `docs/个人工作台/个人工作台-技术功能点.md` | `IMPLEMENTATION_STATUS.md` §13 |

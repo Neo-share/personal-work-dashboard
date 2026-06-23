@@ -129,6 +129,19 @@ interface GuardrailEngine {
 
 SSE 扩展事件：`{ type: 'blocked', code, message }`。
 
+**F3+ 增强（2026-06，实现见 `guardrail-engine.ts`）**
+
+| 项 | 说明 |
+|----|------|
+| 输入归一化 | `normalizeGuardrailText`：NFKC、去零宽字符、折叠空白 |
+| 注入模式 | `INJECTION_PATTERNS`：指令覆盖、提示词提取、越狱、模板分隔符、XSS；中英双语 |
+| 敏感动作 | `SENSITIVE_ACTION_PATTERNS`：删库/批量清空待办·日程·定时/SQL/`rm -rf` 等 |
+| 输入层直拦 | 高风险敏感动作 `code: sensitive_action`，不依赖意图置信度 |
+| 意图层二次 | 低置信度 + 敏感动作词 → `sensitive_action_low_confidence` |
+| 可观测 | `pw.guardrail.blocked { layer, code }` |
+
+验收场景与单测（13 条）：[guardrail-enhancement.md §5](../../../TODO/guardrail-enhancement.md#5-验收场景) · 向外交付摘要见 [个人工作台-交付说明.md §4.1](../../../docs/个人工作台/个人工作台-交付说明.md#41-个人助手四层护栏安全增强)。
+
 ### 3.4 ContextRetriever
 
 ```typescript
@@ -264,7 +277,7 @@ server/src/assistant/
 - [x] 五层实现文件在 `server/src/assistant/` 落地
 - [x] `/api/chat` 个人上下文走 orchestrator，行为与迁移前回归一致
 - [x] 黄金话术 11 条自动化回归通过
-- [x] 护栏拦截可 SSE `blocked` 且不落库
+- [x] 护栏拦截可 SSE `blocked` 且不落库（F3+：13 条单测覆盖 G1–G5 / G2b–G3c）
 - [x] MetricsLedger 可查询最近一次请求的 intent + tools + latency
 - [x] MCP 工具经 `McpContextRetriever` 注入，无需改 chat 路由（**F4**）
 

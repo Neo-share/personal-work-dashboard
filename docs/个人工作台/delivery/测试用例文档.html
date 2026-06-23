@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>个人 AI 助手工作台 — 测试用例文档</title>
+  <link rel="stylesheet" href="_shared.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="doc-header">
+      <h1>个人 AI 助手工作台 — 测试用例文档</h1>
+      <p class="meta">向外交付物 · 合计 77 条 · 框架 Vitest · 核对日期 2026-06-23</p>
+      <nav class="doc-nav">
+        <a href="架构设计文档.html">架构设计</a>
+        <a class="is-current" href="测试用例文档.html">测试用例</a>
+        <a href="测试报告.html">测试报告</a>
+      </nav>
+    </header>
+
+    <section>
+      <h2>1. 文档说明</h2>
+      <p>本文列出个人工作台与助手核心模块的<strong>自动化测试用例</strong>。执行命令：<code>pnpm test</code>（仓库根目录）。</p>
+      <table>
+        <tr><th>项</th><th>说明</th></tr>
+        <tr><td>测试文件</td><td>15 个（<code>server/src/**/*.test.ts</code>）</td></tr>
+        <tr><td>用例总数</td><td>77</td></tr>
+        <tr><td>类型</td><td>单元测试 + 编排链路集成（黄金话术 E2E）</td></tr>
+        <tr><td>不纳入</td><td>浏览器 E2E、LLM 在线评测、开发域 service 全量</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>2. 黄金话术（产品 §6.4，11 条）</h2>
+      <p>来源：<code>personal-assistant-golden.test.ts</code> + <code>intent-router.test.ts</code></p>
+      <table>
+        <tr><th>ID</th><th>输入</th><th>期望意图</th><th>期望行为摘要</th></tr>
+        <tr><td>G01</td><td>明天下午3点开项目评审会</td><td>schedule</td><td>写入日程，不增待办；refresh 含 schedule</td></tr>
+        <tr><td>G02</td><td>下周二上午10点面试产品经理</td><td>schedule</td><td>同上</td></tr>
+        <tr><td>G03</td><td>周三去北京出差</td><td>schedule</td><td>同上</td></tr>
+        <tr><td>G04</td><td>本周五提醒我完成UI改造方案</td><td>todo</td><td>创建待办；refresh 含 todos</td></tr>
+        <tr><td>G05</td><td>提醒我每天下午5点复盘港股收盘情况</td><td>recurring</td><td>创建定时任务；refresh 含 recurringTasks</td></tr>
+        <tr><td>G06</td><td>提醒我每月15号下午5点回访客户</td><td>recurring</td><td>同上</td></tr>
+        <tr><td>G07</td><td>提醒我下周三完成协议合规审核</td><td>todo</td><td>创建待办</td></tr>
+        <tr><td>G08</td><td>会后整理会议纪要</td><td>todo</td><td>创建待办（可触发 AI）</td></tr>
+        <tr><td>G09</td><td>每周五开周会</td><td>recurring_schedule</td><td>写日程不写定时任务</td></tr>
+        <tr><td>G10</td><td>每天上午10点开站会</td><td>recurring_schedule</td><td>同上</td></tr>
+        <tr><td>G11</td><td>今天天气怎么样</td><td>unknown</td><td>引导文案，不写库</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>3. TL1-05 个人助手与五层底座</h2>
+      <h3>3.1 意图路由 intent-router.test.ts（13）</h3>
+      <table>
+        <tr><th>ID</th><th>用例</th><th>验证点</th></tr>
+        <tr><td>IR-01~11</td><td>黄金话术 #1~#11 路由</td><td>type 与产品基准一致</td></tr>
+        <tr><td>IR-12</td><td>modifyTodoId 存在</td><td>返回 revise_ai</td></tr>
+        <tr><td>IR-13</td><td>路由阶段</td><td>标题由编排层 LLM 提取，路由不设置 title</td></tr>
+      </table>
+      <h3>3.2 编排 personal-orchestrator.test.ts（7）</h3>
+      <table>
+        <tr><th>ID</th><th>用例</th><th>验证点</th></tr>
+        <tr><td>OR-01</td><td>输入层护栏拦截</td><td>blocked + prompt_injection 指标</td></tr>
+        <tr><td>OR-02</td><td>未知意图</td><td>引导文案，无 refresh</td></tr>
+        <tr><td>OR-03</td><td>日程时间解析失败</td><td>「未能解析具体时间」</td></tr>
+        <tr><td>OR-04</td><td>定时重复规则解析失败</td><td>「未能解析重复时间」</td></tr>
+        <tr><td>OR-05</td><td>修改模式 revise_ai</td><td>版本递增 + refresh todos</td></tr>
+        <tr><td>OR-06</td><td>无效 modifyTodoId</td><td>tool 层 blocked</td></tr>
+        <tr><td>OR-07</td><td>创建待办成功</td><td>pw.orchestrator.completed 指标</td></tr>
+      </table>
+      <h3>3.3 护栏 guardrail-engine.test.ts（13）</h3>
+      <table>
+        <tr><th>ID</th><th>用例</th><th>验证点</th></tr>
+        <tr><td>GR-01</td><td>G1 超长输入</td><td>input 层 input_too_long</td></tr>
+        <tr><td>GR-02</td><td>G2 英文注入话术</td><td>input 层 prompt_injection</td></tr>
+        <tr><td>GR-03</td><td>G2b 中文指令覆盖</td><td>input 层 prompt_injection</td></tr>
+        <tr><td>GR-04</td><td>G2c 模板分隔符</td><td>input 层 prompt_injection</td></tr>
+        <tr><td>GR-05</td><td>G2d 开发者模式越狱</td><td>input 层 prompt_injection</td></tr>
+        <tr><td>GR-06</td><td>G2e 零宽字符绕过</td><td>归一化后仍 prompt_injection</td></tr>
+        <tr><td>GR-07</td><td>G3 低置信度敏感动作</td><td>intent 层 sensitive_action_low_confidence</td></tr>
+        <tr><td>GR-08</td><td>G3b 删除所有待办</td><td>input 层 sensitive_action</td></tr>
+        <tr><td>GR-09</td><td>G3c SQL 破坏性语句</td><td>input 层 sensitive_action</td></tr>
+        <tr><td>GR-10</td><td>G4 伪造 modifyTodoId</td><td>tool 层 invalid_modify_todo_id</td></tr>
+        <tr><td>GR-11</td><td>G5 路径泄露</td><td>输出脱敏 [路径已隐藏]</td></tr>
+        <tr><td>GR-12</td><td>空消息</td><td>empty_message</td></tr>
+        <tr><td>GR-13</td><td>正常待办创建</td><td>放行 allowed=true</td></tr>
+      </table>
+      <h3>3.4 工具注册 tool-registry.test.ts（5）+ register-tools（1）+ todo-tools（3）</h3>
+      <table>
+        <tr><th>ID</th><th>用例</th><th>验证点</th></tr>
+        <tr><td>TR-01</td><td>注册后 invoke</td><td>metrics pw.tool.invoked</td></tr>
+        <tr><td>TR-02</td><td>未注册工具</td><td>ToolNotRegisteredError</td></tr>
+        <tr><td>TR-03</td><td>Zod 校验失败</td><td>ToolParamsValidationError</td></tr>
+        <tr><td>TR-04</td><td>重复注册</td><td>抛错</td></tr>
+        <tr><td>TR-05</td><td>INTENT_TOOL_MAP</td><td>工具名格式合法</td></tr>
+        <tr><td>TT-01</td><td>register-tools F4</td><td>含 mcp.feishu.get_doc</td></tr>
+        <tr><td>TT-02</td><td>todo.create + externalSnippets</td><td>落库 + refresh</td></tr>
+        <tr><td>TT-03</td><td>todo.revise_ai 成功</td><td>version+1、contextSummary</td></tr>
+        <tr><td>TT-04</td><td>todo.revise_ai 异常</td><td>不支持 AI / 不存在抛错</td></tr>
+      </table>
+      <h3>3.5 上下文 context-retriever.test.ts（2）</h3>
+      <table>
+        <tr><th>ID</th><th>用例</th><th>验证点</th></tr>
+        <tr><td>CR-01</td><td>完整上下文</td><td>messages、activeTodo、todayScheduleCount、soulSettings</td></tr>
+        <tr><td>CR-02</td><td>无 modifyTodoId</td><td>activeTodo 为空</td></tr>
+      </table>
+      <h3>3.6 指标与调度 metrics-ledger.test.ts（4）</h3>
+      <table>
+        <tr><th>ID</th><th>用例</th><th>验证点</th></tr>
+        <tr><td>ML-01</td><td>scheduler 启动 tick</td><td>立即 runDueRecurringTasks</td></tr>
+        <tr><td>ML-02</td><td>到期物化</td><td>materialize + metrics 日志</td></tr>
+        <tr><td>ML-03</td><td>无到期任务</td><td>不调用 materialize</td></tr>
+        <tr><td>ML-04</td><td>MetricsLedger</td><td>record / queryRecent 过滤</td></tr>
+      </table>
+      <h3>3.7 MCP F4（8）</h3>
+      <table>
+        <tr><th>ID</th><th>文件</th><th>用例摘要</th></tr>
+        <tr><td>MC-01~02</td><td>mcp-context-retriever</td><td>无 MCP 退化；成功合并 externalSnippets</td></tr>
+        <tr><td>MC-03~06</td><td>feishu-doc-client</td><td>摘要截断、HTTP 成功/失败、latency/fail 指标</td></tr>
+        <tr><td>MC-07~08</td><td>feishu-url</td><td>wiki/docx URL 提取；无链接空数组</td></tr>
+      </table>
+      <h3>3.8 黄金话术 E2E personal-assistant-golden.test.ts（11）</h3>
+      <p>与 §2 黄金话术一一对应；额外断言 DB 表计数变化与 refresh 契约。</p>
+    </section>
+
+    <section>
+      <h2>4. TL1-04 定时任务 recurring-task-service.test.ts（5）</h2>
+      <table>
+        <tr><th>ID</th><th>用例</th><th>验证点</th></tr>
+        <tr><td>RC-01</td><td>formatCycleLabel</td><td>周期文案格式化</td></tr>
+        <tr><td>RC-02</td><td>daily 物化</td><td>维持未来 5 条待办</td></tr>
+        <tr><td>RC-03</td><td>weekly 物化</td><td>仅下一次待办</td></tr>
+        <tr><td>RC-04</td><td>runDueRecurringTasks</td><td>daily + 到期 weekly/monthly</td></tr>
+        <tr><td>RC-05</td><td>disabled 任务</td><td>不产出待办</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>5. TL1-09 RAG E1–E3</h2>
+      <h3>5.1 internal-knowledge-retriever.test.ts（2）</h3>
+      <table>
+        <tr><th>ID</th><th>用例</th><th>验证点</th></tr>
+        <tr><td>RG-01</td><td>generate 检索</td><td>日程窗 + 同类型历史结果</td></tr>
+        <tr><td>RG-02</td><td>revise 检索</td><td>版本链 + 会话消息</td></tr>
+      </table>
+      <h3>5.2 ai-result-service.test.ts（3）</h3>
+      <table>
+        <tr><th>ID</th><th>用例</th><th>验证点</th></tr>
+        <tr><td>AR-01</td><td>formatAiResultProvider</td><td>snippetIds 写入 provider</td></tr>
+        <tr><td>AR-02</td><td>buildReviseContextSummary</td><td>含日程/外部文档说明</td></tr>
+        <tr><td>AR-03</td><td>mergeExternalSnippetsIntoKnowledge</td><td>MCP 片段置前</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>6. 用例与 TL1 模块对照</h2>
+      <table>
+        <tr><th>TL1</th><th>测试文件</th><th>用例数</th></tr>
+        <tr><td>TL1-04 定时任务</td><td>recurring-task-service · metrics-ledger(scheduler)</td><td>5 + 3</td></tr>
+        <tr><td>TL1-05 助手五层</td><td>intent-router · orchestrator · guardrail · tool-registry · todo-tools · context · golden</td><td>13+7+13+5+3+2+11</td></tr>
+        <tr><td>TL1-05 MCP</td><td>mcp-context · feishu-doc · feishu-url · register-tools</td><td>2+4+2+1</td></tr>
+        <tr><td>TL1-09 RAG</td><td>internal-knowledge-retriever · ai-result-service</td><td>2 + 3</td></tr>
+        <tr><td colspan="2"><strong>合计</strong></td><td><strong>77</strong></td></tr>
+      </table>
+    </section>
+
+    <footer>个人 AI 助手工作台 · 测试用例文档 · 执行 <code>pnpm test</code> 可复现</footer>
+  </div>
+</body>
+</html>

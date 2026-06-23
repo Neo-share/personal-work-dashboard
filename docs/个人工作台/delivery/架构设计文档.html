@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>个人 AI 助手工作台 — 架构设计文档</title>
+  <link rel="stylesheet" href="_shared.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="doc-header">
+      <h1>个人 AI 助手工作台 — 架构设计文档</h1>
+      <p class="meta">向外交付物 · 版本 1.0 · 核对日期 2026-06-23 · 项目 project-manager</p>
+      <nav class="doc-nav">
+        <a class="is-current" href="架构设计文档.html">架构设计</a>
+        <a href="测试用例文档.html">测试用例</a>
+        <a href="测试报告.html">测试报告</a>
+      </nav>
+    </header>
+
+    <section>
+      <h2>1. 文档说明</h2>
+      <p>本文描述「个人 AI 助手工作台」的实现架构，供验收与二次开发参考。产品需求以 Markdown SSOT 为准；本文聚焦<strong>技术架构与模块边界</strong>。</p>
+      <table>
+        <tr><th>项</th><th>说明</th></tr>
+        <tr><td>产品范围</td><td>首页 <code>/</code>：待办、日程、定时任务、个人助手、AI 结果</td></tr>
+        <tr><td>能力分层</td><td>定时任务（调度）→ 物化待办（工作单元）→ 个人助手 AI（待办层）</td></tr>
+        <tr><td>数据持久化</td><td>SQLite（<code>server/data/project-manager.db</code>）</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>2. 系统总体架构</h2>
+      <pre>┌─────────────────────────────────────────────────────────────┐
+│  Browser  http://localhost:5175                             │
+│  PersonalWorkbenchPage · TodoPanel · ScheduleTimeline · …   │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ tRPC + SSE /api/chat?context=personal
+┌───────────────────────────▼─────────────────────────────────┐
+│  Fastify Server  :3100                                      │
+│  ├─ trpc/router        业务 API（待办/日程/定时/助手会话）     │
+│  └─ routes/chat.ts     SSE 个人助手对话                       │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+        ┌───────────────────┼───────────────────┐
+        ▼                   ▼                   ▼
+  services/*         assistant/*         shared/types
+  业务 SQL 与规则      五层编排底座          契约与领域类型</pre>
+      <h3>2.1 Monorepo 包结构</h3>
+      <table>
+        <tr><th>包</th><th>职责</th></tr>
+        <tr><td><code>client/</code></td><td>React + Vite + Ant Design；个人工作台与开发域 UI</td></tr>
+        <tr><td><code>server/</code></td><td>Fastify + tRPC + SQLite；助手五层与业务 service</td></tr>
+        <tr><td><code>shared/</code></td><td>领域类型、<code>assistant-contract.ts</code> 助手协议</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>3. 前端架构（个人工作台）</h2>
+      <table>
+        <tr><th>模块</th><th>路径</th><th>说明</th></tr>
+        <tr><td>页面壳</td><td><code>PersonalWorkbenchPage.tsx</code></td><td>三 Tab：日程与事项 / 定时任务 / 开发域</td></tr>
+        <tr><td>待办</td><td><code>TodoPanel</code></td><td>四态筛选、AI 入口条、历史区</td></tr>
+        <tr><td>日程</td><td><code>ScheduleTimeline</code> · <code>MiniCalendar</code></td><td>0–24h 时间轴、渠道开关</td></tr>
+        <tr><td>定时任务</td><td><code>RecurringTaskPanel</code></td><td>规则 CRUD、物化预览</td></tr>
+        <tr><td>个人助手</td><td><code>PersonalAssistantPanel</code></td><td>SSE 对话、refresh 回流、修改模式</td></tr>
+        <tr><td>AI 结果</td><td><code>AiResultPanel</code></td><td>全屏预览、多轮修改、确认完成</td></tr>
+      </table>
+      <p>布局：待办 36% + 日程 64% + 助手固定 340px；≤1100px 堆叠，≤900px 助手下移。</p>
+    </section>
+
+    <section>
+      <h2>4. 个人助手五层架构（F0–F4）</h2>
+      <p>编排入口：<code>PersonalAssistantOrchestrator.handle</code>（<code>server/src/assistant/personal-orchestrator.ts</code>）。契约 SSOT：<code>shared/src/assistant-contract.ts</code>。</p>
+      <pre>POST /api/chat (context=personal)
+  → personal-assistant-service（薄封装）
+  → PersonalOrchestrator.handle
+  → GuardrailEngine   输入 / 意图 / 工具 / 输出 四层
+  → IntentRouter      规则 NL → 意图 + 槽位
+  → ToolRegistry      白名单工具 invoke
+  → McpContextRetriever  DB 上下文 + 可选 externalSnippets
+  → MetricsLedger     pw.* 指标
+  → SSE: text | refresh | modifyMode | blocked | done</pre>
+      <table>
+        <tr><th>层</th><th>实现</th><th>职责</th></tr>
+        <tr><td>IntentRouter</td><td><code>intent-router.ts</code></td><td>schedule / todo / recurring / recurring_schedule / revise_ai / unknown</td></tr>
+        <tr><td>ToolRegistry</td><td><code>tool-registry.ts</code> + <code>tools/*</code></td><td>todo / schedule / recurring / MCP 工具注册与 Zod 校验</td></tr>
+        <tr><td>GuardrailEngine</td><td><code>guardrail-engine.ts</code></td><td>四层护栏（F3+）：输入归一化、扩展注入/敏感动作、路径脱敏；13 条单测</td></tr>
+        <tr><td>ContextRetriever</td><td><code>context-retriever.ts</code> + <code>mcp-context-retriever.ts</code></td><td>会话、待办、日程统计、飞书文档片段</td></tr>
+        <tr><td>MetricsLedger</td><td><code>metrics-ledger.ts</code></td><td>intent / tool / guardrail / mcp 指标</td></tr>
+      </table>
+      <h3>4.1 意图 → 工具映射</h3>
+      <table>
+        <tr><th>Intent</th><th>Tools</th></tr>
+        <tr><td>schedule</td><td>schedule.create_local</td></tr>
+        <tr><td>todo</td><td>todo.create（含能力判定 → AI）</td></tr>
+        <tr><td>recurring</td><td>recurring.create → recurring.materialize</td></tr>
+        <tr><td>recurring_schedule</td><td>schedule.create_local</td></tr>
+        <tr><td>revise_ai</td><td>todo.revise_ai</td></tr>
+      </table>
+      <h3>4.2 四层护栏（F3+ 安全增强）</h3>
+      <p>个人助手链路采用<strong>确定性代码护栏</strong>（不依赖 LLM 判断）。规则细则 SSOT：<code>TODO/guardrail-enhancement.md</code>；向外交付摘要见交付说明 §4.1。</p>
+      <table>
+        <tr><th>层</th><th>检查项</th><th>失败动作</th></tr>
+        <tr><td>输入</td><td>空消息、超长（2000 字）、提示注入、高风险敏感动作</td><td>SSE <code>blocked</code>，不写库</td></tr>
+        <tr><td>意图</td><td>低置信度 + 敏感动作词</td><td>SSE <code>blocked</code></td></tr>
+        <tr><td>工具</td><td>白名单、Zod 参数、modifyTodoId 归属</td><td>拒绝调用</td></tr>
+        <tr><td>输出</td><td>内部文件路径</td><td>脱敏为 <code>[路径已隐藏]</code></td></tr>
+      </table>
+      <p><strong>2026-06 增强要点</strong>：<code>normalizeGuardrailText</code>（NFKC / 零宽字符 / 空白折叠）；约 24 条注入模式（中英双语、模板分隔符、越狱）；敏感动作输入层直拦（<code>sensitive_action</code>）；指标 <code>pw.guardrail.blocked</code>。</p>
+    </section>
+
+    <section>
+      <h2>5. AI 与 RAG 架构</h2>
+      <h3>5.1 AI 初步结果与修订</h3>
+      <pre>createTodo / triggerAiGeneration
+  → internal-knowledge-retriever.retrieveForTodo（R0 规则检索）
+  → llm-ai-result-generator（OpenAI 兼容 API）
+  → 失败或无 LLM_API_KEY → 规则模板降级
+  → todo_ai_results 版本递增 + 助手会话消息</pre>
+      <h3>5.2 内部 RAG（E1–E3，SQLite 闭环）</h3>
+      <p>检索源：当日日程窗、历史同类型 AI 结果、已完成待办片段等。不依赖外部 OAuth 或 MCP。</p>
+      <h3>5.3 外部 MCP（F4，可选）</h3>
+      <p>用户消息含飞书文档 URL 时，经 HTTP 桥接（<code>FEISHU_MCP_HTTP_URL</code>）拉取摘要注入 <code>externalSnippets</code>；未配置时自动降级，不影响主链路。</p>
+    </section>
+
+    <section>
+      <h2>6. 数据模型（核心表）</h2>
+      <table>
+        <tr><th>表</th><th>用途</th></tr>
+        <tr><td>todos</td><td>待办主表（状态、AI 状态、来源）</td></tr>
+        <tr><td>todo_ai_results</td><td>AI 结果多版本 HTML</td></tr>
+        <tr><td>schedule_events · schedule_event_sources</td><td>日程与多渠道来源</td></tr>
+        <tr><td>recurring_tasks · recurring_task_runs</td><td>定时规则与物化记录</td></tr>
+        <tr><td>assistant_sessions · assistant_messages</td><td>助手会话与消息</td></tr>
+        <tr><td>calendar_sources</td><td>飞书/钉钉/Outlook/本地渠道开关</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>7. 技术栈与环境</h2>
+      <table>
+        <tr><th>层</th><th>技术</th></tr>
+        <tr><td>前端</td><td>React · Vite · Ant Design · tRPC Client</td></tr>
+        <tr><td>后端</td><td>Fastify · tRPC · better-sqlite3</td></tr>
+        <tr><td>助手</td><td>规则意图 + Tool 编排 · SSE</td></tr>
+        <tr><td>LLM</td><td>OpenAI 兼容 API（<code>LLM_API_KEY</code> / <code>LLM_API_BASE</code> / <code>LLM_MODEL</code>）</td></tr>
+        <tr><td>测试</td><td>Vitest + v8 coverage · <code>pnpm agent:gate</code></td></tr>
+      </table>
+      <p>启动：<code>pnpm install && pnpm dev</code> · 前端 :5175 · 后端 :3100</p>
+    </section>
+
+    <section>
+      <h2>8. 实现目录索引</h2>
+      <pre>server/src/assistant/
+├── personal-orchestrator.ts   编排入口
+├── intent-router.ts           意图路由
+├── tool-registry.ts           工具注册
+├── guardrail-engine.ts        护栏
+├── context-retriever.ts       DB 上下文
+├── mcp-context-retriever.ts   MCP 上下文
+├── metrics-ledger.ts          指标
+├── mcp/                       飞书 HTTP 桥接
+└── tools/                     todo / schedule / recurring / mcp
+
+server/src/services/
+├── todo-service.ts            待办 CRUD
+├── schedule-service.ts        日程
+├── recurring-task-service.ts  定时任务与物化
+├── ai-result-service.ts       AI 生成与修订
+├── internal-knowledge-retriever.ts  RAG R0
+└── personal-assistant-service.ts  助手薄封装</pre>
+    </section>
+
+    <footer>个人 AI 助手工作台 · 架构设计文档 · 非权威产品需求以 Markdown SSOT 为准</footer>
+  </div>
+</body>
+</html>

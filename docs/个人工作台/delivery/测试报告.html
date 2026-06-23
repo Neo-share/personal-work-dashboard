@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>个人 AI 助手工作台 — 测试报告</title>
+  <link rel="stylesheet" href="_shared.css" />
+  <style>
+    .cov-high { color: var(--ok); font-weight: 600; }
+    .cov-mid { color: var(--warn); font-weight: 600; }
+    .cov-low { color: #dc2626; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="doc-header">
+      <h1>个人 AI 助手工作台 — 测试报告</h1>
+      <p class="meta">向外交付物 · 生成时间 2026-06-23 · 命令 pnpm test · pnpm test:coverage · pnpm agent:gate</p>
+      <nav class="doc-nav">
+        <a href="架构设计文档.html">架构设计</a>
+        <a href="测试用例文档.html">测试用例</a>
+        <a class="is-current" href="测试报告.html">测试报告</a>
+      </nav>
+    </header>
+
+    <section>
+      <h2>1. 执行摘要</h2>
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="label">测试文件</div>
+          <div class="value">15</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">用例总数</div>
+          <div class="value">77</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">通过</div>
+          <div class="value" style="color:var(--ok)">77</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">失败</div>
+          <div class="value">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">通过率</div>
+          <div class="value">100%</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">门禁 agent:gate</div>
+          <div class="value"><span class="badge badge-ok">PASS</span></div>
+        </div>
+      </div>
+      <p><span class="badge badge-ok">结论</span> 个人工作台与助手核心模块自动化测试全部通过；纳入范围行覆盖率 <strong>75.97%</strong>（<code>assistant/</code> 92.79% · 个人工作台 <code>services/</code> 63.21%），开发域 service 不计入分母。</p>
+    </section>
+
+    <section>
+      <h2>2. 测试执行结果</h2>
+      <table>
+        <tr><th>测试文件</th><th>用例数</th><th>结果</th><th>耗时（约）</th></tr>
+        <tr><td>intent-router.test.ts</td><td>13</td><td><span class="badge badge-ok">PASS</span></td><td>9ms</td></tr>
+        <tr><td>personal-assistant-golden.test.ts</td><td>11</td><td><span class="badge badge-ok">PASS</span></td><td>19ms</td></tr>
+        <tr><td>personal-orchestrator.test.ts</td><td>7</td><td><span class="badge badge-ok">PASS</span></td><td>18ms</td></tr>
+        <tr><td>guardrail-engine.test.ts</td><td>13</td><td><span class="badge badge-ok">PASS</span></td><td>13ms</td></tr>
+        <tr><td>tool-registry.test.ts</td><td>5</td><td><span class="badge badge-ok">PASS</span></td><td>8ms</td></tr>
+        <tr><td>recurring-task-service.test.ts</td><td>5</td><td><span class="badge badge-ok">PASS</span></td><td>9ms</td></tr>
+        <tr><td>metrics-ledger.test.ts</td><td>4</td><td><span class="badge badge-ok">PASS</span></td><td>8ms</td></tr>
+        <tr><td>feishu-doc-client.test.ts</td><td>4</td><td><span class="badge badge-ok">PASS</span></td><td>7ms</td></tr>
+        <tr><td>todo-tools.test.ts</td><td>3</td><td><span class="badge badge-ok">PASS</span></td><td>12ms</td></tr>
+        <tr><td>ai-result-service.test.ts</td><td>3</td><td><span class="badge badge-ok">PASS</span></td><td>6ms</td></tr>
+        <tr><td>context-retriever.test.ts</td><td>2</td><td><span class="badge badge-ok">PASS</span></td><td>9ms</td></tr>
+        <tr><td>mcp-context-retriever.test.ts</td><td>2</td><td><span class="badge badge-ok">PASS</span></td><td>7ms</td></tr>
+        <tr><td>internal-knowledge-retriever.test.ts</td><td>2</td><td><span class="badge badge-ok">PASS</span></td><td>8ms</td></tr>
+        <tr><td>feishu-url.test.ts</td><td>2</td><td><span class="badge badge-ok">PASS</span></td><td>5ms</td></tr>
+        <tr><td>register-tools.test.ts</td><td>1</td><td><span class="badge badge-ok">PASS</span></td><td>4ms</td></tr>
+        <tr><th colspan="2">合计</th><th>77 PASS</th><th>~800ms</th></tr>
+      </table>
+      <p>运行环境：Vitest 3.2.6 · Node.js · 每用例独立内存 SQLite（<code>server/src/test/setup.ts</code>）。</p>
+    </section>
+
+    <section>
+      <h2>3. 代码覆盖率</h2>
+      <p>工具：Vitest + @vitest/coverage-v8 · 范围：<code>src/assistant/**</code> + 个人工作台 9 个 <code>services/</code> 文件（开发域 requirement/repository 等<strong>不纳入</strong>）</p>
+
+      <h3>3.1 汇总</h3>
+      <table>
+        <tr><th>范围</th><th>行覆盖</th><th>分支</th><th>函数</th><th>说明</th></tr>
+        <tr>
+          <td><strong>纳入范围合计</strong></td>
+          <td class="cov-high">75.97%</td><td>76.40%</td><td>77.03%</td>
+          <td>1856 / 2443 行</td>
+        </tr>
+        <tr>
+          <td><strong>assistant/ 合计</strong></td>
+          <td class="cov-high">92.79%</td><td>81.81%</td><td>95.34%</td>
+          <td>五层 + MCP + tools</td>
+        </tr>
+        <tr>
+          <td>个人工作台 services/ 合计</td>
+          <td class="cov-mid">63.21%</td><td>70.16%</td><td>64.00%</td>
+          <td>9 个 service；开发域文件不在分母内</td>
+        </tr>
+      </table>
+
+      <h3>3.2 assistant/ 模块明细</h3>
+      <table>
+        <tr><th>文件</th><th>行覆盖</th><th>可视化</th></tr>
+        <tr><td>context-retriever.ts</td><td class="cov-high">100%</td><td><div class="bar-wrap"><div class="bar" style="width:100%"></div></div></td></tr>
+        <tr><td>todo-tools.ts</td><td class="cov-high">100%</td><td><div class="bar-wrap"><div class="bar" style="width:100%"></div></div></td></tr>
+        <tr><td>feishu-url.ts</td><td class="cov-high">100%</td><td><div class="bar-wrap"><div class="bar" style="width:100%"></div></div></td></tr>
+        <tr><td>recurring-tools.ts / schedule-tools.ts / register-tools.ts</td><td class="cov-high">100%</td><td><div class="bar-wrap"><div class="bar" style="width:100%"></div></div></td></tr>
+        <tr><td>tool-registry.ts</td><td class="cov-high">96.77%</td><td><div class="bar-wrap"><div class="bar" style="width:96.77%"></div></div></td></tr>
+        <tr><td>mcp-config.ts</td><td class="cov-high">95.23%</td><td><div class="bar-wrap"><div class="bar" style="width:95.23%"></div></div></td></tr>
+        <tr><td>guardrail-engine.ts</td><td class="cov-high">95.42%</td><td><div class="bar-wrap"><div class="bar" style="width:95.42%"></div></div></td></tr>
+        <tr><td>feishu-doc-client.ts</td><td class="cov-high">93.13%</td><td><div class="bar-wrap"><div class="bar" style="width:93.13%"></div></div></td></tr>
+        <tr><td>personal-orchestrator.ts</td><td class="cov-high">92.37%</td><td><div class="bar-wrap"><div class="bar" style="width:92.37%"></div></div></td></tr>
+        <tr><td>metrics-ledger.ts</td><td class="cov-high">91.66%</td><td><div class="bar-wrap"><div class="bar" style="width:91.66%"></div></div></td></tr>
+        <tr><td>intent-router.ts</td><td class="cov-high">90.27%</td><td><div class="bar-wrap"><div class="bar" style="width:90.27%"></div></div></td></tr>
+        <tr><td>mcp-context-retriever.ts</td><td class="cov-high">88.57%</td><td><div class="bar-wrap"><div class="bar" style="width:88.57%"></div></div></td></tr>
+        <tr><td>mcp-feishu-tools.ts</td><td class="cov-mid">62.96%</td><td><div class="bar-wrap"><div class="bar" style="width:62.96%"></div></div></td></tr>
+      </table>
+
+      <h3>3.3 services/ 个人工作台相关</h3>
+      <table>
+        <tr><th>文件</th><th>行覆盖</th><th>说明</th></tr>
+        <tr><td>personal-assistant-service.ts</td><td class="cov-high">100%</td><td>薄封装</td></tr>
+        <tr><td>recurring-task-scheduler.ts</td><td class="cov-high">100%</td><td>调度 tick</td></tr>
+        <tr><td>assistant-session-service.ts</td><td class="cov-high">72.32%</td><td>黄金话术 / 上下文</td></tr>
+        <tr><td>recurring-task-service.ts</td><td class="cov-high">73.79%</td><td>物化规则</td></tr>
+        <tr><td>schedule-service.ts</td><td class="cov-high">74.82%</td><td>日程写入</td></tr>
+        <tr><td>internal-knowledge-retriever.ts</td><td class="cov-mid">71.77%</td><td>RAG R0</td></tr>
+        <tr><td>ai-result-service.ts</td><td class="cov-mid">55.37%</td><td>元数据 + 修订链路部分</td></tr>
+        <tr><td>todo-service.ts</td><td class="cov-mid">35.80%</td><td>经 golden / tools 间接覆盖</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>4. 门禁与 CI</h2>
+      <table>
+        <tr><th>命令</th><th>内容</th><th>结果</th></tr>
+        <tr><td><code>pnpm test</code></td><td>77 条单测</td><td><span class="badge badge-ok">exit 0</span></td></tr>
+        <tr><td><code>pnpm test:coverage</code></td><td>同上 + v8 报告</td><td><span class="badge badge-ok">exit 0</span></td></tr>
+        <tr><td><code>pnpm agent:gate</code></td><td>build + test:coverage</td><td><span class="badge badge-ok">exit 0</span></td></tr>
+        <tr><td><code>pnpm gate:pr</code></td><td>scope 校验 + agent:gate（CI）</td><td>已接入 GitHub Actions</td></tr>
+      </table>
+      <p>覆盖率阈值：初版均为 0（宽松）；报告输出目录 <code>server/coverage/</code>。</p>
+    </section>
+
+    <section>
+      <h2>5. 风险与未覆盖项</h2>
+      <table>
+        <tr><th>项</th><th>状态</th><th>说明</th></tr>
+        <tr><td>浏览器 E2E</td><td><span class="badge badge-warn">未做</span></td><td>核心链路由服务端单测 + 黄金话术覆盖</td></tr>
+        <tr><td>RAG E4 embedding</td><td><span class="badge badge-warn">未做</span></td><td>可选增强</td></tr>
+        <tr><td>LLM 在线评测</td><td><span class="badge badge-warn">未做</span></td><td>无 Key 时规则模板降级已测</td></tr>
+        <tr><td>开发域 service</td><td>范围外</td><td>requirement / repository 等已从覆盖率分母排除</td></tr>
+        <tr><td>mcp-feishu-tools execute</td><td>可选</td><td>桥接层已测；Tool 注册已测</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>6. 复现步骤</h2>
+      <pre>cd project-manager
+pnpm install
+pnpm test              # 77 passed
+pnpm test:coverage     # 生成 server/coverage/
+pnpm agent:gate        # build + coverage 门禁</pre>
+    </section>
+
+    <footer>个人 AI 助手工作台 · 测试报告 · 数据来源于 2026-06-23 本地执行结果</footer>
+  </div>
+</body>
+</html>
