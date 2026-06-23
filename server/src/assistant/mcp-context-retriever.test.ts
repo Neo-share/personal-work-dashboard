@@ -2,10 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AssistantContext, ContextRetriever } from '@project-manager/shared';
 import { InMemoryMetricsLedger } from './metrics-ledger.js';
 import { McpContextRetriever } from './mcp-context-retriever.js';
+import * as fetchModule from './mcp/feishu/fetch-feishu-document.js';
 
 describe('McpContextRetriever（F4）', () => {
-  it('无 MCP 配置时退化为 DB 上下文', async () => {
-    delete process.env.FEISHU_MCP_HTTP_URL;
+  it('无飞书凭证时退化为 DB 上下文', async () => {
+    delete process.env.FEISHU_APP_ID;
+    delete process.env.FEISHU_APP_SECRET;
     const dbContext: AssistantContext = {
       sessionId: 1,
       recentMessages: [],
@@ -22,15 +24,10 @@ describe('McpContextRetriever（F4）', () => {
     expect(result.externalSnippets).toBeUndefined();
   });
 
-  it('MCP 成功时合并 externalSnippets', async () => {
-    process.env.FEISHU_MCP_HTTP_URL = 'http://127.0.0.1:3999/mcp';
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({ content: '飞书 PRD 摘要' }),
-      }),
-    );
+  it('飞书拉取成功时合并 externalSnippets', async () => {
+    process.env.FEISHU_APP_ID = 'cli_test';
+    process.env.FEISHU_APP_SECRET = 'secret';
+    vi.spyOn(fetchModule, 'fetchFeishuDocumentContent').mockResolvedValue('飞书 PRD 摘要');
 
     const dbContext: AssistantContext = {
       sessionId: 2,
@@ -49,7 +46,8 @@ describe('McpContextRetriever（F4）', () => {
     expect(result.externalSnippets?.[0]?.excerpt).toContain('飞书 PRD 摘要');
     expect(metrics.queryRecent({ name: 'pw.mcp.latency_ms', limit: 1 })).toHaveLength(1);
 
-    vi.unstubAllGlobals();
-    delete process.env.FEISHU_MCP_HTTP_URL;
+    vi.restoreAllMocks();
+    delete process.env.FEISHU_APP_ID;
+    delete process.env.FEISHU_APP_SECRET;
   });
 });

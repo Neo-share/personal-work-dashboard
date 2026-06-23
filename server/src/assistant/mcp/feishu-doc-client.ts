@@ -1,11 +1,12 @@
 import type { ExternalSnippet, MetricsLedger } from '@project-manager/shared';
+import { fetchFeishuDocumentContent } from './feishu/fetch-feishu-document.js';
 import { getFeishuMcpConfig, isFeishuMcpConfigured } from './mcp-config.js';
 
 export interface FetchFeishuDocOptions {
   metrics?: MetricsLedger;
 }
 
-/** 清洗 MCP 返回的 Markdown，截断为摘要片段 */
+/** 清洗飞书 Markdown，截断为摘要片段 */
 export function summarizeFeishuMarkdown(raw: string, maxChars: number): string {
   const normalized = raw
     .replace(/!\[[^\]]*]\([^)]+\)/g, '')
@@ -33,10 +34,37 @@ function recordMcpMetric(
   });
 }
 
-/**
- * 经 HTTP 桥接调用 Feishu Document MCP 的 get_doc_content
- * 桥接约定：POST { doc } → { content: string }
- */
+function classifyFeishuError(error: unknown): string {
+  if (error instanceof Error) {
+    if (error.message.includes('超时')) {
+      return 'timeout';
+    }
+    const codeMatch = error.message.match(/code:\s*(\d+)/);
+    if (codeMatch) {
+      return codeMatch[1];
+    }
+    return 'feishu_api';
+  }
+  return 'unknown';
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('飞书文档拉取超时')), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
+}
+
+/** 直接调用飞书 Open API 拉取文档 Markdown */
 export async function fetchFeishuDocumentMarkdown(
   doc: string,
   options?: FetchFeishuDocOptions,
@@ -46,32 +74,10 @@ export async function fetchFeishuDocumentMarkdown(
   }
 
   const config = getFeishuMcpConfig();
-  if (!config.httpUrl) {
-    return null;
-  }
-
   const started = Date.now();
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), config.timeoutMs);
 
   try {
-    const response = await fetch(config.httpUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ doc, use_user_token: true }),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      recordMcpMetric(options?.metrics, 'pw.mcp.fail', {
-        source: 'feishu',
-        code: String(response.status),
-      });
-      return null;
-    }
-
-    const payload = (await response.json()) as { content?: string; markdown?: string };
-    const markdown = payload.content ?? payload.markdown ?? '';
+    const markdown = await withTimeout(fetchFeishuDocumentContent(doc), config.timeoutMs);
     recordMcpMetric(
       options?.metrics,
       'pw.mcp.latency_ms',
@@ -80,11 +86,11 @@ export async function fetchFeishuDocumentMarkdown(
     );
     return markdown.trim() || null;
   } catch (error) {
-    const code = error instanceof Error && error.name === 'AbortError' ? 'timeout' : 'network';
-    recordMcpMetric(options?.metrics, 'pw.mcp.fail', { source: 'feishu', code });
+    recordMcpMetric(options?.metrics, 'pw.mcp.fail', {
+      source: 'feishu',
+      code: classifyFeishuError(error),
+    });
     return null;
-  } finally {
-    clearTimeout(timer);
   }
 }
 

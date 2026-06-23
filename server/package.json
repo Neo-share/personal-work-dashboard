@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@fastify/cors": "^10.0.2",
+    "@larksuiteoapi/node-sdk": "^1.59.0",
     "@project-manager/shared": "workspace:*",
     "@trpc/server": "^11.0.0",
     "better-sqlite3": "^11.8.1",
