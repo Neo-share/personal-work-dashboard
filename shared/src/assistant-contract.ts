@@ -151,6 +151,8 @@ export interface AssistantContext {
   soulSettings?: PersonalAssistantSoulSettings;
   /** F4：MCP 外部文档片段，见 docs/个人工作台/个人工作台-交付说明.md §9 */
   externalSnippets?: ExternalSnippet[];
+  /** 为 true 时跳过修改场景的会话修订缓存 */
+  skipReviseCache?: boolean;
 }
 
 export interface ContextRetrieveOptions {
@@ -187,6 +189,8 @@ export interface PersonalOrchestratorInput {
   message: string;
   sessionId?: number;
   modifyTodoId?: number;
+  /** 为 true 时跳过修改场景的会话修订缓存 */
+  skipReviseCache?: boolean;
 }
 
 export interface GuardrailBlocked {

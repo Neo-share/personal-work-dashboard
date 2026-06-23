@@ -498,6 +498,8 @@ export const appRouter = t.router({
         z.object({
           todoId: z.number(),
           revisionHint: z.string().min(1),
+          sessionId: z.number().optional(),
+          skipReviseCache: z.boolean().optional(),
         }),
       )
       .mutation(async ({ input }) => {
@@ -505,7 +507,17 @@ export const appRouter = t.router({
         if (!todo?.aiResultType) {
           throw new Error('待办无可修改的 AI 结果');
         }
-        return reviseAiResult(input.todoId, todo.aiResultType, todo.title, input.revisionHint);
+        return reviseAiResult(
+          input.todoId,
+          todo.aiResultType,
+          todo.title,
+          input.revisionHint,
+          undefined,
+          {
+            sessionId: input.sessionId,
+            skipReviseCache: input.skipReviseCache,
+          },
+        );
       }),
   }),
 
@@ -606,6 +618,7 @@ export const appRouter = t.router({
           message: z.string(),
           modifyTodoId: z.number().optional(),
           sessionId: z.number().optional(),
+          skipReviseCache: z.boolean().optional(),
         }),
       )
       .mutation(async ({ input }) => resolvePersonalAssistantIntent(input.message, input)),

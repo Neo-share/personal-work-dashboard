@@ -10,12 +10,13 @@ export type PersonalAssistantResolveResult = PersonalAssistantResult | Guardrail
 /** 薄封装：委托五层 orchestrator（F0 契约） */
 export async function resolvePersonalAssistantIntent(
   message: string,
-  options?: { modifyTodoId?: number; sessionId?: number },
+  options?: { modifyTodoId?: number; sessionId?: number; skipReviseCache?: boolean },
 ): Promise<PersonalAssistantResolveResult> {
   return personalAssistantOrchestrator.handle({
     message,
     modifyTodoId: options?.modifyTodoId,
     sessionId: options?.sessionId,
+    skipReviseCache: options?.skipReviseCache,
   }) as Promise<PersonalOrchestratorOutput>;
 }
 

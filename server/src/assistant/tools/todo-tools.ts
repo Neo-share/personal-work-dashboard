@@ -15,6 +15,7 @@ export interface TodoReviseAiResult {
   modifyTodoId: number;
   modifyVersion: number;
   contextSummary?: string;
+  fromReviseCache?: boolean;
 }
 
 export const todoCreateTool: ToolDefinition<
@@ -72,12 +73,17 @@ export const todoReviseAiTool: ToolDefinition<
       todo.title,
       params.revisionHint,
       ctx.assistantContext?.externalSnippets,
+      {
+        sessionId: ctx.sessionId,
+        skipReviseCache: ctx.assistantContext?.skipReviseCache,
+      },
     );
     return {
       refresh: ['todos'],
       modifyTodoId: params.modifyTodoId,
       modifyVersion: revised.version,
       contextSummary: revised.contextSummary,
+      fromReviseCache: revised.fromReviseCache,
     };
   },
 };

@@ -1,8 +1,18 @@
 import type { PersonalAssistantRefresh } from '@project-manager/shared';
 import { PERSONAL_ASSISTANT_SOUL_TONE_LABELS } from '@project-manager/shared';
-import { Button, Form, Input, Modal, Select, message } from 'antd';
+import { QuestionCircleOutlined } from '@ant-design/icons';
+import { Button, Form, Input, Modal, Select, Switch, Tooltip, message } from 'antd';
 import { useEffect, useState } from 'react';
 import { trpc } from '../../lib/trpc';
+
+const REVISE_CACHE_STORAGE_KEY = 'pw.reviseCacheEnabled';
+
+/** 修改模式修订缓存说明（Tooltip） */
+const REVISE_CACHE_TOOLTIP = [
+  '开启后：同一会话内，若待办版本、修订意见与当前内容均相同，将复用上次成功的修订结果，减少等待。',
+  '关闭后：每次修订都会重新调用模型。',
+  '缓存仅保存在服务端内存，重启后失效；不跨对话、不跨版本共享。',
+].join('\n');
 
 const INITIAL_GREETING = '你好！我会先区分待办与日程，帮你创建内容或生成初步结果。';
 const NEW_SESSION_GREETING = '新对话已开始。我会先区分待办与日程，帮你创建内容或生成初步结果。';
@@ -43,6 +53,11 @@ export default function PersonalAssistantPanel({
   const [selectedThreadId, setSelectedThreadId] = useState<number | null>(null);
   const [soulOpen, setSoulOpen] = useState(false);
   const [soulForm] = Form.useForm();
+  const [useReviseCache, setUseReviseCache] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    const stored = window.localStorage.getItem(REVISE_CACHE_STORAGE_KEY);
+    return stored !== 'false';
+  });
 
   const sessionsQuery = trpc.assistant.sessions.useQuery();
   const soulQuery = trpc.personalWorkbench.getSoulSettings.useQuery(undefined, {
@@ -104,6 +119,7 @@ export default function PersonalAssistantPanel({
           context: 'personal',
           modifyTodoId: modifyTodoId ?? undefined,
           sessionId: activeSessionId,
+          skipReviseCache: modifyTodoId ? !useReviseCache : undefined,
         }),
       });
 
@@ -199,10 +215,26 @@ export default function PersonalAssistantPanel({
     <aside className="pw-assistant">
       {modifyTodoId ? (
         <div className="pw-modify-bar">
-          修改模式 · 待办 #{modifyTodoId} · v{modifyVersion ?? 1}
-          <Button type="link" size="small" onClick={onExitModify}>
-            退出
-          </Button>
+          <span>
+            修改模式 · 待办 #{modifyTodoId} · v{modifyVersion ?? 1}
+          </span>
+          <div className="pw-modify-bar-actions">
+            <span className="pw-modify-cache-label">使用缓存</span>
+            <Tooltip title={<span style={{ whiteSpace: 'pre-line' }}>{REVISE_CACHE_TOOLTIP}</span>}>
+              <QuestionCircleOutlined className="pw-modify-cache-tip" aria-label="使用缓存说明" />
+            </Tooltip>
+            <Switch
+              size="small"
+              checked={useReviseCache}
+              onChange={(checked) => {
+                setUseReviseCache(checked);
+                window.localStorage.setItem(REVISE_CACHE_STORAGE_KEY, String(checked));
+              }}
+            />
+            <Button type="link" size="small" onClick={onExitModify}>
+              退出
+            </Button>
+          </div>
         </div>
       ) : null}
 

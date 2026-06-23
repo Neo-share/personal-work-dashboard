@@ -89,7 +89,10 @@ function buildReplyForIntent(
 
   if (type === 'revise_ai') {
     const result = toolPayload as TodoReviseAiResult;
-    const contextNote = result.contextSummary ? `（${result.contextSummary}）` : '';
+    const notes: string[] = [];
+    if (result.contextSummary) notes.push(result.contextSummary);
+    if (result.fromReviseCache) notes.push('命中修订缓存');
+    const contextNote = notes.length ? `（${notes.join('；')}）` : '';
     return `已根据你的意见更新结果至 v${result.modifyVersion}${contextNote}。`;
   }
 
@@ -181,10 +184,13 @@ export class PersonalAssistantOrchestrator implements PersonalOrchestrator {
       return buildBlocked(inputVerdict);
     }
 
-    const assistantContext = await mcpContextRetriever.retrieve(session.id, {
-      modifyTodoId: input.modifyTodoId,
-      message: text,
-    });
+    const assistantContext = {
+      ...(await mcpContextRetriever.retrieve(session.id, {
+        modifyTodoId: input.modifyTodoId,
+        message: text,
+      })),
+      skipReviseCache: input.skipReviseCache,
+    };
     const toolCtx = { sessionId: session.id, metrics: inMemoryMetricsLedger, assistantContext };
 
     appendAssistantMessage(session.id, 'user', text);

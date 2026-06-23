@@ -12,6 +12,7 @@ export async function registerChatRoutes(server: FastifyInstance) {
       context?: 'personal' | 'dev';
       modifyTodoId?: number;
       sessionId?: number;
+      skipReviseCache?: boolean;
     };
     const message = body.message?.trim() ?? '';
     const context = body.context ?? 'dev';
@@ -36,6 +37,7 @@ export async function registerChatRoutes(server: FastifyInstance) {
         const result = await resolvePersonalAssistantIntent(message, {
           modifyTodoId: body.modifyTodoId,
           sessionId: body.sessionId,
+          skipReviseCache: body.skipReviseCache,
         });
 
         if (isGuardrailBlocked(result)) {

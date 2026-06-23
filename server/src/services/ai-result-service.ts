@@ -6,6 +6,11 @@ import {
   reviseAiResultWithLlm,
 } from '../llm/llm-ai-result-generator.js';
 import {
+  lookupReviseSessionCache,
+  shouldUseReviseSessionCache,
+  storeReviseSessionCache,
+} from '../llm/revise-session-cache.js';
+import {
   retrieveForTodo,
   type KnowledgeSnippet,
 } from './internal-knowledge-retriever.js';
@@ -151,6 +156,14 @@ export function formatAiResultProvider(
   return `llm-rag:${snippetIds.join(',')}`;
 }
 
+/** 修订缓存命中时的 provider 标识 */
+function formatReviseCacheProvider(snippetIds: string[]): string {
+  if (snippetIds.length === 0) {
+    return 'llm-cache';
+  }
+  return `llm-cache-rag:${snippetIds.join(',')}`;
+}
+
 /** 规则修订（LLM 不可用时的降级） */
 function applyRevisionRules(html: string, revisionHint: string): string {
   let revised = html;
@@ -265,9 +278,45 @@ async function resolveRevisedAiResultHtml(
   currentHtml: string,
   snippets: KnowledgeSnippet[],
   externalSnippets?: ExternalSnippet[],
-): Promise<{ htmlContent: string; provider: string; snippetIds: string[] }> {
+  options?: {
+    sessionId?: number;
+    todoId?: number;
+    baseVersion?: number;
+    skipReviseCache?: boolean;
+  },
+): Promise<{
+  htmlContent: string;
+  provider: string;
+  snippetIds: string[];
+  fromReviseCache?: boolean;
+}> {
   const mergedSnippets = mergeExternalSnippetsIntoKnowledge(snippets, externalSnippets);
   const snippetIds = mergedSnippets.map((item) => item.id);
+  const { sessionId, todoId, baseVersion, skipReviseCache } = options ?? {};
+  const cacheEligible =
+    sessionId !== undefined && todoId !== undefined && baseVersion !== undefined;
+
+  if (
+    cacheEligible &&
+    shouldUseReviseSessionCache(skipReviseCache)
+  ) {
+    const cached = lookupReviseSessionCache({
+      sessionId,
+      todoId,
+      baseVersion,
+      revisionHint,
+      currentHtml,
+      snippetIds,
+    });
+    if (cached) {
+      return {
+        htmlContent: cached.htmlContent,
+        provider: formatReviseCacheProvider(cached.snippetIds),
+        snippetIds: cached.snippetIds,
+        fromReviseCache: true,
+      };
+    }
+  }
 
   if (isLlmConfigured()) {
     try {
@@ -278,14 +327,36 @@ async function resolveRevisedAiResultHtml(
         revisionHint,
         snippets: mergedSnippets,
       });
-      return {
+      const result = {
         htmlContent,
         provider: formatAiResultProvider('llm', snippetIds),
         snippetIds,
       };
+      if (
+        cacheEligible &&
+        shouldUseReviseSessionCache(skipReviseCache)
+      ) {
+        storeReviseSessionCache(
+          {
+            sessionId,
+            todoId,
+            baseVersion,
+            revisionHint,
+            currentHtml,
+            snippetIds,
+          },
+          result,
+        );
+      }
+      return result;
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       console.error(`[ai-result] LLM 修订失败，降级规则: ${detail}`);
+      return {
+        htmlContent: applyRevisionRules(currentHtml, revisionHint),
+        provider: formatAiResultProvider('rule-template', snippetIds),
+        snippetIds,
+      };
     }
   }
   return {
@@ -337,11 +408,13 @@ export async function reviseAiResult(
   title: string,
   revisionHint: string,
   externalSnippets?: ExternalSnippet[],
+  options?: { sessionId?: number; skipReviseCache?: boolean },
 ): Promise<{
   id: number;
   version: number;
   htmlContent: string;
   contextSummary: string;
+  fromReviseCache?: boolean;
 }> {
   const db = getDb();
   const now = new Date().toISOString();
@@ -372,14 +445,20 @@ export async function reviseAiResult(
     externalSnippets,
   );
 
-  const { htmlContent, provider } = await resolveRevisedAiResultHtml(
-    resultType,
-    title,
-    revisionHint,
-    currentHtml,
-    retrieved.snippets,
-    externalSnippets,
-  );
+  const { htmlContent, provider, fromReviseCache } = await resolveRevisedAiResultHtml(
+      resultType,
+      title,
+      revisionHint,
+      currentHtml,
+      retrieved.snippets,
+      externalSnippets,
+      {
+        sessionId: options?.sessionId,
+        todoId,
+        baseVersion: previousVersion,
+        skipReviseCache: options?.skipReviseCache,
+      },
+    );
 
   const result = db
     .prepare(
@@ -395,5 +474,6 @@ export async function reviseAiResult(
     version,
     htmlContent,
     contextSummary,
+    fromReviseCache,
   };
 }
