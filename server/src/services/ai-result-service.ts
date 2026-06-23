@@ -1,7 +1,14 @@
 import type { AiResultType, PersonalAssistantSoulSettings } from '@project-manager/shared';
 import { getDb } from '../db/index.js';
 import { isLlmConfigured } from '../llm/llm-config.js';
-import { generateAiResultWithLlm } from '../llm/llm-ai-result-generator.js';
+import {
+  generateAiResultWithLlm,
+  reviseAiResultWithLlm,
+} from '../llm/llm-ai-result-generator.js';
+import {
+  retrieveForTodo,
+  type KnowledgeSnippet,
+} from './internal-knowledge-retriever.js';
 import { getPersonalAssistantSoulSettings } from './personal-assistant-soul-service.js';
 
 /** 异步生成延迟（毫秒），便于前端展示 pending 态并轮询 */
@@ -124,16 +131,78 @@ export function scheduleAiResultGeneration(
 
 type AiResultProvider = 'llm' | 'rule-template';
 
-/** 生成 HTML：已配置 LLM 时优先调用，失败则降级规则模板 */
+/** 将 snippetIds 写入 provider 字段，便于追溯（E2.3） */
+export function formatAiResultProvider(
+  provider: AiResultProvider,
+  snippetIds: string[],
+): string {
+  if (provider === 'rule-template') {
+    return 'rule-template';
+  }
+  if (snippetIds.length === 0) {
+    return 'llm';
+  }
+  return `llm-rag:${snippetIds.join(',')}`;
+}
+
+/** 规则修订（LLM 不可用时的降级） */
+function applyRevisionRules(html: string, revisionHint: string): string {
+  let revised = html;
+  if (/进度|百分比/.test(revisionHint)) {
+    revised = revised.replace(/60%|\+2\.3%|\+12\.3%/, '85%');
+  }
+  if (/补充|添加/.test(revisionHint)) {
+    revised += '<p><em>（已补充用户要求的内容）</em></p>';
+  }
+  if (/精简/.test(revisionHint)) {
+    revised = revised.replace(/<li>.*?<\/li>/g, '').slice(0, 500);
+  }
+  if (/结论/.test(revisionHint)) {
+    revised = revised.replace(/结论.*?<\/p>/, '结论：已按用户意见更新。</p>');
+  }
+  if (/删除段落/.test(revisionHint)) {
+    revised = revised.split('</p>')[0] + '</p>';
+  }
+  if (/表格|选品/.test(revisionHint)) {
+    revised += '<p>已更新表格数据。</p>';
+  }
+  return revised;
+}
+
+export function buildReviseContextSummary(
+  snippets: KnowledgeSnippet[],
+  previousVersion: number,
+): string {
+  const hasSchedule = snippets.some((item) => item.sourceTable === 'schedule_events');
+  if (hasSchedule) {
+    return `已参考 v${previousVersion} 与日程上下文`;
+  }
+  return `已参考 v${previousVersion}`;
+}
+
+/** 生成 HTML：检索 → LLM；失败则降级规则模板 */
 async function resolveAiResultHtml(
+  todoId: number,
   resultType: AiResultType,
   title: string,
   description?: string | null,
-): Promise<{ htmlContent: string; provider: AiResultProvider }> {
+): Promise<{ htmlContent: string; provider: string; snippetIds: string[] }> {
+  const retrieved = retrieveForTodo(todoId, { intent: 'generate' });
+  const snippetIds = retrieved.snippets.map((item) => item.id);
+
   if (isLlmConfigured()) {
     try {
-      const htmlContent = await generateAiResultWithLlm({ resultType, title, description });
-      return { htmlContent, provider: 'llm' };
+      const htmlContent = await generateAiResultWithLlm({
+        resultType,
+        title,
+        description,
+        snippets: retrieved.snippets,
+      });
+      return {
+        htmlContent,
+        provider: formatAiResultProvider('llm', snippetIds),
+        snippetIds,
+      };
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       console.error(`[ai-result] LLM 生成失败，降级模板: ${detail}`);
@@ -141,7 +210,43 @@ async function resolveAiResultHtml(
   }
   return {
     htmlContent: generateAiHtml(resultType, title),
-    provider: 'rule-template',
+    provider: formatAiResultProvider('rule-template', snippetIds),
+    snippetIds,
+  };
+}
+
+async function resolveRevisedAiResultHtml(
+  resultType: AiResultType,
+  title: string,
+  revisionHint: string,
+  currentHtml: string,
+  snippets: KnowledgeSnippet[],
+): Promise<{ htmlContent: string; provider: string; snippetIds: string[] }> {
+  const snippetIds = snippets.map((item) => item.id);
+
+  if (isLlmConfigured()) {
+    try {
+      const htmlContent = await reviseAiResultWithLlm({
+        resultType,
+        title,
+        currentHtml,
+        revisionHint,
+        snippets,
+      });
+      return {
+        htmlContent,
+        provider: formatAiResultProvider('llm', snippetIds),
+        snippetIds,
+      };
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      console.error(`[ai-result] LLM 修订失败，降级规则: ${detail}`);
+    }
+  }
+  return {
+    htmlContent: applyRevisionRules(currentHtml, revisionHint),
+    provider: formatAiResultProvider('rule-template', snippetIds),
+    snippetIds,
   };
 }
 
@@ -160,6 +265,7 @@ export async function createAiResultForTodo(
     .get(todoId) as { maxVersion: number | null };
   const version = (latest.maxVersion ?? 0) + 1;
   const { htmlContent, provider } = await resolveAiResultHtml(
+    todoId,
     resultType,
     title,
     todoRow?.description,
@@ -179,48 +285,66 @@ export async function createAiResultForTodo(
   return { id: Number(result.lastInsertRowid), version, htmlContent };
 }
 
-export function reviseAiResult(
+export async function reviseAiResult(
   todoId: number,
   resultType: AiResultType,
   title: string,
   revisionHint: string,
-): { id: number; version: number; htmlContent: string } {
-  let html = generateAiHtml(resultType, title);
-  // Demo 修改关键词处理
-  if (/进度|百分比/.test(revisionHint)) {
-    html = html.replace(/60%|\+2\.3%|\+12\.3%/, '85%');
-  }
-  if (/补充|添加/.test(revisionHint)) {
-    html += '<p><em>（已补充用户要求的内容）</em></p>';
-  }
-  if (/精简/.test(revisionHint)) {
-    html = html.replace(/<li>.*?<\/li>/g, '').slice(0, 500);
-  }
-  if (/结论/.test(revisionHint)) {
-    html = html.replace(/结论.*?<\/p>/, '结论：已按用户意见更新。</p>');
-  }
-  if (/删除段落/.test(revisionHint)) {
-    html = html.split('</p>')[0] + '</p>';
-  }
-  if (/表格|选品/.test(revisionHint)) {
-    html += '<p>已更新表格数据。</p>';
-  }
-
+): Promise<{
+  id: number;
+  version: number;
+  htmlContent: string;
+  contextSummary: string;
+}> {
   const db = getDb();
   const now = new Date().toISOString();
   const latest = db
-    .prepare('SELECT MAX(version) as maxVersion FROM todo_ai_results WHERE todo_id = ?')
+    .prepare(
+      `SELECT MAX(version) as maxVersion FROM todo_ai_results WHERE todo_id = ?`,
+    )
     .get(todoId) as { maxVersion: number | null };
-  const version = (latest.maxVersion ?? 0) + 1;
+  const previousVersion = latest.maxVersion ?? 0;
+  const version = previousVersion + 1;
+
+  const currentRow = db
+    .prepare(
+      `SELECT html_content FROM todo_ai_results
+       WHERE todo_id = ? ORDER BY version DESC LIMIT 1`,
+    )
+    .get(todoId) as { html_content: string } | undefined;
+  const currentHtml =
+    currentRow?.html_content ?? generateAiHtml(resultType, title);
+
+  const retrieved = retrieveForTodo(todoId, {
+    intent: 'revise',
+    userDelta: revisionHint,
+  });
+  const contextSummary = buildReviseContextSummary(
+    retrieved.snippets,
+    Math.max(previousVersion, 1),
+  );
+
+  const { htmlContent, provider } = await resolveRevisedAiResultHtml(
+    resultType,
+    title,
+    revisionHint,
+    currentHtml,
+    retrieved.snippets,
+  );
 
   const result = db
     .prepare(
       `INSERT INTO todo_ai_results (todo_id, version, result_type, html_content, status, provider, created_at)
-       VALUES (?, ?, ?, ?, 'ready', 'rule-template', ?)`,
+       VALUES (?, ?, ?, ?, 'ready', ?, ?)`,
     )
-    .run(todoId, version, resultType, html, now);
+    .run(todoId, version, resultType, htmlContent, provider, now);
 
   db.prepare(`UPDATE todos SET ai_status = 'ready', updated_at = ? WHERE id = ?`).run(now, todoId);
 
-  return { id: Number(result.lastInsertRowid), version, htmlContent: html };
+  return {
+    id: Number(result.lastInsertRowid),
+    version,
+    htmlContent,
+    contextSummary,
+  };
 }

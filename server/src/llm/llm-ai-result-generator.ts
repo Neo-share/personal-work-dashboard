@@ -1,5 +1,6 @@
 import type { AiResultType, PersonalAssistantSoulSettings } from '@project-manager/shared';
 import { AI_RESULT_TYPE_LABELS } from '@project-manager/shared';
+import type { KnowledgeSnippet } from '../services/internal-knowledge-retriever.js';
 import { getPersonalAssistantSoulSettings } from '../services/personal-assistant-soul-service.js';
 import { createLlmClient } from './openai-client.js';
 
@@ -8,6 +9,16 @@ export interface LlmAiGenerateInput {
   title: string;
   description?: string | null;
   soulSettings?: PersonalAssistantSoulSettings;
+  snippets?: KnowledgeSnippet[];
+}
+
+export interface LlmAiReviseInput {
+  resultType: AiResultType;
+  title: string;
+  currentHtml: string;
+  revisionHint: string;
+  soulSettings?: PersonalAssistantSoulSettings;
+  snippets?: KnowledgeSnippet[];
 }
 
 /** 各结果类型的 HTML 结构要求（对齐个人工作台 §6.3） */
@@ -34,15 +45,34 @@ function buildSoulHint(soul: PersonalAssistantSoulSettings): string {
   return parts.join('；');
 }
 
-function buildSystemPrompt(resultType: AiResultType, soul: PersonalAssistantSoulSettings): string {
+function buildContextBlock(snippets?: KnowledgeSnippet[]): string {
+  if (!snippets?.length) {
+    return '';
+  }
+  const lines = snippets.map(
+    (item) => `- [${item.label}] (${item.id}) ${item.excerpt}`,
+  );
+  return ['参考以下内部资料（须优先采信，勿编造外链）：', ...lines].join('\n');
+}
+
+function buildSystemPrompt(
+  resultType: AiResultType,
+  soul: PersonalAssistantSoulSettings,
+  mode: 'generate' | 'revise',
+): string {
+  const action =
+    mode === 'generate'
+      ? '为待办事项生成结构化 HTML 初步结果'
+      : '根据用户修订意见更新已有 HTML 结果';
   return [
-    '你是个人工作台的 AI 助手，负责为待办事项生成结构化 HTML 初步结果。',
+    `你是个人工作台的 AI 助手，负责${action}。`,
     `结果类型：${AI_RESULT_TYPE_LABELS[resultType]}（${resultType}）`,
     `结构要求：${RESULT_TYPE_HINTS[resultType]}`,
     `表达风格：${buildSoulHint(soul)}`,
     '约束：',
     '- 只输出 HTML 片段，不要 markdown 代码块，不要解释性前后缀',
-    '- 内容应贴合待办标题与描述，可合理推断但勿编造具体外链或人名',
+    '- 内容应贴合待办标题与内部参考资料，可合理推断但勿编造具体外链或人名',
+    '- 修订时保留原结果有效结构，按用户意见增量修改',
     '- 使用中文',
   ].join('\n');
 }
@@ -52,7 +82,27 @@ function buildUserPrompt(input: LlmAiGenerateInput): string {
   if (input.description?.trim()) {
     lines.push(`待办描述：${input.description.trim()}`);
   }
-  lines.push('请生成该待办的 AI 初步结果 HTML。');
+  const context = buildContextBlock(input.snippets);
+  if (context) {
+    lines.push('', context);
+  }
+  lines.push('', '请生成该待办的 AI 初步结果 HTML。');
+  return lines.join('\n');
+}
+
+function buildReviseUserPrompt(input: LlmAiReviseInput): string {
+  const lines = [
+    `待办标题：${input.title}`,
+    `用户修订意见：${input.revisionHint}`,
+    '',
+    '当前结果 HTML：',
+    input.currentHtml,
+  ];
+  const context = buildContextBlock(input.snippets);
+  if (context) {
+    lines.push('', context);
+  }
+  lines.push('', '请输出修订后的完整 HTML。');
   return lines.join('\n');
 }
 
@@ -76,10 +126,37 @@ export async function generateAiResultWithLlm(input: LlmAiGenerateInput): Promis
   const soul = input.soulSettings ?? getPersonalAssistantSoulSettings();
   const result = await client.chatCompletion({
     messages: [
-      { role: 'system', content: buildSystemPrompt(input.resultType, soul) },
+      { role: 'system', content: buildSystemPrompt(input.resultType, soul, 'generate') },
       { role: 'user', content: buildUserPrompt(input) },
     ],
     temperature: 0.6,
+    maxTokens: 2048,
+  });
+
+  const html = normalizeHtmlOutput(result.content);
+  if (!html) {
+    throw new Error('LLM 返回 HTML 为空');
+  }
+  return html;
+}
+
+/**
+ * 调用 LLM 修订待办 AI 结果 HTML
+ * @throws 未配置 LLM 或请求失败时抛出
+ */
+export async function reviseAiResultWithLlm(input: LlmAiReviseInput): Promise<string> {
+  const client = createLlmClient();
+  if (!client) {
+    throw new Error('LLM 未配置');
+  }
+
+  const soul = input.soulSettings ?? getPersonalAssistantSoulSettings();
+  const result = await client.chatCompletion({
+    messages: [
+      { role: 'system', content: buildSystemPrompt(input.resultType, soul, 'revise') },
+      { role: 'user', content: buildReviseUserPrompt(input) },
+    ],
+    temperature: 0.5,
     maxTokens: 2048,
   });
 

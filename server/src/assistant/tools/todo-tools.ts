@@ -14,6 +14,7 @@ export interface TodoReviseAiResult {
   refresh: PersonalAssistantRefresh[];
   modifyTodoId: number;
   modifyVersion: number;
+  contextSummary?: string;
 }
 
 export const todoCreateTool: ToolDefinition<
@@ -64,7 +65,7 @@ export const todoReviseAiTool: ToolDefinition<
     if (!todo || !todo.aiResultType) {
       throw new Error('待办不存在或不支持 AI 修改');
     }
-    const revised = reviseAiResult(
+    const revised = await reviseAiResult(
       params.modifyTodoId,
       todo.aiResultType,
       todo.title,
@@ -74,6 +75,7 @@ export const todoReviseAiTool: ToolDefinition<
       refresh: ['todos'],
       modifyTodoId: params.modifyTodoId,
       modifyVersion: revised.version,
+      contextSummary: revised.contextSummary,
     };
   },
 };

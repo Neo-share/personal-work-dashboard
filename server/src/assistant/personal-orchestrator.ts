@@ -89,7 +89,8 @@ function buildReplyForIntent(
 
   if (type === 'revise_ai') {
     const result = toolPayload as TodoReviseAiResult;
-    return `已根据你的意见更新结果至 v${result.modifyVersion}。`;
+    const contextNote = result.contextSummary ? `（${result.contextSummary}）` : '';
+    return `已根据你的意见更新结果至 v${result.modifyVersion}${contextNote}。`;
   }
 
   if (type === 'recurring_schedule') {

@@ -500,7 +500,7 @@ export const appRouter = t.router({
           revisionHint: z.string().min(1),
         }),
       )
-      .mutation(({ input }) => {
+      .mutation(async ({ input }) => {
         const todo = getTodoById(input.todoId);
         if (!todo?.aiResultType) {
           throw new Error('待办无可修改的 AI 结果');
