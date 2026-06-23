@@ -2,7 +2,7 @@ import type { TodoFilter, TodoItem } from '@project-manager/shared';
 import { TODO_SOURCE_LABELS } from '@project-manager/shared';
 import { Button, Checkbox, DatePicker, Dropdown, Form, Input, Modal, Popconfirm, Switch, message } from 'antd';
 import dayjs from 'dayjs';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { trpc } from '../../lib/trpc';
 import AiResultPanel from './AiResultPanel';
 
@@ -16,6 +16,7 @@ const FILTERS: Array<{ key: TodoFilter; label: string }> = [
 interface TodoPanelProps {
   onRefresh?: () => void;
   onEnterModify?: (todoId: number, version?: number) => void;
+  highlightTodoIds?: number[];
 }
 
 function TodoCard({
@@ -23,11 +24,13 @@ function TodoCard({
   onRefresh,
   onEnterModify,
   onEdit,
+  highlighted,
 }: {
   todo: TodoItem;
   onRefresh?: () => void;
   onEnterModify?: (todoId: number, version?: number) => void;
   onEdit?: (todo: TodoItem) => void;
+  highlighted?: boolean;
 }) {
   const utils = trpc.useUtils();
   const completeMutation = trpc.todos.complete.useMutation({
@@ -83,7 +86,10 @@ function TodoCard({
   }
 
   return (
-    <div className={`pw-todo-card${todo.status === 'completed' ? ' is-completed' : ''}`}>
+    <div
+      id={`pw-todo-${todo.id}`}
+      className={`pw-todo-card${todo.status === 'completed' ? ' is-completed' : ''}${highlighted ? ' is-highlight' : ''}`}
+    >
       <div className="pw-todo-card-head">
         {todo.status === 'active' ? (
           <Checkbox
@@ -128,7 +134,7 @@ function TodoCard({
   );
 }
 
-export default function TodoPanel({ onRefresh, onEnterModify }: TodoPanelProps) {
+export default function TodoPanel({ onRefresh, onEnterModify, highlightTodoIds = [] }: TodoPanelProps) {
   const [filter, setFilter] = useState<TodoFilter>('active');
   const [showHistory, setShowHistory] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -191,6 +197,16 @@ export default function TodoPanel({ onRefresh, onEnterModify }: TodoPanelProps) 
   const displayCompleted =
     filter === 'all' || filter === 'completed' ? completedItems : [];
 
+  const highlightSet = new Set(highlightTodoIds);
+
+  useEffect(() => {
+    if (highlightTodoIds.length === 0) return;
+    const firstId = highlightTodoIds[0];
+    window.requestAnimationFrame(() => {
+      document.getElementById(`pw-todo-${firstId}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  }, [highlightTodoIds]);
+
   return (
     <div className="pw-panel pw-panel-todo">
       <div className="pw-panel-head">
@@ -219,6 +235,7 @@ export default function TodoPanel({ onRefresh, onEnterModify }: TodoPanelProps) 
           <TodoCard
             key={todo.id}
             todo={todo}
+            highlighted={highlightSet.has(todo.id)}
             onRefresh={onRefresh}
             onEnterModify={onEnterModify}
             onEdit={openEdit}

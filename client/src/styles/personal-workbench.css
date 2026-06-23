@@ -292,6 +292,24 @@
   opacity: 0.7;
 }
 
+.pw-todo-card.is-highlight {
+  border-color: #7c3aed;
+  animation: pw-todo-highlight 2.5s ease-out;
+}
+
+@keyframes pw-todo-highlight {
+  0%,
+  35% {
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.35);
+  }
+
+  100% {
+    border-color: #e8eaf0;
+    box-shadow: none;
+  }
+}
+
 .pw-todo-card-head {
   display: flex;
   align-items: flex-start;

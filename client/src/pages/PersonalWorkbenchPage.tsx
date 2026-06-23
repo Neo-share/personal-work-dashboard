@@ -1,6 +1,6 @@
 import type { PersonalAssistantRefresh } from '@project-manager/shared';
 import dayjs from 'dayjs';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import PersonalAssistantPanel from '../components/personal-workbench/PersonalAssistantPanel';
 import RecurringTaskPanel from '../components/personal-workbench/RecurringTaskPanel';
@@ -23,6 +23,8 @@ export default function PersonalWorkbenchPage() {
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [modifyTodoId, setModifyTodoId] = useState<number | null>(null);
   const [modifyVersion, setModifyVersion] = useState<number | undefined>();
+  const [highlightTodoIds, setHighlightTodoIds] = useState<number[]>([]);
+  const highlightTimerRef = useRef<number | null>(null);
 
   const utils = trpc.useUtils();
   const summaryQuery = trpc.personalWorkbench.summary.useQuery({
@@ -42,6 +44,30 @@ export default function PersonalWorkbenchPage() {
     if (targets.includes('schedule')) void utils.schedule.listDay.invalidate();
     if (targets.includes('recurringTasks')) void utils.recurringTasks.list.invalidate();
   }
+
+  function handleMaterialized(payload: { todoIds: number[]; taskTitle: string }) {
+    setTab('workspace');
+    if (highlightTimerRef.current !== null) {
+      window.clearTimeout(highlightTimerRef.current);
+    }
+    if (payload.todoIds.length > 0) {
+      setHighlightTodoIds(payload.todoIds);
+      highlightTimerRef.current = window.setTimeout(() => {
+        setHighlightTodoIds([]);
+        highlightTimerRef.current = null;
+      }, 2500);
+    } else {
+      setHighlightTodoIds([]);
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (highlightTimerRef.current !== null) {
+        window.clearTimeout(highlightTimerRef.current);
+      }
+    };
+  }, []);
 
   const summary = summaryQuery.data;
 
@@ -92,6 +118,7 @@ export default function PersonalWorkbenchPage() {
 
               <div className="pw-dual-panel">
                 <TodoPanel
+                  highlightTodoIds={highlightTodoIds}
                   onRefresh={() => handleRefresh(['todos', 'summary'])}
                   onEnterModify={(todoId, version) => {
                     setModifyTodoId(todoId);
@@ -111,7 +138,10 @@ export default function PersonalWorkbenchPage() {
           </div>
 
           <div className={`pw-tab-panel${tab === 'recurring' ? ' is-active' : ''}`}>
-            <RecurringTaskPanel onRefresh={() => handleRefresh(['todos', 'summary'])} />
+            <RecurringTaskPanel
+              onRefresh={() => handleRefresh(['todos', 'summary'])}
+              onMaterialized={handleMaterialized}
+            />
           </div>
         </div>
 

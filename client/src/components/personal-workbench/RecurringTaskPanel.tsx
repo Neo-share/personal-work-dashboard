@@ -20,9 +20,11 @@ function formatCycle(task: {
 
 interface RecurringTaskPanelProps {
   onRefresh?: () => void;
+  /** 物化操作后切 Tab 并高亮待办（含 0 条新增时定位已有待办） */
+  onMaterialized?: (payload: { todoIds: number[]; taskTitle: string }) => void;
 }
 
-export default function RecurringTaskPanel({ onRefresh }: RecurringTaskPanelProps) {
+export default function RecurringTaskPanel({ onRefresh, onMaterialized }: RecurringTaskPanelProps) {
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<RecurringTask | null>(null);
@@ -44,12 +46,20 @@ export default function RecurringTaskPanel({ onRefresh }: RecurringTaskPanelProp
     onError: (err) => message.error(err.message || '创建失败'),
   });
   const updateMutation = trpc.recurringTasks.update.useMutation({
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      const titleSynced =
+        editingTask !== null &&
+        variables.title !== undefined &&
+        variables.title !== editingTask.title;
       void utils.recurringTasks.list.invalidate();
+      void utils.todos.list.invalidate();
       setEditOpen(false);
       setEditingTask(null);
       editForm.resetFields();
-      message.success('定时任务已更新');
+      onRefresh?.();
+      message.success(
+        titleSynced ? '定时任务已更新，进行中待办标题已同步' : '定时任务已更新',
+      );
     },
     onError: (err) => message.error(err.message || '更新失败'),
   });
@@ -62,13 +72,39 @@ export default function RecurringTaskPanel({ onRefresh }: RecurringTaskPanelProp
     onError: (err) => message.error(err.message || '删除失败'),
   });
   const materializeMutation = trpc.recurringTasks.materializeNow.useMutation({
-    onSuccess: (data) => {
+    onSuccess: async (data, variables) => {
       void utils.todos.list.invalidate();
       void utils.personalWorkbench.summary.invalidate();
       onRefresh?.();
-      message.success(
-        data.todoIds.length > 0 ? `已生成 ${data.todoIds.length} 条待办` : '暂无新待办（可能已存在或任务已停用）',
-      );
+
+      const task = listQuery.data?.find((item) => item.id === variables.id);
+      const taskTitle = task?.title ?? '定时任务';
+
+      if (!task?.enabled) {
+        message.warning(`定时任务「${taskTitle}」已停用，无法物化待办`);
+        return;
+      }
+
+      if (data.todoIds.length > 0) {
+        message.success(`已生成 ${data.todoIds.length} 条待办「${taskTitle}」，已切换到日程与事项`);
+        onMaterialized?.({ todoIds: data.todoIds, taskTitle });
+        return;
+      }
+
+      const activeTodos = await utils.todos.list.fetch({ filter: 'active' });
+      const linkedIds = activeTodos
+        .filter((todo) => todo.recurringTaskId === variables.id)
+        .map((todo) => todo.id);
+
+      if (linkedIds.length > 0) {
+        message.info(
+          `本轮触发点已物化，无新增待办。请在「日程与事项」查看「${taskTitle}」（${linkedIds.length} 条进行中）`,
+        );
+        onMaterialized?.({ todoIds: linkedIds, taskTitle });
+      } else {
+        message.info(`本轮触发点已物化，暂无与「${taskTitle}」关联的进行中待办`);
+        onMaterialized?.({ todoIds: [], taskTitle });
+      }
     },
     onError: (err) => message.error(err.message || '物化失败'),
   });
@@ -116,7 +152,7 @@ export default function RecurringTaskPanel({ onRefresh }: RecurringTaskPanelProp
               onClick={() => materializeMutation.mutate({ id: task.id })}
               loading={materializeMutation.isPending}
             >
-              立即生成待办
+              立即生成待办（测试）
             </Button>
             <Popconfirm
               title="确定删除？"

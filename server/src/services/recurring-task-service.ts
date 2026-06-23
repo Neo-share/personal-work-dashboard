@@ -138,6 +138,13 @@ export function updateRecurringTask(
     id,
   );
 
+  // 重命名定时任务时，同步未完成的关联待办标题
+  if (fields.title !== undefined && fields.title !== existing.title) {
+    db.prepare(
+      `UPDATE todos SET title = ?, updated_at = ? WHERE recurring_task_id = ? AND status = 'active'`,
+    ).run(title, now, id);
+  }
+
   return getRecurringTaskById(id);
 }
 
