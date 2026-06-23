@@ -1,6 +1,6 @@
 # Agent 控制层导航
 
-本目录是 Agent 执行控制层。业务架构与 SSOT 映射见根目录 [AGENTS.md §2](../AGENTS.md#2-文档映射ssot)。
+本目录是 Agent 执行控制层。文档索引见根目录 [AGENTS.md §2](../AGENTS.md#2-文档索引)。
 
 **细则不在本文件重复**：工作流见 `workflow.md`；工程约束见 `engineering-rules.md`；命令见 `commands-checklist.md`。
 
@@ -34,4 +34,4 @@
 - 后端任务：`agents/tasks/api.tasks.yaml`
 - 共享类型任务：`agents/tasks/shared.tasks.yaml`
 
-改代码后的校验顺序见 **[commands-checklist.md](./commands-checklist.md)**（唯一来源）。
+改代码后的校验顺序见 **[commands-checklist.md](./commands-checklist.md)**。

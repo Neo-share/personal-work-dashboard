@@ -20,7 +20,7 @@
 
     <section>
       <h2>1. 文档说明</h2>
-      <p>本文描述「个人 AI 助手工作台」的实现架构，供验收与二次开发参考。产品需求以 Markdown SSOT 为准；本文聚焦<strong>技术架构与模块边界</strong>。</p>
+      <p>本文描述「个人 AI 助手工作台」的实现架构，供验收与二次开发参考。产品需求见 Markdown 文档；本文聚焦<strong>技术架构与模块边界</strong>。</p>
       <table>
         <tr><th>项</th><th>说明</th></tr>
         <tr><td>产品范围</td><td>首页 <code>/</code>：待办、日程、定时任务、个人助手、AI 结果</td></tr>
@@ -71,7 +71,7 @@
 
     <section>
       <h2>4. 个人助手五层架构（F0–F4）</h2>
-      <p>编排入口：<code>PersonalAssistantOrchestrator.handle</code>（<code>server/src/assistant/personal-orchestrator.ts</code>）。契约 SSOT：<code>shared/src/assistant-contract.ts</code>。</p>
+      <p>编排入口：<code>PersonalAssistantOrchestrator.handle</code>（<code>server/src/assistant/personal-orchestrator.ts</code>）。契约定义：<code>shared/src/assistant-contract.ts</code>。</p>
       <pre>POST /api/chat (context=personal)
   → personal-assistant-service（薄封装）
   → PersonalOrchestrator.handle
@@ -99,7 +99,7 @@
         <tr><td>revise_ai</td><td>todo.revise_ai</td></tr>
       </table>
       <h3>4.2 四层护栏（F3+ 安全增强）</h3>
-      <p>个人助手链路采用<strong>确定性代码护栏</strong>（不依赖 LLM 判断）。规则细则 SSOT：<code>TODO/guardrail-enhancement.md</code>；向外交付摘要见交付说明 §4.1。</p>
+      <p>个人助手链路采用<strong>确定性代码护栏</strong>（不依赖 LLM 判断）。规则细则见 <code>TODO/guardrail-enhancement.md</code>；向外交付摘要见交付说明 §4.1。</p>
       <table>
         <tr><th>层</th><th>检查项</th><th>失败动作</th></tr>
         <tr><td>输入</td><td>空消息、超长（2000 字）、提示注入、高风险敏感动作</td><td>SSE <code>blocked</code>，不写库</td></tr>
@@ -188,7 +188,7 @@ server/src/services/
 └── personal-assistant-service.ts  助手薄封装</pre>
     </section>
 
-    <footer>个人 AI 助手工作台 · 架构设计文档 · 非权威产品需求以 Markdown SSOT 为准</footer>
+    <footer>个人 AI 助手工作台 · 架构设计文档 · 产品需求以 Markdown 文档为准</footer>
   </div>
 </body>
 </html>

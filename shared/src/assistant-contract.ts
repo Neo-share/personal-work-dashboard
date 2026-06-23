@@ -1,7 +1,7 @@
 /**
  * 个人助手五层底座 — F0 冻结契约（2026-06-23）
  *
- * SSOT：协议类型定义。实现见 server/src/assistant/。
+ * 协议类型定义。实现见 server/src/assistant/。
  * 设计说明：server/src/assistant/ARCHITECTURE.md §3
  */
 

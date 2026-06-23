@@ -2,13 +2,13 @@
 
 > **读者优先级：AI Agent > 人类开发者**
 >
-> 修改 `shared/` 时先读本文件，架构细节见同目录 `ARCHITECTURE.md`。Monorepo 总览与 SSOT 映射见根目录 [../AGENTS.md](../AGENTS.md#2-文档映射ssot)。
+> 修改 `shared/` 时先读本文件，架构细节见同目录 `ARCHITECTURE.md`。文档索引见根目录 [../AGENTS.md](../AGENTS.md#2-文档索引)。
 
 ---
 
 ## 1. 包职责
 
-`@project-manager/shared`：前后端共享的**领域与协议单一真相源**。导出 TypeScript 类型、枚举联合、中文标签常量、个人助手五层接口契约，以及少量跨端纯函数 helper（飞书 deep link、周报周期、工作域模型）。
+`@project-manager/shared`：前后端共享的**领域类型与协议**。导出 TypeScript 类型、枚举联合、中文标签常量、个人助手五层接口契约，以及少量跨端纯函数 helper（飞书 deep link、周报周期、工作域模型）。
 
 **负责**：实体 interface、视图 DTO、图谱/对话协议类型、个人助手 F0 契约、枚举中文标签。
 
@@ -71,7 +71,7 @@ shared/
 
 ## 5. 编码约束
 
-硬性约束见 **`.cursor/rules/shared.mdc`**、**`.cursor/rules/project-core.mdc`** 与 **[agents/engineering-rules.md](../agents/engineering-rules.md)**（唯一来源，本处不重复）。
+硬性约束见 **`.cursor/rules/shared.mdc`**、**`.cursor/rules/project-core.mdc`** 与 **[agents/engineering-rules.md](../agents/engineering-rules.md)**。
 
 补充：`assistant-contract.ts` 仅放接口与冻结常量（如 `PERSONAL_INTENT_TOOL_MAP`），**不引入 zod 等运行时依赖**；实现见 `server/src/assistant/`。
 
@@ -146,7 +146,7 @@ shared/
 | 文档 | 用途 |
 |------|------|
 | `shared/ARCHITECTURE.md` | 类型体系、实体关系、与 DB 映射对照 |
-| `../server/src/assistant/ARCHITECTURE.md` | 个人助手五层实现架构（契约实现侧 SSOT） |
+| `../server/src/assistant/ARCHITECTURE.md` | 个人助手五层实现架构 |
 | `../server/AGENTS.md` | schema / service / Zod 同步 |
 | `../client/AGENTS.md` | UI 展示与 labels |
 | `../ARCHITECTURE.md` | 全栈集成 |

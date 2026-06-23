@@ -1,6 +1,6 @@
 # Agent 工作流执行规范
 
-> SSOT：Agent 工作流**唯一定义**。入口摘要见 `AGENTS.md`、`CLAUDE.md`；勿在 Skill/Plan 中复制全文。
+> Agent 工作流定义。入口摘要见 `AGENTS.md`、`CLAUDE.md`。
 
 ## A. 路由
 
@@ -35,7 +35,7 @@ S0 上下文确认 → S1 需求结构化 → S2 任务计划 → S3 实施 → 
 
 ## D. 命令速查
 
-见 **[commands-checklist.md](./commands-checklist.md)** §Agent 命令（唯一来源）。
+见 **[commands-checklist.md](./commands-checklist.md)** §Agent 命令。
 
 ## F. 分阶段执行卡
 

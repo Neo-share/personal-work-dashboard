@@ -1,6 +1,6 @@
 # Agent 常见误区
 
-> SSOT：Agent 执行陷阱的**唯一清单**。工程约束见 [engineering-rules.md](./engineering-rules.md)。
+> Agent 执行陷阱清单。工程约束见 [engineering-rules.md](./engineering-rules.md)。
 
 ## 误把计划当完成
 

@@ -92,7 +92,7 @@ function matchesAnyPattern(text: string, patterns: RegExp[]): boolean {
 
 /**
  * 四层护栏引擎（F0 契约实现）
- * 规则细则 SSOT：TODO/guardrail-enhancement.md
+ * 规则细则见 TODO/guardrail-enhancement.md
  */
 export class PersonalGuardrailEngine implements GuardrailEngine {
   checkInput(message: string): GuardrailVerdict {

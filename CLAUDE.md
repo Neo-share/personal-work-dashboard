@@ -1,6 +1,6 @@
 # Claude Code 入口
 
-> 权威映射见 [AGENTS.md §文档映射](./AGENTS.md#2-文档映射ssot)。本文件为**入口**，不重复定义 workflow 细则。
+> 文档索引见 [AGENTS.md §2](./AGENTS.md#2-文档索引)。本文件为**入口**，workflow 细则见链接文档。
 
 进入任务前先读取 `AGENTS.md`。项目级执行规范以 `agents/workflow.md` 和 `agents/engineering-rules.md` 为准。
 

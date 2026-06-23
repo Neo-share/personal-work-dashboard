@@ -2,7 +2,7 @@
 
 > **读者优先级：AI Agent > 人类开发者**
 >
-> Monorepo 全栈架构**引用层**。权威映射见 [AGENTS.md §文档映射](./AGENTS.md#2-文档映射ssot)。
+> 操作指南见 `AGENTS.md`；全栈视图见 `../ARCHITECTURE.md`。文档索引见 [../AGENTS.md §2](../AGENTS.md#2-文档索引)。
 >
 > 前端见 `client/ARCHITECTURE.md`；后端见 `server/ARCHITECTURE.md`；共享类型见 `shared/ARCHITECTURE.md`。
 
@@ -129,7 +129,7 @@ pnpm start   # 仅 server API
 
 ## 6. 配置摘要
 
-| 项 | 唯一来源 | 默认 |
+| 项 | 详见 | 默认 |
 |----|----------|------|
 | 前端端口 | `client/vite.config.ts` | 5175 |
 | 后端端口 | `process.env.PORT` | 3100 |
@@ -140,11 +140,11 @@ pnpm start   # 仅 server API
 
 ## 7. 文档索引
 
-引用层索引；职责与权威来源见 **[AGENTS.md §2.1](./AGENTS.md#21-权威映射表)**。
+文档索引见 **[AGENTS.md §2.1](./AGENTS.md#21-文档对照表)**。
 
 ```
 IMPLEMENTATION_STATUS.md               实现状态（计划 vs 代码）
-AGENTS.md                              Agent 入口与 SSOT 映射
+AGENTS.md                              Agent 入口与文档索引
 ARCHITECTURE.md                        本文件（全栈集成）
 client/ · server/ · shared/           包级 AGENTS + ARCHITECTURE
 PROJECT_MANAGER_*.md                   产品与技术方案（规划）
@@ -156,6 +156,6 @@ docs/个人工作台/个人工作台.md          个人工作台产品需求
 
 ## 8. 实现状态
 
-**唯一对照来源**：[IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)。不在本文件维护缺口表。
+**实现状态**：[IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)。
 
 各包实现细节见 `client/ARCHITECTURE.md`、`server/ARCHITECTURE.md`、`shared/ARCHITECTURE.md` 文末索引节。

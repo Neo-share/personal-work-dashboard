@@ -2,7 +2,7 @@
 
 > **读者优先级：AI Agent > 人类开发者**
 >
-> 修改 `server/` 时先读本文件，架构细节见同目录 `ARCHITECTURE.md`。Monorepo 总览与 SSOT 映射见根目录 [../AGENTS.md](../AGENTS.md#2-文档映射ssot)。
+> 修改 `server/` 时先读本文件，架构细节见同目录 `ARCHITECTURE.md`。文档索引见根目录 [../AGENTS.md](../AGENTS.md#2-文档索引)。
 
 ---
 
@@ -121,7 +121,7 @@ routes/chat.ts → personal-assistant-service → personal-orchestrator
   → GuardrailEngine → IntentRouter → ToolRegistry → ContextRetriever → MetricsLedger
 ```
 
-契约与分层细则见 `src/assistant/ARCHITECTURE.md`（SSOT）。
+契约与分层细则见 `src/assistant/ARCHITECTURE.md`。
 
 ---
 
@@ -186,7 +186,7 @@ assistant.sessions | todoThreads | messages | createSession | appendMessage | re
 
 ## 7. 编码约束
 
-硬性约束见 **`.cursor/rules/server.mdc`**、**`.cursor/rules/project-core.mdc`** 与 **[agents/engineering-rules.md](../agents/engineering-rules.md)**（唯一来源，本处不重复）。
+硬性约束见 **`.cursor/rules/server.mdc`**、**`.cursor/rules/project-core.mdc`** 与 **[agents/engineering-rules.md](../agents/engineering-rules.md)**。
 
 **助手与 LLM 边界**：
 
@@ -283,8 +283,8 @@ LLM_MODEL=gpt-4o-mini                    # 可选
 | 文档 | 用途 |
 |------|------|
 | `server/ARCHITECTURE.md` | 分层、DB、API、扫描/图谱/助手/LLM 子系统 |
-| `src/assistant/ARCHITECTURE.md` | 个人助手五层契约与实现（SSOT） |
+| `src/assistant/ARCHITECTURE.md` | 个人助手五层契约与实现 |
 | `../client/AGENTS.md` | 前端消费与 UI 任务 |
-| `../shared/AGENTS.md` | 领域类型单一真相源 |
+| `../shared/AGENTS.md` | 领域类型与协议 |
 | `../shared/ARCHITECTURE.md` | 类型体系详述 |
 | `../ARCHITECTURE.md` | 全栈集成与 Monorepo 总览 |

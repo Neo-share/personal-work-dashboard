@@ -1,6 +1,6 @@
 # 个人驾驶舱架构设计
 
-> **SSOT**：工作项跨域演进的**设计定义**。类型与枚举权威来源：`shared/src/work-model.ts`、`shared/src/types.ts`（本文件不重复字段表）。
+> 工作项跨域演进的设计说明。类型与枚举见 `shared/src/work-model.ts`、`shared/src/types.ts`。
 >
 > 从「开发需求管理」演进为「个人全领域工作管理」的逻辑分层与迁移路径。
 
@@ -83,7 +83,7 @@
 
 ## 4. 数据流（不变）
 
-见 [AGENTS.md §5 跨包数据流](./AGENTS.md#5-跨包数据流)（唯一来源）。
+见 [AGENTS.md §5 跨包数据流](./AGENTS.md#5-跨包数据流)。
 
 列表筛选新增 `domain`；创建/更新支持 `domain` 字段。
 

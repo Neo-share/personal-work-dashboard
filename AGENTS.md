@@ -14,14 +14,12 @@
 
 ---
 
-## 2. 文档映射（SSOT）
+## 2. 文档索引
 
-> 同一事实**只在一处定义**，其余文档**只引用**。冲突时优先级：代码 > 契约/types > 执行规范 > 机读任务/CI > 产品/规划文档。
+### 2.1 文档对照表
 
-### 2.1 权威映射表
-
-| 职责 | 唯一来源 | 引用方（勿重复定义） |
-|------|----------|----------------------|
+| 职责 | 主文档 | 相关文档 |
+|------|--------|----------|
 | Agent 入口与跨包导航 | 本文件 | `CLAUDE.md`、`CODEX.md`、`agents/README.md` |
 | Agent 工作流 S0–S5 | `agents/workflow.md` | `workflow-driven-requirements` Skill、各入口摘要 |
 | 工程硬约束 | `agents/engineering-rules.md` | `.cursor/rules/project-core.mdc` |
@@ -51,7 +49,7 @@
 | Cursor 硬性规则 | `.cursor/rules/*.mdc` | Skill、Plan |
 | 本地 dev 启动 | `.cursor/skills/start-project/SKILL.md` | `README.md` |
 
-### 2.2 文档地图（引用层）
+### 2.2 文档地图
 
 | 包 | 操作指南 | 架构参考 |
 |----|----------|----------|
@@ -170,6 +168,6 @@ client(personal): trpc + /api/chat(context=personal) → refresh 指令回流
 
 ## 9. 方案 vs 实现
 
-**唯一对照来源**：[IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)（按阶段、页面、数据模型、扫描、对话、验收标准标注 ✅/⚠️/❌）。
+**实现状态**：[IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)（按阶段、页面、数据模型、扫描、对话、验收标准标注 ✅/⚠️/❌）。
 
 新增功能前先查该文件，避免把已实现项写成规划或把 TODO 写成已上线。

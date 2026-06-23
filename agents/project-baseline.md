@@ -1,6 +1,6 @@
 # 项目 Baseline
 
-> SSOT：技术栈、目录与 **Scope 映射** 的唯一来源。入口文档只链接，不重复定义。
+> 技术栈、目录与 **Scope 映射**。
 
 ## 项目定位
 
@@ -40,4 +40,4 @@
 
 ## 默认验证
 
-见 **[commands-checklist.md](./commands-checklist.md)**（唯一来源）。当前 `pnpm agent:gate` 绑定 `pnpm build`，构建顺序为 shared → server → client。
+见 **[commands-checklist.md](./commands-checklist.md)**。当前 `pnpm agent:gate` 绑定 `pnpm build`，构建顺序为 shared → server → client。

@@ -1,6 +1,6 @@
 # 个人助手五层架构
 
-> **SSOT**：五层助手底座**接口契约**、目录规划与分阶段落地的唯一来源。
+> 五层助手底座**接口契约**、目录规划与分阶段落地说明。
 >
 > - 实现目录索引：[README.md](./README.md)
 > - 技术功能点对照：[个人工作台-技术功能点.md](../../../docs/个人工作台/个人工作台-技术功能点.md) §TL1-05 · §附录 C
@@ -116,7 +116,7 @@ interface ToolInvokeResult {
 
 ### 3.3 GuardrailEngine
 
-四层护栏**检查项与失败动作**见 **[guardrail-enhancement.md §2](../../../TODO/guardrail-enhancement.md#2-四层护栏定义)**（唯一来源）。本处仅定义编排层接口：
+四层护栏**检查项与失败动作**见 **[guardrail-enhancement.md §2](../../../TODO/guardrail-enhancement.md#2-四层护栏定义)**。本处定义编排层接口：
 
 ```typescript
 interface GuardrailEngine {

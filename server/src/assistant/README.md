@@ -1,6 +1,6 @@
 # 个人助手五层底座（实现目录）
 
-> **契约 SSOT**：`shared/src/assistant-contract.ts`（F0 已冻结，2026-06-23）
+> **契约定义**：`shared/src/assistant-contract.ts`（F0 已冻结，2026-06-23）
 >
 > **设计说明**：`server/src/assistant/ARCHITECTURE.md` §3–§4
 >

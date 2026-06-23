@@ -1,6 +1,6 @@
 # 项目管理平台方案
 
-> **SSOT**：分阶段技术方案与实施任务的**唯一来源**。实现进度见 [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)，勿在本文件写实现状态。
+> 分阶段技术方案与实施任务。实现进度见 [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)。
 
 关联产品设计说明书：[项目管理平台产品设计说明书](./PROJECT_MANAGER_PRODUCT_DESIGN.md)
 

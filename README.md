@@ -14,7 +14,7 @@
 
 ## 技术栈
 
-见 **[agents/project-baseline.md](./agents/project-baseline.md)**（唯一来源）。
+见 **[agents/project-baseline.md](./agents/project-baseline.md)**。
 
 ## 启动
 
@@ -34,7 +34,7 @@ pnpm dev
 
 ## 文档
 
-权威映射见 **[AGENTS.md §文档映射](./AGENTS.md#2-文档映射ssot)**。
+文档索引见 **[AGENTS.md §2](./AGENTS.md#2-文档索引)**。
 
 | 读者 | 入口 |
 |------|------|

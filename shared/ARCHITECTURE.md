@@ -2,7 +2,7 @@
 
 > **读者优先级：AI Agent > 人类开发者**
 >
-> 共享类型包架构**定义层**（类型体系展开说明）。操作指南见 `AGENTS.md`；全栈视图见 `../ARCHITECTURE.md`。SSOT 映射见 [../AGENTS.md §2](../AGENTS.md#2-文档映射ssot)。
+> 共享类型包架构说明。操作指南见 `AGENTS.md`；全栈视图见 `../ARCHITECTURE.md`。文档索引见 [../AGENTS.md §2](../AGENTS.md#2-文档索引)。
 
 ---
 
@@ -363,7 +363,7 @@ Monorepo 根 `pnpm build` 顺序：**shared → server → client**。
 
 ## 10. 实现状态
 
-**唯一对照来源**：[../IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md)。类型定义权威来源仍为 `shared/src/types.ts` 与 `assistant-contract.ts`；不在本文件维护规划缺口表。
+**实现状态**：[../IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md)。类型定义见 `shared/src/types.ts` 与 `assistant-contract.ts`。
 
 扩展新实体时：先在 `types.ts` 定义 interface + enum，再向下游 server/client 同步。
 

@@ -1,10 +1,10 @@
 # Agent 工程硬约束
 
-> SSOT：工程硬约束**唯一定义**。Cursor 规则 `.cursor/rules/project-core.mdc` 与之对齐，不另立冲突条款。
+> 工程硬约束的定义文档。Cursor 规则 `.cursor/rules/project-core.mdc` 与之对齐。
 
 ## 文档优先级
 
-1. `AGENTS.md`（含 SSOT 映射表）
+1. `AGENTS.md`（含文档索引）
 2. `agents/workflow.md` + 本文件
 3. 其他 `agents/*`
 4. `docs/*`：归档与产品需求，不作为执行规范
@@ -20,7 +20,7 @@
 
 ## Scope 命名
 
-见 **[project-baseline.md §Scope 映射](./project-baseline.md)**（唯一来源）。
+见 **[project-baseline.md §Scope 映射](./project-baseline.md)**。
 
 ## 编码要求
 
@@ -32,4 +32,4 @@
 
 ## 完成判定
 
-见 **[commands-checklist.md §交付前 DoD](./commands-checklist.md)**（唯一来源）。
+见 **[commands-checklist.md §交付前 DoD](./commands-checklist.md)**。

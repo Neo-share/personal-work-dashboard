@@ -1,6 +1,6 @@
 # Codex 入口摘要
 
-> 权威映射见 [AGENTS.md §文档映射](./AGENTS.md#2-文档映射ssot)。本文件为**入口**，细则见链接文档。
+> 文档索引见 [AGENTS.md §2](./AGENTS.md#2-文档索引)。本文件为**入口**，细则见链接文档。
 
 先读 `AGENTS.md`，再按 `agents/README.md` 进入控制层。
 
@@ -21,4 +21,4 @@ pnpm agent:gate
 
 ## Scope
 
-见 **[agents/project-baseline.md §Scope 映射](./agents/project-baseline.md)**（唯一来源）。
+见 **[agents/project-baseline.md §Scope 映射](./agents/project-baseline.md)**。

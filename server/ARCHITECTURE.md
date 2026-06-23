@@ -2,7 +2,7 @@
 
 > **读者优先级：AI Agent > 人类开发者**
 >
-> 后端架构**引用层**。操作指南见 `AGENTS.md`；全栈视图见 `../ARCHITECTURE.md`。SSOT 映射见 [../AGENTS.md §2](../AGENTS.md#2-文档映射ssot)。
+> 后端架构说明。操作指南见 `AGENTS.md`；全栈视图见 `../ARCHITECTURE.md`。文档索引见 [../AGENTS.md §2](../AGENTS.md#2-文档索引)。
 
 ---
 
@@ -303,7 +303,7 @@ Client 侧 ReactFlow 只读渲染；server 只提供 JSON 图数据。
 
 ### 10.2 个人域助手（五层编排）
 
-**SSOT**：`src/assistant/ARCHITECTURE.md`
+详见 **`src/assistant/ARCHITECTURE.md`**
 
 ```text
 POST /api/chat (context=personal)
@@ -369,7 +369,7 @@ POST /api/chat (context=personal)
 
 ## 13. 实现状态
 
-**唯一对照来源**：[../IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md)。不在本文件维护缺口表。
+**实现状态**：[../IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md)。
 
 ---
 
@@ -417,4 +417,4 @@ src/services/cursor-service.ts
 src/services/feishu-service.ts
 ```
 
-个人助手五层设计细则见 **`src/assistant/ARCHITECTURE.md`**（不重复展开）。
+个人助手五层设计细则见 **`src/assistant/ARCHITECTURE.md`**。

@@ -2,7 +2,7 @@
 
 > **读者优先级：AI Agent > 人类开发者**
 >
-> 修改 `client/` 时先读本文件，架构细节见同目录 `ARCHITECTURE.md`。Monorepo 总览与 SSOT 映射见根目录 [../AGENTS.md](../AGENTS.md#2-文档映射ssot)。
+> 修改 `client/` 时先读本文件，架构细节见同目录 `ARCHITECTURE.md`。文档索引见根目录 [../AGENTS.md](../AGENTS.md#2-文档索引)。
 
 ---
 
@@ -109,7 +109,7 @@ mutation 成功 → trpc.useUtils() → utils.xxx.invalidate()
 
 ## 6. 编码约束
 
-硬性约束见 **`.cursor/rules/client.mdc`**、**`.cursor/rules/project-core.mdc`** 与 **[agents/engineering-rules.md](../agents/engineering-rules.md)**（唯一来源，本处不重复）。
+硬性约束见 **`.cursor/rules/client.mdc`**、**`.cursor/rules/project-core.mdc`** 与 **[agents/engineering-rules.md](../agents/engineering-rules.md)**。
 
 ---
 

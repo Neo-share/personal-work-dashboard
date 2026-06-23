@@ -1,6 +1,6 @@
 # 个人工作台 · 待办知识库（RAG）方案
 
-> **SSOT**：个人工作台 RAG 能力的**规划定义**（后续迭代）。产品主需求见 [个人工作台.md](./个人工作台.md)；实现状态见 [IMPLEMENTATION_STATUS.md](../../IMPLEMENTATION_STATUS.md)。
+> 个人工作台 RAG 能力的规划说明（后续迭代）。产品主需求见 [个人工作台.md](./个人工作台.md)；实现状态见 [IMPLEMENTATION_STATUS.md](../../IMPLEMENTATION_STATUS.md)。
 
 ---
 

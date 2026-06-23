@@ -1,6 +1,6 @@
 # 项目管理平台产品设计说明书
 
-> **SSOT**：产品目标与领域语义的**唯一来源**。实现进度见 [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)，勿在本文件写实现状态。
+> 产品目标与领域语义。实现进度见 [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)。
 
 关联计划文档：[项目管理平台方案](./PROJECT_MANAGER_PLATFORM_PLAN.md)
 
