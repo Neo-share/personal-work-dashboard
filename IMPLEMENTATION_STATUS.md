@@ -4,7 +4,7 @@
 >
 > **读者优先级：AI Agent > 人类开发者**
 >
-> 对照 [PROJECT_MANAGER_PLATFORM_PLAN.md](./PROJECT_MANAGER_PLATFORM_PLAN.md) 与 [PROJECT_MANAGER_PRODUCT_DESIGN.md](./PROJECT_MANAGER_PRODUCT_DESIGN.md)，以**当前代码**为准。最后核对日期：2026-06-23（个人工作台 §13 同步）。
+> 对照 [PROJECT_MANAGER_PLATFORM_PLAN.md](./PROJECT_MANAGER_PLATFORM_PLAN.md) 与 [PROJECT_MANAGER_PRODUCT_DESIGN.md](./PROJECT_MANAGER_PRODUCT_DESIGN.md)，以**当前代码**为准。最后核对日期：2026-06-23（个人工作台 §13 文档收口）。
 
 **图例**：✅ 已实现 · ⚠️ 部分实现 · ❌ 未实现
 
@@ -297,17 +297,17 @@
 > 产品 SSOT：[docs/个人工作台/个人工作台.md](./docs/个人工作台/个人工作台.md)  
 > L4 功能点与完成状态：[个人工作台-功能点.md §实现状态总览](./docs/个人工作台/个人工作台-功能点.md#实现状态总览)  
 > **TL4 技术对照**：[个人工作台-技术功能点.md](./docs/个人工作台/个人工作台-技术功能点.md)  
-> **未完成待办**：[TODO/personal-workbench-enhancement.md](./TODO/personal-workbench-enhancement.md)  
-> 五层契约：[shared/src/assistant-contract.ts](./shared/src/assistant-contract.ts) · [TODO/architecture-foundation.md](./TODO/architecture-foundation.md)
+> **未完成项**：[个人工作台-功能点.md §待完成明细](./docs/个人工作台/个人工作台-功能点.md#待完成明细)  
+> 五层契约：[shared/src/assistant-contract.ts](./shared/src/assistant-contract.ts) · [server/src/assistant/ARCHITECTURE.md](./server/src/assistant/ARCHITECTURE.md)
 
 本节为**索引**，详细 ✅/⚠️/❌ 状态不在此重复维护。
 
 | 模块 | 状态 | 说明 |
 |------|------|------|
 | TL1-01 ~ TL1-09（E1–E3） | ✅ | 见 [个人工作台-功能点.md §实现状态总览](./docs/个人工作台/个人工作台-功能点.md#实现状态总览) |
-| Phase E4 embedding（可选） | ❌ | 见 personal-workbench-enhancement |
-| 外部日历 OAuth | ❌ | 范围外，见 personal-workbench-enhancement |
-| MCP 外部文档 | ❌ | 见 `TODO/mcp-integration.md` |
+| Phase E4 embedding（可选） | ❌ | 见 [功能点 §待完成明细](./docs/个人工作台/个人工作台-功能点.md#待完成明细) |
+| 外部日历 OAuth | ❌ | 范围外，见 [功能点 §待完成明细](./docs/个人工作台/个人工作台-功能点.md#待完成明细) |
+| MCP 外部文档（F4） | ⚠️ | 代码已落地；需配置 `FEISHU_MCP_HTTP_URL`，见 [交付说明 §9](./docs/个人工作台/个人工作台-交付说明.md#9-mcp-配置说明) |
 
 ---
 

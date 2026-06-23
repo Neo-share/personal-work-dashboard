@@ -2,7 +2,7 @@
 
 > **契约 SSOT**：`shared/src/assistant-contract.ts`（F0 已冻结，2026-06-23）
 >
-> **设计说明**：`TODO/architecture-foundation.md` §3–§4
+> **设计说明**：`server/src/assistant/ARCHITECTURE.md` §3–§4
 >
 > **状态**：F1–F4 已落地（orchestrator + tools + context-retriever + MCP externalSnippets）。
 

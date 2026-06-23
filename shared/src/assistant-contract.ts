@@ -2,7 +2,7 @@
  * 个人助手五层底座 — F0 冻结契约（2026-06-23）
  *
  * SSOT：协议类型定义。实现见 server/src/assistant/。
- * 设计说明：TODO/architecture-foundation.md §3
+ * 设计说明：server/src/assistant/ARCHITECTURE.md §3
  */
 
 import type {
@@ -149,7 +149,7 @@ export interface AssistantContext {
   todayScheduleCount?: number;
   /** Soul 偏好，见 personal-assistant-soul-service */
   soulSettings?: PersonalAssistantSoulSettings;
-  /** F4：MCP 外部文档片段，见 TODO/mcp-integration.md */
+  /** F4：MCP 外部文档片段，见 docs/个人工作台/个人工作台-交付说明.md §9 */
   externalSnippets?: ExternalSnippet[];
 }
 

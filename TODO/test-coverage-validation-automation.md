@@ -3,7 +3,7 @@
 > **SSOT**：测试框架、覆盖率与**门禁接入计划**的唯一来源。
 >
 > - 索引与依赖：[roadmap.md](./roadmap.md)
-> - 五层接口契约（单测对齐基准）：[architecture-foundation.md](./architecture-foundation.md) F0 · [shared/src/assistant-contract.ts](../shared/src/assistant-contract.ts)
+> - 五层接口契约（单测对齐基准）：[server/src/assistant/ARCHITECTURE.md](../server/src/assistant/ARCHITECTURE.md) F0 · [shared/src/assistant-contract.ts](../shared/src/assistant-contract.ts)
 > - 门禁命令与 DoD：[agents/commands-checklist.md](../agents/commands-checklist.md)
 > - 个人工作台已验收回归：见 [个人工作台-功能点.md §实现状态总览](../docs/个人工作台/个人工作台-功能点.md#实现状态总览)
 > - TL4 测试范围对照：[个人工作台-技术功能点.md](../docs/个人工作台/个人工作台-技术功能点.md)
@@ -48,7 +48,7 @@
 | 阶段 | 依赖 | 说明 |
 |------|------|------|
 | T1 | 无 | 框架与 gate 路径，可与 F0 并行 |
-| T2–T3 | F0 契约冻结 | 五层模块单测以 [architecture-foundation.md §3](./architecture-foundation.md#3-分层设计) 为准 |
+| T2–T3 | F0 契约冻结 | 五层模块单测以 [ARCHITECTURE.md §3](../server/src/assistant/ARCHITECTURE.md#3-分层设计) 为准 |
 | T2 现有 service | 无 | `recurring-task-scheduler` 等可在 T1 后独立推进 |
 
 ### T1 — 框架基线（无 F0 依赖）

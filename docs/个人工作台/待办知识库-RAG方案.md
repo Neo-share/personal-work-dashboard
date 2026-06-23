@@ -74,7 +74,7 @@
 | 能力 | 原因 |
 |------|------|
 | NL 意图分流 RAG | 分类问题，继续规则 / 轻量意图模型 |
-| 飞书 / 外部文档 MCP | 非内部闭环，见 `TODO/mcp-integration.md` |
+| 飞书 / 外部文档 MCP | 非内部 RAG 闭环；运行时 F4 见 [个人工作台-交付说明.md §9](./个人工作台-交付说明.md#9-mcp-配置说明) |
 | 周报文档段落填充 | 依赖需求 links 与外链 |
 | 开发域需求问答 | 跨工作台边界 |
 | Soul 偏好向量库 | 体量小，后续 prompt 注入即可 |
@@ -84,7 +84,7 @@
 
 ## 5. 架构落点
 
-对齐 `TODO/architecture-foundation.md` 中的 **ContextRetriever**，第一版仅实现 **InternalTodoKnowledgeRetriever**：
+对齐 [server/src/assistant/ARCHITECTURE.md §3.4](../../server/src/assistant/ARCHITECTURE.md#34-contextretriever) 中的 **ContextRetriever**，第一版仅实现 **InternalTodoKnowledgeRetriever**：
 
 ```text
 createTodo / materializeRecurringTask
@@ -99,7 +99,7 @@ reviseAiResult / 修改模式
   → version +1, assistant_messages 快照
 ```
 
-**降级**：LLM 不可用或检索 0 条时，回退现有 `generateAiHtml` 模板（与 `personal-workbench-enhancement.md` Phase C 一致）。
+**降级**：LLM 不可用或检索 0 条时，回退现有 `generateAiHtml` 模板。
 
 ---
 
@@ -177,8 +177,8 @@ reviseAiResult / 修改模式
 ## 10. 与路线图关系
 
 - **前置**：个人工作台 Phase A–F 与 Phase E1–E3 已闭环；完成状态见 [个人工作台-功能点.md §实现状态总览](./个人工作台-功能点.md#实现状态总览)  
-- **并行**：不阻塞 `architecture-foundation.md`；检索器接口与其 ContextRetriever 契约对齐，便于后续替换  
-- **后置**：`mcp-integration.md` 可在 Internal 检索之上 **叠加** External 片段，不替代本方案  
+- **并行**：不阻塞五层底座；检索器接口与 ContextRetriever 契约对齐，便于后续替换
+- **后置**：F4 MCP 可在 Internal 检索之上 **叠加** External 片段，不替代本方案（见 [交付说明 §9](./个人工作台-交付说明.md#9-mcp-配置说明)）
 
 ---
 

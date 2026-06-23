@@ -1,12 +1,12 @@
-# 架构底座待办
+# 个人助手五层架构
 
 > **SSOT**：五层助手底座**接口契约**、目录规划与分阶段落地的唯一来源。
 >
-> - 索引与依赖：[roadmap.md](./roadmap.md)
-> - 技术功能点对照：[个人工作台-技术功能点.md](../docs/个人工作台/个人工作台-技术功能点.md) §TL1-05 · §附录 C
-> - 护栏**规则细则**（非接口）：[guardrail-enhancement.md](./guardrail-enhancement.md)
-> - MCP 接入计划：[mcp-integration.md](./mcp-integration.md)
-> - 实现状态：[IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md)
+> - 实现目录索引：[README.md](./README.md)
+> - 技术功能点对照：[个人工作台-技术功能点.md](../../../docs/个人工作台/个人工作台-技术功能点.md) §TL1-05 · §附录 C
+> - 护栏**规则细则**（非接口）：[TODO/guardrail-enhancement.md](../../../TODO/guardrail-enhancement.md)
+> - MCP 运行时配置与验收：[个人工作台-交付说明.md §9](../../../docs/个人工作台/个人工作台-交付说明.md#9-mcp-配置说明)
+> - 实现状态：[IMPLEMENTATION_STATUS.md](../../../IMPLEMENTATION_STATUS.md) §13
 >
 > 状态：**F0 契约已冻结（2026-06-23）**；**F1–F4 已落地**。类型见 `shared/src/assistant-contract.ts`，实现目录见 §4。
 
@@ -24,13 +24,13 @@
 | **ContextRetriever** | 会话、待办、日程等上下文组装 | 不调用外部 LLM |
 | **MetricsLedger** | 时延、错误、调用次数、分桶统计 | 不做告警推送 |
 
-**验收（实现阶段）**：接口契约冻结；关键链路可观测；注入防护与动作白名单；MCP/Skill 可复用 ToolRegistry。
+**验收**：接口契约冻结；关键链路可观测；注入防护与动作白名单；MCP/Skill 可复用 ToolRegistry。
 
 ---
 
 ## 2. 现状与接入点
 
-**当前个人助手链路（F1–F3 已落地）**：
+**当前个人助手链路**：
 
 ```text
 POST /api/chat (context=personal)
@@ -39,12 +39,12 @@ POST /api/chat (context=personal)
   → GuardrailEngine.checkInput / checkIntent / checkToolCall / checkOutput
   → IntentRouter.route (RuleBasedIntentRouter)
   → ToolRegistry.invoke (todo / schedule / recurring tools)
-  → ContextRetriever.retrieve (DB 上下文)
+  → McpContextRetriever.retrieve (DB + 可选 externalSnippets)
   → MetricsLedger.record
   → SSE: text | refresh | modifyMode | blocked | error | done
 ```
 
-**遗留**：无。MCP 需配置 `FEISHU_MCP_HTTP_URL` 后才会拉取 `externalSnippets`；未配置时自动降级为纯 DB 上下文。
+**MCP 可选**：配置 `FEISHU_MCP_HTTP_URL` 后拉取 `externalSnippets`；未配置时自动降级为纯 DB 上下文（见交付说明 §9）。
 
 ---
 
@@ -116,7 +116,7 @@ interface ToolInvokeResult {
 
 ### 3.3 GuardrailEngine
 
-四层护栏**检查项与失败动作**见 **[guardrail-enhancement.md §2](./guardrail-enhancement.md#2-四层护栏定义)**（唯一来源）。本处仅定义编排层接口：
+四层护栏**检查项与失败动作**见 **[guardrail-enhancement.md §2](../../../TODO/guardrail-enhancement.md#2-四层护栏定义)**（唯一来源）。本处仅定义编排层接口：
 
 ```typescript
 interface GuardrailEngine {
@@ -127,7 +127,7 @@ interface GuardrailEngine {
 }
 ```
 
-SSE 扩展事件：`{ type: 'blocked', code, message }`（个人工作台 Phase C 已预留）。
+SSE 扩展事件：`{ type: 'blocked', code, message }`。
 
 ### 3.4 ContextRetriever
 
@@ -137,12 +137,12 @@ interface AssistantContext {
   recentMessages: AssistantMessage[];
   activeTodo?: TodoItem;
   todayScheduleCount?: number;
-  /** 后续 MCP */
+  /** F4：MCP 外部文档片段 */
   externalSnippets?: Array<{ source: string; excerpt: string }>;
 }
 ```
 
-第一版仅组装 DB 内会话 + 可选待办。外部片段由 [mcp-integration.md](./mcp-integration.md) 填充 `externalSnippets`（接口字段定义见上）。
+DB 内会话 + 可选待办由 `context-retriever.ts` 组装；外部片段由 `mcp-context-retriever.ts` 经 HTTP 桥接填充（配置见交付说明 §9）。
 
 ```typescript
 interface ContextRetriever {
@@ -165,6 +165,7 @@ interface MetricEvent {
 // pw.tool.invoked { tool, ok }
 // pw.tool.latency_ms { tool }
 // pw.guardrail.blocked { layer, code }
+// pw.mcp.latency_ms / pw.mcp.fail { source, tool }
 ```
 
 第一版：内存环形缓冲 + `server` 日志；第二版：可选落 SQLite `metric_events` 表或对接 Sentry。
@@ -205,41 +206,43 @@ server/src/assistant/
 ├── intent-router.ts          RuleBasedIntentRouter
 ├── tool-registry.ts          注册表 + invoke
 ├── guardrail-engine.ts       四层检查
-├── context-retriever.ts      上下文组装
+├── context-retriever.ts      DB 上下文组装
+├── mcp-context-retriever.ts  DB + MCP externalSnippets
 ├── metrics-ledger.ts         记录与查询
-├── personal-orchestrator.ts  编排入口（替代 resolvePersonalAssistantIntent 单体）
+├── personal-orchestrator.ts  编排入口
+├── mcp/                      飞书 HTTP 桥接客户端
 └── tools/
     ├── todo-tools.ts
     ├── schedule-tools.ts
     └── recurring-tools.ts
 ```
 
-`personal-assistant-service.ts` 保留薄封装，内部委托 `personal-orchestrator`，避免一次性大重构。
+`personal-assistant-service.ts` 保留薄封装，内部委托 `personal-orchestrator`。
 
 ---
 
 ## 5. 分阶段落地
 
-| 阶段 | 内容 | 依赖 | 状态 |
-|------|------|------|------|
-| **F0** | 接口冻结 → `shared/src/assistant-contract.ts` | — | ✅ |
-| **F1** | MetricsLedger + ToolRegistry + tools 注册 | F0 | ✅ |
-| **F2** | IntentRouter + personal-orchestrator 切换 | F1 | ✅ |
-| **F3** | GuardrailEngine 四层 + SSE `blocked` | F2 | ✅ |
-| **F4** | ContextRetriever.externalSnippets + MCP | mcp-integration | ✅ |
+| 阶段 | 内容 | 状态 |
+|------|------|------|
+| **F0** | 接口冻结 → `shared/src/assistant-contract.ts` | ✅ |
+| **F1** | MetricsLedger + ToolRegistry + tools 注册 | ✅ |
+| **F2** | IntentRouter + personal-orchestrator 切换 | ✅ |
+| **F3** | GuardrailEngine 四层 + SSE `blocked` | ✅ |
+| **F4** | ContextRetriever.externalSnippets + MCP HTTP 桥接 | ✅（代码）；⚠️ 需配置 `FEISHU_MCP_HTTP_URL` 后验收 |
 
-个人工作台 **不阻塞于 F4**；F1–F3 已完成，行为见 [个人工作台-功能点.md §实现状态总览](../docs/个人工作台/个人工作台-功能点.md#实现状态总览)。
+完成状态见 [个人工作台-功能点.md §实现状态总览](../../../docs/个人工作台/个人工作台-功能点.md#实现状态总览)。
 
 ---
 
-## 6. 与相关待办关系
+## 6. 相关文档
 
 | 文档 | 关系 |
 |------|------|
-| [personal-workbench-enhancement.md](./personal-workbench-enhancement.md) | Phase E1–E3 已收口；E4 embedding 可选待做；完成状态见 [功能点 §实现状态总览](../docs/个人工作台/个人工作台-功能点.md#实现状态总览) |
-| [guardrail-enhancement.md](./guardrail-enhancement.md) | GuardrailEngine **规则细则** |
-| [mcp-integration.md](./mcp-integration.md) | ContextRetriever 外部片段 |
-| [test-coverage-validation-automation.md](./test-coverage-validation-automation.md) | F0 契约冻结后，以 §3 接口为准编写单测与 gate；T1 框架可与 F0 并行 |
+| [guardrail-enhancement.md](../../../TODO/guardrail-enhancement.md) | GuardrailEngine **规则细则** |
+| [test-coverage-validation-automation.md](../../../TODO/test-coverage-validation-automation.md) | 五层单测与 gate |
+| [待办知识库-RAG方案.md](../../../docs/个人工作台/待办知识库-RAG方案.md) | 内部 RAG（E1–E3 ✅；E4 可选） |
+| [个人工作台-交付说明.md §9](../../../docs/个人工作台/个人工作台-交付说明.md#9-mcp-配置说明) | MCP 配置与验收 |
 
 ---
 
@@ -255,15 +258,15 @@ server/src/assistant/
 
 ---
 
-## 8. 验收清单（实现阶段勾选）
+## 8. 验收清单
 
 - [x] 五层接口类型在 `shared/src/assistant-contract.ts` 冻结
-- [x] 五层实现文件在 `server/src/assistant/` 落地（F1–F2：orchestrator + tools + context-retriever）
+- [x] 五层实现文件在 `server/src/assistant/` 落地
 - [x] `/api/chat` 个人上下文走 orchestrator，行为与迁移前回归一致
 - [x] 黄金话术 11 条自动化回归通过
 - [x] 护栏拦截可 SSE `blocked` 且不落库
 - [x] MetricsLedger 可查询最近一次请求的 intent + tools + latency
-- [x] MCP tool 可通过 ToolRegistry 注册，无需改 chat 路由（**F4**）
+- [x] MCP 工具经 `McpContextRetriever` 注入，无需改 chat 路由（**F4**）
 
 ---
 

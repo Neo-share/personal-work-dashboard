@@ -1,4 +1,4 @@
-/** 飞书 Document MCP HTTP 桥接配置（凭证由人工配置，见 TODO/mcp-integration.md） */
+/** 飞书 Document MCP HTTP 桥接配置（凭证由人工配置，见 docs/个人工作台/个人工作台-交付说明.md §9） */
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 const DEFAULT_MAX_DOCS = 3;
