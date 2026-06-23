@@ -4,7 +4,7 @@
 >
 > **设计说明**：`TODO/architecture-foundation.md` §3–§4
 >
-> **状态**：F1–F2 已落地（orchestrator + tools + context-retriever）；F3–F4 待排期。
+> **状态**：F1–F4 已落地（orchestrator + tools + context-retriever + MCP externalSnippets）。
 
 ## 目标文件
 

@@ -1,4 +1,4 @@
-import type { AiResultType, PersonalAssistantSoulSettings } from '@project-manager/shared';
+import type { ExternalSnippet, AiResultType, PersonalAssistantSoulSettings } from '@project-manager/shared';
 import { getDb } from '../db/index.js';
 import { isLlmConfigured } from '../llm/llm-config.js';
 import {
@@ -15,6 +15,8 @@ import { getPersonalAssistantSoulSettings } from './personal-assistant-soul-serv
 const AI_GENERATION_DELAY_MS = 1500;
 
 const pendingGenerations = new Set<number>();
+/** 待办创建时暂存 MCP 外部片段，供异步 AI 生成消费 */
+const pendingExternalSnippets = new Map<number, ExternalSnippet[]>();
 
 /** 能力判定：不可自动的关键词 */
 const MANUAL_KEYWORDS = ['电话', '回访', '线下', '见面', '签字'];
@@ -107,9 +109,13 @@ export function scheduleAiResultGeneration(
   todoId: number,
   resultType: AiResultType,
   title: string,
+  externalSnippets?: ExternalSnippet[],
 ): void {
   if (pendingGenerations.has(todoId)) {
     return;
+  }
+  if (externalSnippets?.length) {
+    pendingExternalSnippets.set(todoId, externalSnippets);
   }
   pendingGenerations.add(todoId);
   setTimeout(() => {
@@ -172,12 +178,44 @@ function applyRevisionRules(html: string, revisionHint: string): string {
 export function buildReviseContextSummary(
   snippets: KnowledgeSnippet[],
   previousVersion: number,
+  externalSnippets?: ExternalSnippet[],
 ): string {
   const hasSchedule = snippets.some((item) => item.sourceTable === 'schedule_events');
+  const hasExternal = (externalSnippets?.length ?? 0) > 0;
+  if (hasSchedule && hasExternal) {
+    return `已参考 v${previousVersion}、日程与外部文档上下文`;
+  }
+  if (hasExternal) {
+    return `已参考 v${previousVersion} 与外部文档上下文`;
+  }
   if (hasSchedule) {
     return `已参考 v${previousVersion} 与日程上下文`;
   }
   return `已参考 v${previousVersion}`;
+}
+
+function takePendingExternalSnippets(todoId: number): ExternalSnippet[] | undefined {
+  const snippets = pendingExternalSnippets.get(todoId);
+  pendingExternalSnippets.delete(todoId);
+  return snippets;
+}
+
+/** 将 MCP 外部片段并入 LLM 上下文（F4） */
+export function mergeExternalSnippetsIntoKnowledge(
+  snippets: KnowledgeSnippet[],
+  externalSnippets?: ExternalSnippet[],
+): KnowledgeSnippet[] {
+  if (!externalSnippets?.length) {
+    return snippets;
+  }
+  const externalAsKnowledge: KnowledgeSnippet[] = externalSnippets.map((item, index) => ({
+    id: `external_mcp:${index}:${item.source}`,
+    sourceTable: 'assistant_messages',
+    sourceId: index,
+    label: `外部 · ${item.source}`,
+    excerpt: item.excerpt,
+  }));
+  return [...externalAsKnowledge, ...snippets];
 }
 
 /** 生成 HTML：检索 → LLM；失败则降级规则模板 */
@@ -186,9 +224,14 @@ async function resolveAiResultHtml(
   resultType: AiResultType,
   title: string,
   description?: string | null,
+  externalSnippets?: ExternalSnippet[],
 ): Promise<{ htmlContent: string; provider: string; snippetIds: string[] }> {
   const retrieved = retrieveForTodo(todoId, { intent: 'generate' });
-  const snippetIds = retrieved.snippets.map((item) => item.id);
+  const mergedSnippets = mergeExternalSnippetsIntoKnowledge(
+    retrieved.snippets,
+    externalSnippets,
+  );
+  const snippetIds = mergedSnippets.map((item) => item.id);
 
   if (isLlmConfigured()) {
     try {
@@ -196,7 +239,7 @@ async function resolveAiResultHtml(
         resultType,
         title,
         description,
-        snippets: retrieved.snippets,
+        snippets: mergedSnippets,
       });
       return {
         htmlContent,
@@ -221,8 +264,10 @@ async function resolveRevisedAiResultHtml(
   revisionHint: string,
   currentHtml: string,
   snippets: KnowledgeSnippet[],
+  externalSnippets?: ExternalSnippet[],
 ): Promise<{ htmlContent: string; provider: string; snippetIds: string[] }> {
-  const snippetIds = snippets.map((item) => item.id);
+  const mergedSnippets = mergeExternalSnippetsIntoKnowledge(snippets, externalSnippets);
+  const snippetIds = mergedSnippets.map((item) => item.id);
 
   if (isLlmConfigured()) {
     try {
@@ -231,7 +276,7 @@ async function resolveRevisedAiResultHtml(
         title,
         currentHtml,
         revisionHint,
-        snippets,
+        snippets: mergedSnippets,
       });
       return {
         htmlContent,
@@ -269,6 +314,7 @@ export async function createAiResultForTodo(
     resultType,
     title,
     todoRow?.description,
+    takePendingExternalSnippets(todoId),
   );
 
   const result = db
@@ -290,6 +336,7 @@ export async function reviseAiResult(
   resultType: AiResultType,
   title: string,
   revisionHint: string,
+  externalSnippets?: ExternalSnippet[],
 ): Promise<{
   id: number;
   version: number;
@@ -322,6 +369,7 @@ export async function reviseAiResult(
   const contextSummary = buildReviseContextSummary(
     retrieved.snippets,
     Math.max(previousVersion, 1),
+    externalSnippets,
   );
 
   const { htmlContent, provider } = await resolveRevisedAiResultHtml(
@@ -330,6 +378,7 @@ export async function reviseAiResult(
     revisionHint,
     currentHtml,
     retrieved.snippets,
+    externalSnippets,
   );
 
   const result = db

@@ -64,7 +64,8 @@ export type PersonalToolName =
   | 'todo.revise_ai'
   | 'schedule.create_local'
   | 'recurring.create'
-  | 'recurring.materialize';
+  | 'recurring.materialize'
+  | 'mcp.feishu.get_doc';
 
 /** 实现侧为 Zod schema；契约层不引入 zod 依赖 */
 export interface ToolDefinition<TParams = unknown, TResult = unknown> {
@@ -74,9 +75,17 @@ export interface ToolDefinition<TParams = unknown, TResult = unknown> {
   execute: (params: TParams, ctx: ToolContext) => Promise<TResult>;
 }
 
+/** MCP 外部知识片段（F4） */
+export interface ExternalSnippet {
+  source: string;
+  excerpt: string;
+}
+
 export interface ToolContext {
   sessionId: number;
   metrics: MetricsLedger;
+  /** 编排层组装的会话上下文，供副作用工具读取 externalSnippets */
+  assistantContext?: AssistantContext;
 }
 
 export interface ToolInvokeResult {
@@ -140,12 +149,18 @@ export interface AssistantContext {
   todayScheduleCount?: number;
   /** Soul 偏好，见 personal-assistant-soul-service */
   soulSettings?: PersonalAssistantSoulSettings;
-  /** 后续 MCP 填充，见 TODO/mcp-integration.md */
-  externalSnippets?: Array<{ source: string; excerpt: string }>;
+  /** F4：MCP 外部文档片段，见 TODO/mcp-integration.md */
+  externalSnippets?: ExternalSnippet[];
+}
+
+export interface ContextRetrieveOptions {
+  modifyTodoId?: number;
+  /** 用户当前消息，用于提取飞书链接并拉取外部片段 */
+  message?: string;
 }
 
 export interface ContextRetriever {
-  retrieve(sessionId: number, options?: { modifyTodoId?: number }): AssistantContext;
+  retrieve(sessionId: number, options?: ContextRetrieveOptions): Promise<AssistantContext>;
 }
 
 // ---------------------------------------------------------------------------

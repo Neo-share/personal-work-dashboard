@@ -34,12 +34,13 @@ export const todoCreateTool: ToolDefinition<
     dueAt: z.string().optional(),
     source: z.enum(['manual', 'natural_language', 'recurring_task']).optional(),
   }),
-  execute: async (params) => {
+  execute: async (params, ctx) => {
     const todo = createTodo({
       title: params.title,
       description: params.description ?? '来源：自然语言',
       dueAt: params.dueAt,
       source: params.source ?? 'natural_language',
+      externalSnippets: ctx.assistantContext?.externalSnippets,
     });
     return {
       refresh: ['todos', 'summary'],
@@ -60,7 +61,7 @@ export const todoReviseAiTool: ToolDefinition<
     modifyTodoId: z.number().int().positive(),
     revisionHint: z.string().min(1),
   }),
-  execute: async (params) => {
+  execute: async (params, ctx) => {
     const todo = getTodoById(params.modifyTodoId);
     if (!todo || !todo.aiResultType) {
       throw new Error('待办不存在或不支持 AI 修改');
@@ -70,6 +71,7 @@ export const todoReviseAiTool: ToolDefinition<
       todo.aiResultType,
       todo.title,
       params.revisionHint,
+      ctx.assistantContext?.externalSnippets,
     );
     return {
       refresh: ['todos'],

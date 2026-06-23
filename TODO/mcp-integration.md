@@ -35,11 +35,11 @@
 
 ## 4. 实施步骤（规划）
 
-1. [ ] 选型与配置 Feishu Document MCP（凭证与权限由人工配置，文档不记录密钥）
-2. [ ] 实现 `McpContextRetriever` 适配器，填充 `externalSnippets`
-3. [ ] 个人助手 AI 生成/修订链路消费片段（与 `ai-result-service` 或后续 LLM 层对接）
-4. [ ] 失败降级：无 MCP 时行为与当前规则模板一致
-5. [ ] 指标：`pw.mcp.latency_ms`、`pw.mcp.fail` 记入 MetricsLedger
+1. [x] 选型与配置 Feishu Document MCP（凭证与权限由人工配置，文档不记录密钥）
+2. [x] 实现 `McpContextRetriever` 适配器，填充 `externalSnippets`
+3. [x] 个人助手 AI 生成/修订链路消费片段（与 `ai-result-service` 或后续 LLM 层对接）
+4. [x] 失败降级：无 MCP 时行为与当前规则模板一致
+5. [x] 指标：`pw.mcp.latency_ms`、`pw.mcp.fail` 记入 MetricsLedger
 
 ---
 
@@ -48,7 +48,7 @@
 - [ ] 至少 **3 个核心场景**可稳定拉取文档上下文并影响助手回复
 - [ ] MCP 不可用时自动降级，用户仍可完成基础待办/日程操作
 - [ ] 延迟与失败可查询或日志可追溯
-- [ ] 新 MCP 工具通过 `ToolRegistry` 注册，无需改 `routes/chat.ts`（见 architecture-foundation §7）
+- [x] 新 MCP 工具通过 `ToolRegistry` 注册，无需改 `routes/chat.ts`（见 architecture-foundation §7）
 
 ---
 
@@ -56,5 +56,5 @@
 
 - [ ] 将 MCP 纳入个人工作台核心链路
   - 目标：Feishu Document MCP 作为首要外部知识来源。
-  - 范围：§4 实施步骤。
+  - 范围：§4 实施步骤（代码已落地；需配置 `FEISHU_MCP_HTTP_URL` 与 HTTP 桥接后验收 §5 场景）。
   - 验收：§5 清单。

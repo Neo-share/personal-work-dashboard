@@ -1,5 +1,6 @@
 import type {
   AiResultType,
+  ExternalSnippet,
   PersonalWorkbenchSummary,
   TodoAiResult,
   TodoFilter,
@@ -107,6 +108,7 @@ export function createTodo(input: {
   isUrgent?: boolean;
   recurringTaskId?: number;
   triggerAi?: boolean;
+  externalSnippets?: ExternalSnippet[];
 }): TodoItem {
   const db = getDb();
   const now = new Date().toISOString();
@@ -134,7 +136,12 @@ export function createTodo(input: {
   const todoId = Number(result.lastInsertRowid);
 
   if (capability.canAuto && capability.resultType && input.triggerAi !== false) {
-    scheduleAiResultGeneration(todoId, capability.resultType, input.title);
+    scheduleAiResultGeneration(
+      todoId,
+      capability.resultType,
+      input.title,
+      input.externalSnippets,
+    );
   } else if (!capability.canAuto) {
     db.prepare(`UPDATE todos SET description = ? WHERE id = ?`).run(
       input.description ?? capability.reason,

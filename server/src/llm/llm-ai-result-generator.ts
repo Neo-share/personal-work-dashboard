@@ -52,7 +52,7 @@ function buildContextBlock(snippets?: KnowledgeSnippet[]): string {
   const lines = snippets.map(
     (item) => `- [${item.label}] (${item.id}) ${item.excerpt}`,
   );
-  return ['参考以下内部资料（须优先采信，勿编造外链）：', ...lines].join('\n');
+  return ['参考以下资料（须优先采信，勿编造外链）：', ...lines].join('\n');
 }
 
 function buildSystemPrompt(

@@ -11,8 +11,8 @@ import type {
 } from '@project-manager/shared';
 import { PERSONAL_INTENT_TOOL_MAP } from '@project-manager/shared';
 import { extractTitleWithLlm, MAX_ASSISTANT_TITLE_LENGTH } from '../llm/llm-title-extractor.js';
-import { dbContextRetriever } from './context-retriever.js';
 import { ruleBasedIntentRouter } from './intent-router.js';
+import { mcpContextRetriever } from './mcp-context-retriever.js';
 import {
   personalGuardrailEngine,
   sanitizeAssistantReply,
@@ -175,15 +175,17 @@ export class PersonalAssistantOrchestrator implements PersonalOrchestrator {
     const text = input.message.trim();
     const session = resolveAssistantSession(input.sessionId);
     const toolRegistry = getPersonalToolRegistry();
-    const toolCtx = { sessionId: session.id, metrics: inMemoryMetricsLedger };
 
     const inputVerdict = personalGuardrailEngine.checkInput(text);
     if (!inputVerdict.allowed) {
       return buildBlocked(inputVerdict);
     }
 
-    // 上下文组装（第一版仅用于后续 RAG/MCP 扩展）
-    dbContextRetriever.retrieve(session.id, { modifyTodoId: input.modifyTodoId });
+    const assistantContext = await mcpContextRetriever.retrieve(session.id, {
+      modifyTodoId: input.modifyTodoId,
+      message: text,
+    });
+    const toolCtx = { sessionId: session.id, metrics: inMemoryMetricsLedger, assistantContext };
 
     appendAssistantMessage(session.id, 'user', text);
 

@@ -8,7 +8,7 @@
 > - MCP 接入计划：[mcp-integration.md](./mcp-integration.md)
 > - 实现状态：[IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md)
 >
-> 状态：**F0 契约已冻结（2026-06-23）**；**F1–F3 已落地**；**F4（MCP 片段）待排期**。类型见 `shared/src/assistant-contract.ts`，实现目录见 §4。
+> 状态：**F0 契约已冻结（2026-06-23）**；**F1–F4 已落地**。类型见 `shared/src/assistant-contract.ts`，实现目录见 §4。
 
 ---
 
@@ -44,7 +44,7 @@ POST /api/chat (context=personal)
   → SSE: text | refresh | modifyMode | blocked | error | done
 ```
 
-**遗留**：`ContextRetriever.externalSnippets` 仍为空；MCP 接入见 F4 · [mcp-integration.md](./mcp-integration.md)。
+**遗留**：无。MCP 需配置 `FEISHU_MCP_HTTP_URL` 后才会拉取 `externalSnippets`；未配置时自动降级为纯 DB 上下文。
 
 ---
 
@@ -226,7 +226,7 @@ server/src/assistant/
 | **F1** | MetricsLedger + ToolRegistry + tools 注册 | F0 | ✅ |
 | **F2** | IntentRouter + personal-orchestrator 切换 | F1 | ✅ |
 | **F3** | GuardrailEngine 四层 + SSE `blocked` | F2 | ✅ |
-| **F4** | ContextRetriever.externalSnippets + MCP | mcp-integration | ❌ |
+| **F4** | ContextRetriever.externalSnippets + MCP | mcp-integration | ✅ |
 
 个人工作台 **不阻塞于 F4**；F1–F3 已完成，行为见 [个人工作台-功能点.md §实现状态总览](../docs/个人工作台/个人工作台-功能点.md#实现状态总览)。
 
@@ -263,8 +263,8 @@ server/src/assistant/
 - [x] 黄金话术 11 条自动化回归通过
 - [x] 护栏拦截可 SSE `blocked` 且不落库
 - [x] MetricsLedger 可查询最近一次请求的 intent + tools + latency
-- [ ] MCP tool 可通过 ToolRegistry 注册，无需改 chat 路由（**F4**）
+- [x] MCP tool 可通过 ToolRegistry 注册，无需改 chat 路由（**F4**）
 
 ---
 
-*F0–F3 已落地 · 2026-06-23 · 下一步 F4（MCP externalSnippets）*
+*F0–F4 已落地 · 2026-06-23*
