@@ -1,5 +1,7 @@
 # 实现状态对照（计划书 vs 代码）
 
+> **SSOT**：计划书与当前代码的**唯一对照来源**。权威映射见 [AGENTS.md §2.1](./AGENTS.md#21-权威映射表)。
+>
 > **读者优先级：AI Agent > 人类开发者**
 >
 > 对照 [PROJECT_MANAGER_PLATFORM_PLAN.md](./PROJECT_MANAGER_PLATFORM_PLAN.md) 与 [PROJECT_MANAGER_PRODUCT_DESIGN.md](./PROJECT_MANAGER_PRODUCT_DESIGN.md)，以**当前代码**为准。最后核对日期：2026-06-12。
@@ -148,7 +150,8 @@
 | 计划页面 | 状态 | 路由 / 备注 |
 |----------|------|-------------|
 | 对话助手（全局） | ⚠️ | `ChatPanel` 全页 FAB；非 assistant-ui |
-| 我的工作台 | ✅ | `/` |
+| 个人 AI 助手工作台 | ✅ | `/` · `PersonalWorkbenchPage` |
+| 开发域工作台 | ✅ | `/dev-dashboard` · `MyWorkbenchPage` |
 | 需求列表 | ✅ | `/requirements`；服务端 `list` 筛选 + URL 同步 |
 | 需求详情 | ✅ | `/requirements/:id`；编辑/删除/关联 CRUD ✅ |
 | 项目/仓库列表 | ⚠️ | `/repositories`；反查并行需求 ✅；无业务域筛选 |
@@ -286,6 +289,58 @@
 | P2 | DB migration | 工程化 |
 | P3 | 外部系统 MCP/API（YApi/Figma/Sentry/飞书） | 第四阶段 |
 | P3 | LLM 编排 | 计划架构项 |
+
+---
+
+## 13. 个人 AI 助手工作台（产品考题）
+
+> 产品 SSOT：[docs/个人工作台/个人工作台.md](./docs/个人工作台/个人工作台.md)  
+> L4 功能点：[个人工作台-功能点.md](./docs/个人工作台/个人工作台-功能点.md) · TL4 技术对照：[个人工作台-技术功能点.md](./docs/个人工作台/个人工作台-技术功能点.md)  
+> 实施 Phase：[TODO/personal-workbench-enhancement.md](./TODO/personal-workbench-enhancement.md)  
+> 五层契约：[shared/src/assistant-contract.ts](./shared/src/assistant-contract.ts) · [TODO/architecture-foundation.md](./TODO/architecture-foundation.md)
+
+### 13.1 页面与布局
+
+| 项 | 状态 | 实现位置 |
+|----|------|----------|
+| 路由 `/` 个人工作台主页 | ✅ | `PersonalWorkbenchPage` |
+| 日程与事项 / 定时任务页签 | ✅ | 双栏 36%/64% + 340px 助手 |
+| 概览胶囊（日程/待办/逾期/已完成） | ✅ | `personalWorkbench.summary` |
+| 小月历联动日程数 | ✅ | A6 |
+| 响应式堆叠（≤1100px / ≤900px） | ✅ | `personal-workbench.css` |
+
+### 13.2 待办 / 日程 / 定时任务
+
+| 能力 | 状态 | 说明 |
+|------|------|------|
+| 待办 CRUD + 筛选 + 逾期 | ✅ | `TodoPanel` + `todo-service` |
+| AI 结果预览 / 修改 / 确认 | ✅ | `AiResultPanel` + `ai-result-service` |
+| 0–24h 时间轴 + 多渠道去重 | ✅ | `ScheduleTimeline` + `schedule-service` |
+| 定时任务 CRUD + 物化待办 | ✅ | `RecurringTaskPanel` + `recurring-task-scheduler` |
+| 编辑弹窗（待办/定时任务） | ✅ | Phase A1/A2 |
+
+### 13.3 个人助手与五层底座
+
+| 能力 | 状态 | 实现位置 |
+|------|------|----------|
+| NL 意图分流（待办/日程/定时/例会） | ✅ | `RuleBasedIntentRouter` |
+| 黄金话术 11 条回归 | ✅ | `personal-assistant-golden.test.ts` |
+| ToolRegistry 白名单工具 | ✅ | `assistant/tools/*` |
+| PersonalOrchestrator 编排 | ✅ | `assistant/personal-orchestrator.ts` |
+| 四层护栏 + SSE `blocked` | ✅ | `guardrail-engine.ts` + `chat.ts` |
+| MetricsLedger 指标 | ✅ | `metrics-ledger.ts` |
+| ContextRetriever（DB 上下文） | ✅ | `context-retriever.ts` |
+| 历史对话 / 修改模式 | ✅ | `PersonalAssistantPanel` + `assistant-session-service` |
+
+### 13.4 待后续迭代
+
+| 项 | 状态 | 说明 |
+|----|------|------|
+| 待办知识库 RAG（Phase E） | ❌ | 见 `待办知识库-RAG方案.md` |
+| AI pending 真异步轮询（B4） | ✅ | `scheduleAiResultGeneration` + 前端 800ms 轮询 |
+| 外部日历 OAuth | ❌ | Demo 模拟渠道 |
+| MCP 外部文档片段 | ❌ | 见 `TODO/mcp-integration.md` |
+| Soul 设置真实配置 | ✅ | `personalWorkbench.get/setSoulSettings` + Modal |
 
 ---
 

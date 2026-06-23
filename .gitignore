@@ -4,6 +4,7 @@ out
 data
 .env
 server/.env
+server/coverage
 .DS_Store
 *.log
 pnpm-debug.log*

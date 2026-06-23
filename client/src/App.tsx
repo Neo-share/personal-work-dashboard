@@ -3,14 +3,15 @@ import ChatPanel from './components/ChatPanel';
 import GraphPage from './pages/GraphPage';
 import MyWorkbenchPage from './pages/MyWorkbenchPage';
 import PeoplePage from './pages/PeoplePage';
+import PersonalWorkbenchPage from './pages/PersonalWorkbenchPage';
 import RepositoriesPage from './pages/RepositoriesPage';
 import RequirementDetailPage from './pages/RequirementDetailPage';
 import RequirementsPage from './pages/RequirementsPage';
 import ScanCenterPage from './pages/ScanCenterPage';
 import WeeklyReportPage from './pages/WeeklyReportPage';
 
-const navItems = [
-  { to: '/', label: '驾驶舱' },
+const devNavItems = [
+  { to: '/dev-dashboard', label: '驾驶舱' },
   { to: '/requirements', label: '工作列表' },
   { to: '/weekly-report', label: '周报' },
   { to: '/repositories', label: '仓库' },
@@ -19,7 +20,7 @@ const navItems = [
   { to: '/people', label: '协作联系人' },
 ];
 
-export default function App() {
+function DevShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -28,32 +29,94 @@ export default function App() {
           <p className="brand-subtitle">管理个人工作项、协作联系人与上下文资源</p>
         </div>
         <nav className="app-nav">
-          {navItems.map((item) => (
+          {devNavItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.to === '/'}
+              end={item.to === '/dev-dashboard'}
               className={({ isActive }) => (isActive ? 'active' : undefined)}
             >
               {item.label}
             </NavLink>
           ))}
+          <NavLink to="/">个人工作台</NavLink>
         </nav>
       </header>
-      <main className="app-main">
-        <Routes>
-          <Route path="/" element={<MyWorkbenchPage />} />
-          <Route path="/requirements" element={<RequirementsPage />} />
-          <Route path="/requirements/:id" element={<RequirementDetailPage />} />
-          <Route path="/weekly-report" element={<WeeklyReportPage />} />
-          <Route path="/graph" element={<GraphPage />} />
-          <Route path="/repositories" element={<RepositoriesPage />} />
-          <Route path="/people" element={<PeoplePage />} />
-          <Route path="/scan" element={<ScanCenterPage />} />
-          <Route path="/settings" element={<Navigate to="/scan" replace />} />
-        </Routes>
-      </main>
+      <main className="app-main">{children}</main>
       <ChatPanel />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<PersonalWorkbenchPage />} />
+      <Route
+        path="/dev-dashboard"
+        element={
+          <DevShell>
+            <MyWorkbenchPage />
+          </DevShell>
+        }
+      />
+      <Route
+        path="/requirements"
+        element={
+          <DevShell>
+            <RequirementsPage />
+          </DevShell>
+        }
+      />
+      <Route
+        path="/requirements/:id"
+        element={
+          <DevShell>
+            <RequirementDetailPage />
+          </DevShell>
+        }
+      />
+      <Route
+        path="/weekly-report"
+        element={
+          <DevShell>
+            <WeeklyReportPage />
+          </DevShell>
+        }
+      />
+      <Route
+        path="/graph"
+        element={
+          <DevShell>
+            <GraphPage />
+          </DevShell>
+        }
+      />
+      <Route
+        path="/repositories"
+        element={
+          <DevShell>
+            <RepositoriesPage />
+          </DevShell>
+        }
+      />
+      <Route
+        path="/people"
+        element={
+          <DevShell>
+            <PeoplePage />
+          </DevShell>
+        }
+      />
+      <Route
+        path="/scan"
+        element={
+          <DevShell>
+            <ScanCenterPage />
+          </DevShell>
+        }
+      />
+      <Route path="/settings" element={<Navigate to="/scan" replace />} />
+    </Routes>
   );
 }

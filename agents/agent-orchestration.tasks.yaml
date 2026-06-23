@@ -1,0 +1,40 @@
+schema_version: 1
+kind: agent_orchestration_catalog
+project: project-manager
+task_catalog:
+  - agents/tasks/web.tasks.yaml
+  - agents/tasks/api.tasks.yaml
+  - agents/tasks/shared.tasks.yaml
+execution_policy:
+  workflow: "S0 -> S1 -> S2 -> S3 -> S4 -> S5"
+  scope_workflow: "pnpm agent:scope:auto -> pnpm agent:scope:<scope>"
+  quality_gate: "pnpm agent:gate"
+  s4_mechanical_loop: "pnpm agent:s4:mechanical-loop"
+  human_confirmation:
+    s1_s2_required_by_default: true
+    g2_scope_confirmation_required: true
+tasks:
+  - id: task-001-control-layer-verify
+    title: 验证 Agent 控制层门禁
+    owner_scope: all
+    risk_level: medium
+    inputs:
+      - agents/
+      - ops/
+      - package.json
+    outputs:
+      - agents/
+      - ops/
+      - .cursor/rules/
+      - .github/workflows/
+      - docs/tasks/
+      - AGENTS.md
+      - CLAUDE.md
+      - CODEX.md
+      - package.json
+    verify:
+      - "pnpm agent:scope:all"
+      - "pnpm agent:gate"
+    rollback:
+      - "git checkout -- AGENTS.md package.json"
+      - "rm -rf agents ops docs/tasks .github/workflows .cursor/rules/agent-autonomy-s2-s4.mdc .cursor/rules/worktree.mdc .cursor/skills/workflow-driven-requirements CLAUDE.md CODEX.md"

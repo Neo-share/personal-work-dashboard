@@ -9,6 +9,22 @@ const DB_PATH = path.join(DATA_DIR, 'project-manager.db');
 
 let db: Database.Database | null = null;
 
+/** 单测专用：注入内存库并重置单例 */
+export function initTestDb(database: Database.Database): void {
+  if (db) {
+    db.close();
+  }
+  db = database;
+}
+
+/** 单测专用：关闭并清空单例，避免污染进程内其它测试 */
+export function resetTestDb(): void {
+  if (db) {
+    db.close();
+    db = null;
+  }
+}
+
 function migrateSchema(database: Database.Database): void {
   const repositoryColumns = database
     .prepare('PRAGMA table_info(repositories)')

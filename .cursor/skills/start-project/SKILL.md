@@ -8,6 +8,8 @@ disable-model-invocation: false
 
 pnpm monorepo 本地 Web 应用（**个人驾驶舱**）：**shared watch + server :3100 + client :5175**。
 
+端口与命令见 **[agents/commands-checklist.md](../../agents/commands-checklist.md)** 与 **[agents/project-baseline.md](../../agents/project-baseline.md)**（唯一来源）。
+
 ---
 
 ## 触发场景
@@ -163,7 +165,6 @@ pnpm --filter @project-manager/shared build
 
 | 文档 | 用途 |
 |------|------|
-| `AGENTS.md` | Monorepo 入口 |
-| `README.md` | 人类可读简介 |
-| `client/ARCHITECTURE.md` | Vite 代理与前端 |
-| `server/ARCHITECTURE.md` | 后端端口与 DB |
+| [AGENTS.md](../../AGENTS.md) | Monorepo 入口与 SSOT 映射 |
+| [README.md](../../README.md) | 人类可读简介 |
+| [agents/commands-checklist.md](../../agents/commands-checklist.md) | 命令与 DoD |

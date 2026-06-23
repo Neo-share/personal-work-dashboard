@@ -2,13 +2,13 @@
 
 > **读者优先级：AI Agent > 人类开发者**
 >
-> 修改 `shared/` 时先读本文件，架构细节见同目录 `ARCHITECTURE.md`。Monorepo 总览见根目录 `../AGENTS.md`。
+> 修改 `shared/` 时先读本文件，架构细节见同目录 `ARCHITECTURE.md`。Monorepo 总览与 SSOT 映射见根目录 [../AGENTS.md](../AGENTS.md#2-文档映射ssot)。
 
 ---
 
 ## 1. 包职责
 
-`@project-manager/shared`：前后端共享的**领域类型单一真相源**。导出 TypeScript 类型、枚举联合、中文标签常量；**无运行时业务逻辑**。
+`@project-manager/shared`：前后端共享的**领域与协议单一真相源**。导出 TypeScript 类型、枚举联合、中文标签常量，以及少量跨端通用 helper（飞书 deep link、周报周期、工作域模型）。
 
 **负责**：实体 interface、视图 DTO、图谱/对话协议类型、枚举中文标签。
 
@@ -23,10 +23,11 @@
 | 新增/修改实体字段 | `src/types.ts` |
 | 新增枚举或联合类型 | `src/types.ts` |
 | 新增中文标签常量 | `src/types.ts`（与 enum 同文件） |
-| 导出入口 | `src/index.ts`（re-export，一般不需改） |
+| 工作域模块抽象 | `src/work-model.ts` |
+| 飞书 OpenID / DeepLink 解析 | `src/feishu.ts` |
+| 周报默认周期计算 | `src/report-week-range.ts` |
+| 导出入口 | `src/index.ts`（统一 re-export） |
 | 构建配置 | `tsconfig.json`, `package.json` |
-
-**几乎只改一个文件**：`src/types.ts`。
 
 ---
 
@@ -39,8 +40,11 @@ shared/
 ├── package.json
 ├── tsconfig.json
 ├── src/
-│   ├── index.ts      export * from './types.js'
-│   └── types.ts      全部领域类型与标签常量
+│   ├── index.ts               统一导出入口
+│   ├── types.ts               领域类型与标签常量
+│   ├── work-model.ts          工作域模块抽象
+│   ├── feishu.ts              飞书 open_id 与 deep link helper
+│   └── report-week-range.ts   周报时间范围 helper
 └── dist/             tsc 产物（gitignore 或构建生成）
 ```
 
@@ -63,14 +67,7 @@ shared/
 
 ## 5. 编码约束
 
-硬性约束见 **`.cursor/rules/shared.mdc`** 与 **`.cursor/rules/project-core.mdc`**。
-
-要点：
-
-- **仅类型与常量**；不添加 runtime 依赖（除 typescript dev）
-- 中文标签与 enum 定义**同文件**维护（`REQUIREMENT_STATUS_LABELS` 等）
-- 不在 shared 放 AppRouter、tRPC procedure 类型
-- 导出 ESM：`index.ts` 使用 `'./types.js'` 后缀
+硬性约束见 **`.cursor/rules/shared.mdc`**、**`.cursor/rules/project-core.mdc`** 与 **[agents/engineering-rules.md](../agents/engineering-rules.md)**（唯一来源，本处不重复）。
 
 ---
 
@@ -116,18 +113,17 @@ shared/
 2. `../server` — service 返回该形状
 3. `../client` — 消费 tRPC 结果
 
+### 7.5 新增跨端 helper（非业务逻辑）
+
+1. 优先放 `src/feishu.ts`、`src/report-week-range.ts`、`src/work-model.ts`
+2. 保持纯函数、无 I/O、无第三方依赖
+3. 在 `src/index.ts` 暴露并同步 client/server 调用点
+
 ---
 
 ## 8. 本地开发
 
-```bash
-# monorepo 根目录
-pnpm dev                                    # shared tsc --watch 已包含
-pnpm --filter @project-manager/shared build
-pnpm --filter @project-manager/shared dev   # 仅 shared watch
-```
-
-构建顺序：`shared` 必须在 `server`、`client` 之前（根 `pnpm build` 已保证）。
+见 **[agents/commands-checklist.md](../agents/commands-checklist.md)**。构建顺序：`shared` 必须在 `server`、`client` 之前（根 `pnpm build` 已保证）。
 
 ---
 

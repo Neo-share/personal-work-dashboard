@@ -2,7 +2,7 @@
 
 > **读者优先级：AI Agent > 人类开发者**
 >
-> 后端架构参考。操作指南见 `AGENTS.md`；全栈视图见 `../ARCHITECTURE.md`。
+> 后端架构**引用层**。操作指南见 `AGENTS.md`；全栈视图见 `../ARCHITECTURE.md`。SSOT 映射见 [../AGENTS.md §2](../AGENTS.md#2-文档映射ssot)。
 
 ---
 
@@ -90,12 +90,14 @@ Zod 校验在 router；返回形状对齐 `@project-manager/shared` 类型。
 ### 4.2 对话 SSE
 
 ```
-POST /api/chat  { message?: string }
+POST /api/chat  { message?: string, context?: 'dev' | 'personal', modifyTodoId?, sessionId? }
   → routes/chat.ts
-  → assistant-service.resolveAssistantIntent()
+  → assistant-service.resolveAssistantIntent() / personal-assistant-service.resolvePersonalAssistantIntent()
   → SSE:
        { type: 'text', content: string }
-       { type: 'action', action: NavigationAction }
+       { type: 'action', action: NavigationAction }          # dev 助手
+       { type: 'refresh', refresh: PersonalAssistantRefresh[] } # personal 助手
+       { type: 'modifyMode', modifyTodoId, modifyVersion }   # personal 修改模式
        { type: 'done' }
 ```
 
@@ -115,6 +117,10 @@ erDiagram
   people ||--o{ requirement_people : linked
   requirements ||--o{ milestones : has
   requirements ||--o{ links : has
+  recurring_tasks ||--o{ todos : materialize
+  todos ||--o{ todo_ai_results : has
+  schedule_events ||--o{ schedule_event_sources : has
+  assistant_sessions ||--o{ assistant_messages : has
 ```
 
 ### 5.2 表清单
@@ -129,7 +135,15 @@ erDiagram
 | `requirement_people` | 需求↔人员 M:N |
 | `milestones` | 里程碑 |
 | `links` | 外部链接 URL |
+| `repository_branch_notes` | 分支备注 |
 | `scan_snapshots` | 扫描历史 JSON |
+| `requirement_status_history` | 需求状态变更历史 |
+| `todos` | 待办主体 |
+| `todo_ai_results` | 待办 AI 结果版本 |
+| `schedule_events` + `schedule_event_sources` | 日程去重结果与来源明细 |
+| `calendar_sources` | 日历来源开关 |
+| `recurring_tasks` + `recurring_task_runs` | 定时任务与物化记录 |
+| `assistant_sessions` + `assistant_messages` | 个人助手会话与消息 |
 
 **Schema**：`src/db/schema.ts`（`SCHEMA_SQL` 常量）
 
@@ -155,6 +169,7 @@ erDiagram
 RequirementStatus, Priority, CollaborationDirection, ManagementRole
 PersonCollaborationStatus, MilestoneStatus
 GraphNodeType, NavigationActionType
+TodoSource, TodoStatus, TodoAiStatus, AiResultType, CalendarSourceType, RecurringFrequency
 ```
 
 ---
@@ -165,13 +180,21 @@ GraphNodeType, NavigationActionType
 
 ```
 appRouter
-├── settings      getWorkspacePath, setWorkspacePath
+├── settings      get/setWorkspacePath, get/setIgnoreDirs
 ├── workbench     summary
-├── requirements  list, detail, create, update,
-│                 add/remove Repository/Person/Milestone/Link
+├── personalWorkbench summary
+├── weeklyReport  generate
+├── requirements  list, detail, create, update, delete,
+│                 add/remove Repository/Person/Milestone/Link, updateMilestone
 ├── graph         get({ requirementId? })
-├── repositories  list, detail, requirements, scanWorkspace, latestScan
-└── people        list, create
+├── repositories  list/detail/requirements/branches/setBranchNote
+│                 deleteBranch/syncBranches/scanWorkspace/latestScan/openInCursor
+├── people        list/create/update/delete
+├── todos         list/detail/create/update/complete/restore/cancel/delete
+│                 aiResults/confirmAiResult/reviseAiResult
+├── schedule      listDay/detail/createLocal/delete/sources/setSourceEnabled
+├── recurringTasks list/create/update/toggle/delete/materializeNow
+└── assistant     sessions/messages/createSession/appendMessage/resolveIntent
 ```
 
 实现与 Zod：`src/trpc/router.ts`
@@ -190,11 +213,19 @@ appRouter
 | Service | 职责 |
 |---------|------|
 | `requirement-service` | 需求 CRUD；`getRequirementDetail` JOIN 关联；`getWorkbenchSummary` 聚合 |
-| `repository-service` | 仓库列表/详情；`runWorkspaceScan` 事务 UPSERT + 快照 |
-| `people-service` | 人员 list/create |
+| `repository-service` | 仓库 live 列表、分支查询/同步/删除、分支备注、扫描 UPSERT + 快照 |
+| `cursor-service` | 仓库按分支切换并在 Cursor 中打开（Agent/Classic） |
+| `people-service` | 人员 CRUD |
 | `association-service` | 关联边 CRUD；`getRepositoryRequirements` 反查；`touchRequirement` |
 | `graph-service` | `getRequirementGraph` 构建 nodes/edges |
-| `assistant-service` | `resolveAssistantIntent` 规则匹配 → reply + NavigationAction |
+| `weekly-report-service` | 周报区间聚合与 Markdown 输出（含飞书链接优先） |
+| `todo-service` | 待办 CRUD、AI 状态流转、个人工作台统计 |
+| `ai-result-service` | 能力判定、模板结果生成、版本修订 |
+| `schedule-service` | 日程去重、来源开关、详情查询、本地日程写入 |
+| `recurring-task-service` | 定时任务 CRUD、滚动物化待办 |
+| `assistant-session-service` | 助手会话与消息持久化 |
+| `assistant-service` | 开发域助手：规则匹配 → reply + NavigationAction |
+| `personal-assistant-service` | 个人助手：待办/日程/定时任务意图解析 + refresh 返回 |
 
 ---
 
@@ -232,21 +263,20 @@ Client 侧 ReactFlow 只读渲染；server 只提供 JSON 图数据。
 
 ---
 
-## 10. 对话助手子系统
+## 10. 对话与个人助手子系统
 
 **实现**：规则引擎（非 LLM）
 
-| 关键词 | NavigationAction |
-|--------|------------------|
-| 工作台/首页 | `openWorkbench` |
-| 扫描/仓库扫描 | `openScanCenter` |
-| 关系图/图谱/上下游 | `openGraph`（可带 requirementId） |
-| 打开/查看/进入 + 详情 | `openRequirementDetail` |
-| 风险 | `filterRequirements({ riskOnly: true })` |
-| 提测/上线/开发中/并行 + 仓库名 | `filterRequirements({ keyword })` |
-| 匹配需求名称 | `openRequirementDetail` |
+| 助手 | 输入上下文 | 主要输出 |
+|------|----------|----------|
+| `assistant-service` | `context=dev` | `reply` + `NavigationAction` |
+| `personal-assistant-service` | `context=personal` | `reply` + `refresh` + 可选 `modifyMode` |
 
-**未实现**：LLM、`chat_sessions` 持久化
+**开发域动作**：`openWorkbench/openScanCenter/openGraph/openRequirementDetail/filterRequirements`
+
+**个人域动作**：自动创建待办/日程/定时任务；修改模式下修订 AI 结果并返回刷新目标
+
+**未实现**：LLM 推理链、外部知识库接入、复杂多轮规划
 
 ---
 
@@ -264,21 +294,9 @@ Client 侧 ReactFlow 只读渲染；server 只提供 JSON 图数据。
 
 ---
 
-## 12. 已实现 vs 规划
+## 12. 实现状态
 
-完整对照见 **[../IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md)**。
-
-| 能力 | 状态 |
-|------|------|
-| 需求 CRUD + 关联 | ⚠️ update API 有，client UI 缺 |
-| Git 扫描 | ⚠️ 一级目录 |
-| 规则对话助手 | ⚠️ MVP |
-| 关系图谱 API | ✅ 只读 |
-| projects / apps / dependencies | ❌ |
-| chat_sessions | ❌ |
-| DB migration | ❌ |
-| LLM | ❌ |
-| 外部系统 API | ❌ |
+**唯一对照来源**：[../IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md)。不在本文件维护缺口表。
 
 ---
 
@@ -298,5 +316,14 @@ src/services/repository-service.ts
 src/services/people-service.ts
 src/services/association-service.ts
 src/services/graph-service.ts
+src/services/weekly-report-service.ts
+src/services/todo-service.ts
+src/services/ai-result-service.ts
+src/services/schedule-service.ts
+src/services/recurring-task-service.ts
+src/services/assistant-session-service.ts
 src/services/assistant-service.ts
+src/services/personal-assistant-service.ts
+src/services/cursor-service.ts
+src/services/feishu-service.ts
 ```

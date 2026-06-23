@@ -1,0 +1,14 @@
+---
+description: S1/S2 人类确认与 S3-S4 自主修验策略
+alwaysApply: true
+---
+
+# Agent 控制层执行策略
+
+- 进入会修改代码的任务时，先读 `AGENTS.md` 与 `agents/workflow.md`。
+- S1/S2：产出 Spec 或任务计划后默认暂停等待确认。
+- G.2：S3 写入前必须确认具体改动文件或路径集合，不可豁免。
+- S3/S4：范围确认后自主实施、执行 I.0 scope 校验和门禁。
+- 改代码后：`pnpm agent:scope:auto` → `pnpm agent:scope:<scope>`。
+- S4：优先 `pnpm agent:s4:mechanical-loop`；仍失败则认知修验，上限 15 轮。
+- 完成判定：`pnpm agent:gate` 至少一次 exit 0。

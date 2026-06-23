@@ -1,8 +1,8 @@
 # 项目管理平台产品设计说明书
 
-关联计划文档：[项目管理平台方案](./PROJECT_MANAGER_PLATFORM_PLAN.md)
+> **SSOT**：产品目标与领域语义的**唯一来源**。实现进度见 [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)，勿在本文件写实现状态。
 
-> **实现进度**：见 [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)（计划书 vs 当前代码对照）。
+关联计划文档：[项目管理平台方案](./PROJECT_MANAGER_PLATFORM_PLAN.md)
 
 ## 产品定位
 

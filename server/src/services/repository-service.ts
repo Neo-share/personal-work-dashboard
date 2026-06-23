@@ -124,6 +124,7 @@ export async function listRepositoryBranches(id: number): Promise<RepositoryBran
     });
 
     const notesMap = getBranchNotesMap(id);
+    await refreshRepositoryGitMetadataSafe(id, repo.path);
 
     return {
       currentBranch,
@@ -164,6 +165,42 @@ async function refreshRepositoryGitMetadata(
     log.latest?.date ?? null,
     repositoryId,
   );
+}
+
+/** 从磁盘 Git 状态刷新 DB；路径无效或读取失败时静默跳过 */
+async function refreshRepositoryGitMetadataSafe(
+  repositoryId: number,
+  repoPath: string,
+): Promise<void> {
+  if (!fs.existsSync(repoPath)) {
+    return;
+  }
+  try {
+    await refreshRepositoryGitMetadata(repositoryId, repoPath);
+  } catch {
+    // 外部切换分支后仓库可能处于中间状态，跳过单次刷新
+  }
+}
+
+/** 批量刷新仓库 Git 元数据；未传 id 时刷新全部 */
+export async function refreshRepositoriesGitMetadata(
+  repositoryIds?: number[],
+): Promise<void> {
+  const repos = repositoryIds?.length
+    ? repositoryIds
+        .map((id) => getRepositoryById(id))
+        .filter((repo): repo is Repository => repo !== null)
+    : listRepositories();
+
+  await Promise.all(
+    repos.map((repo) => refreshRepositoryGitMetadataSafe(repo.id, repo.path)),
+  );
+}
+
+/** 读取列表前先同步各仓库当前分支与 dirty 状态 */
+export async function listRepositoriesLive(): Promise<Repository[]> {
+  await refreshRepositoriesGitMetadata();
+  return listRepositories();
 }
 
 function getRepositoryOrThrow(repositoryId: number): Repository {

@@ -10,7 +10,7 @@ import type {
   WorkDomain,
 } from '@project-manager/shared';
 import { getDb } from '../db/index.js';
-import { listRepositories } from './repository-service.js';
+import { listRepositories, refreshRepositoriesGitMetadata } from './repository-service.js';
 
 export function recordRequirementStatusChange(
   requirementId: number,
@@ -125,6 +125,22 @@ export function listRequirements(filters?: {
   return rows.map(mapRequirement);
 }
 
+export async function getRequirementDetailLive(id: number): Promise<RequirementDetail | null> {
+  const db = getDb();
+  const repoIds = (
+    db
+      .prepare(
+        'SELECT repository_id FROM requirement_repositories WHERE requirement_id = ?',
+      )
+      .all(id) as Array<{ repository_id: number }>
+  ).map((row) => row.repository_id);
+
+  if (repoIds.length > 0) {
+    await refreshRepositoriesGitMetadata(repoIds);
+  }
+  return getRequirementDetail(id);
+}
+
 export function getRequirementDetail(id: number): RequirementDetail | null {
   const db = getDb();
   const row = db
@@ -135,7 +151,27 @@ export function getRequirementDetail(id: number): RequirementDetail | null {
   const repositories = (
     db
       .prepare(
-        `SELECT rr.*, r.*
+        `SELECT
+           rr.id,
+           rr.requirement_id,
+           rr.repository_id,
+           rr.responsibility,
+           rr.branch,
+           rr.env,
+           rr.status,
+           rr.risk,
+           r.name,
+           r.path,
+           r.remote,
+           r.default_branch,
+           r.current_branch,
+           r.last_commit,
+           r.last_commit_author,
+           r.last_commit_at,
+           r.is_dirty,
+           r.tech_tags,
+           r.env_scripts,
+           r.scanned_at
          FROM requirement_repositories rr
          JOIN repositories r ON r.id = rr.repository_id
          WHERE rr.requirement_id = ?`,
@@ -170,7 +206,21 @@ export function getRequirementDetail(id: number): RequirementDetail | null {
   const people = (
     db
       .prepare(
-        `SELECT rp.*, p.*
+        `SELECT
+           rp.id,
+           rp.requirement_id,
+           rp.person_id,
+           rp.management_role,
+           rp.direction,
+           rp.role_type,
+           rp.responsibility,
+           rp.status,
+           rp.notes,
+           p.name,
+           p.role,
+           p.team,
+           p.contact,
+           p.feishu_open_id
          FROM requirement_people rp
          JOIN people p ON p.id = rp.person_id
          WHERE rp.requirement_id = ?`,
@@ -186,7 +236,14 @@ export function getRequirementDetail(id: number): RequirementDetail | null {
     responsibility: (item.responsibility as string | null) ?? null,
     status: item.status as RequirementPerson['status'],
     notes: (item.notes as string | null) ?? null,
-    person: mapPerson(item),
+    person: mapPerson({
+      id: item.person_id,
+      name: item.name,
+      role: item.role,
+      team: item.team,
+      contact: item.contact,
+      feishu_open_id: item.feishu_open_id,
+    }),
   })) as RequirementDetail['people'];
 
   const milestones = (

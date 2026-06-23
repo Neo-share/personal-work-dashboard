@@ -2,7 +2,9 @@
 
 > **读者优先级：AI Agent > 人类开发者**
 >
-> Monorepo 全栈架构入口。前端见 `client/ARCHITECTURE.md`；后端见 `server/ARCHITECTURE.md`；共享类型见 `shared/ARCHITECTURE.md`。
+> Monorepo 全栈架构**引用层**。权威映射见 [AGENTS.md §文档映射](./AGENTS.md#2-文档映射ssot)。
+>
+> 前端见 `client/ARCHITECTURE.md`；后端见 `server/ARCHITECTURE.md`；共享类型见 `shared/ARCHITECTURE.md`。
 
 ---
 
@@ -53,9 +55,9 @@ flowchart TB
 
 | 包 | 文档 | 职责 |
 |----|------|------|
-| `client/` | `client/ARCHITECTURE.md` | React SPA、路由、UI、tRPC 消费、ChatPanel |
-| `server/` | `server/ARCHITECTURE.md` | Fastify、tRPC、SQLite、Git 扫描、助手规则引擎 |
-| `shared/` | `shared/ARCHITECTURE.md` | 领域类型、枚举、中文标签、跨端协议 |
+| `client/` | `client/ARCHITECTURE.md` | React SPA、双工作台路由、tRPC 消费、开发助手与个人助手 UI |
+| `server/` | `server/ARCHITECTURE.md` | Fastify、tRPC、SQLite、Git 扫描、规则助手、待办/日程/定时任务 |
+| `shared/` | `shared/ARCHITECTURE.md` | 开发域 + 个人工作台共享类型、中文标签、跨端协议与工具函数 |
 
 ---
 
@@ -83,26 +85,37 @@ Client 直接引用 Server 源码类型；Shared 提供领域模型，**不**导
 ### 3.3 对话助手全链路
 
 ```
-client ChatPanel → POST /api/chat (SSE)
-  → server routes/chat.ts → assistant-service
-  → NavigationAction → client useNavigationAction → react-router
+client ChatPanel / PersonalAssistantPanel → POST /api/chat (SSE)
+  → server routes/chat.ts
+  → assistant-service (dev) / personal-assistant-service (personal)
+  → action / refresh / modifyMode 事件
+  → client 导航或 query invalidate
 ```
 
-协议类型定义在 `shared/src/types.ts`（`ChatMessage`, `NavigationAction`）。
+协议类型定义在 `shared/src/types.ts`（`ChatMessage`, `NavigationAction`, `PersonalAssistantResult`）。
+
+### 3.4 个人工作台链路
+
+```
+PersonalWorkbenchPage
+  → trpc.personalWorkbench / todos / schedule / recurringTasks
+  → server todo-service / schedule-service / recurring-task-service
+  → SQLite（todos, todo_ai_results, schedule_*, recurring_*）
+```
 
 ---
 
 ## 4. 共享领域模型
 
-**单一类型源**：`shared/src/types.ts`（文档见 `shared/ARCHITECTURE.md`）
+**唯一类型源**：`shared/src/types.ts`。分层说明、实体关系与 DB 对照见 **[shared/ARCHITECTURE.md](./shared/ARCHITECTURE.md)**。
 
-核心实体：`Requirement`, `Repository`, `Person`, `RequirementDetail`, `WorkbenchSummary`, `RequirementGraph`, `NavigationAction`
-
-枚举与中文标签同文件维护。Server service 层负责 DB↔TS 映射；Client 负责展示。
+工作域抽象见 `shared/src/work-model.ts`；跨域演进设计见 **[PERSONAL_WORK_ARCHITECTURE.md](./PERSONAL_WORK_ARCHITECTURE.md)**。
 
 ---
 
 ## 5. 构建与部署
+
+见 [agents/commands-checklist.md](./agents/commands-checklist.md) 与 [agents/project-baseline.md](./agents/project-baseline.md)。
 
 ```bash
 pnpm dev     # shared watch + server + client 并行
@@ -110,55 +123,39 @@ pnpm build   # shared → server → client
 pnpm start   # 仅 server API
 ```
 
-| 包 | 产物 |
-|----|------|
-| shared | `shared/dist/` |
-| server | `server/dist/` |
-| client | `client/dist/` |
-
 **生产**：`pnpm start` 不含静态前端；需单独托管 `client/dist` 并反向代理 `/trpc`、`/api`。
 
 ---
 
 ## 6. 配置摘要
 
-| 项 | 位置 | 默认 |
-|----|------|------|
+| 项 | 唯一来源 | 默认 |
+|----|----------|------|
 | 前端端口 | `client/vite.config.ts` | 5175 |
 | 后端端口 | `process.env.PORT` | 3100 |
-| workspace 路径 | SQLite settings | `/Users/ningliu/Documents/CodeLab` |
-| 数据库 | `server/data/` | gitignore |
+| workspace 路径 | SQLite `settings`（seed 见 `server/src/db/seed.ts`） | `/Users/ningliu/Documents/CodeLab` |
+| 数据库路径 | `server/data/` | gitignore |
 
 ---
 
-## 8. 文档索引
+## 7. 文档索引
+
+引用层索引；职责与权威来源见 **[AGENTS.md §2.1](./AGENTS.md#21-权威映射表)**。
 
 ```
-IMPLEMENTATION_STATUS.md               计划书 vs 代码（实现缺口）
-AGENTS.md / ARCHITECTURE.md            Monorepo 入口
-client/AGENTS.md / ARCHITECTURE.md     前端
-server/AGENTS.md / ARCHITECTURE.md     后端
-shared/AGENTS.md / ARCHITECTURE.md     共享类型
-PROJECT_MANAGER_PLATFORM_PLAN.md       原始技术方案
-PROJECT_MANAGER_PRODUCT_DESIGN.md      产品语义
-.cursor/rules/*.mdc                    硬性编码约束
+IMPLEMENTATION_STATUS.md               实现状态（计划 vs 代码）
+AGENTS.md                              Agent 入口与 SSOT 映射
+ARCHITECTURE.md                        本文件（全栈集成）
+client/ · server/ · shared/           包级 AGENTS + ARCHITECTURE
+PROJECT_MANAGER_*.md                   产品与技术方案（规划）
+docs/个人工作台/个人工作台.md          个人工作台产品需求
+.cursor/rules/*.mdc                    Cursor 硬性编码约束
 ```
 
 ---
 
-## 9. 全局缺口
+## 8. 实现状态
 
-详表见 **[IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)**。摘要：
+**唯一对照来源**：[IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)。不在本文件维护缺口表。
 
-| 能力 | 状态 |
-|------|------|
-| 第一阶段 MVP | ⚠️ 主体可用 |
-| 第二/三阶段 | ⚠️ 简化实现 |
-| 第四阶段外部集成 | ❌ |
-| 需求 update UI | ❌ |
-| projects/apps 模型 | ❌ |
-| assistant-ui / LLM | ❌ |
-| 图谱编辑 / dependencies | ❌ |
-| DB migration | ❌ |
-
-各包细节见 `client/ARCHITECTURE.md` §12、`server/ARCHITECTURE.md` §12、`shared/ARCHITECTURE.md` §10。
+各包实现细节见 `client/ARCHITECTURE.md`、`server/ARCHITECTURE.md`、`shared/ARCHITECTURE.md` 文末索引节。

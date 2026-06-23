@@ -3,6 +3,8 @@
 > **读者优先级：AI Agent > 人类开发者**
 >
 > Monorepo 入口文档。修改 **前端** 读 `client/AGENTS.md`；修改 **后端** 读 `server/AGENTS.md`；修改 **共享类型** 读 `shared/AGENTS.md`。
+>
+> Agent 控制层已接入。进入会修改代码的任务时，先读本文件，再按 `agents/README.md` 进入 S0-S5 工作流。
 
 ---
 
@@ -12,7 +14,39 @@
 
 ---
 
-## 2. 文档地图
+## 2. 文档映射（SSOT）
+
+> 同一事实**只在一处定义**，其余文档**只引用**。冲突时优先级：代码 > 契约/types > 执行规范 > 机读任务/CI > 产品/规划文档。
+
+### 2.1 权威映射表
+
+| 职责 | 唯一来源 | 引用方（勿重复定义） |
+|------|----------|----------------------|
+| Agent 入口与跨包导航 | 本文件 | `CLAUDE.md`、`CODEX.md`、`agents/README.md` |
+| Agent 工作流 S0–S5 | `agents/workflow.md` | `workflow-driven-requirements` Skill、各入口摘要 |
+| 工程硬约束 | `agents/engineering-rules.md` | `.cursor/rules/project-core.mdc` |
+| Scope / 目录 / 技术栈 | `agents/project-baseline.md` | `CODEX.md`、`engineering-rules.md` |
+| 门禁与命令 | `agents/commands-checklist.md` | `workflow.md` §D、`start-project` Skill |
+| 已知陷阱 | `agents/pitfalls.md` | 包级 AGENTS |
+| 领域类型与协议 | `shared/src/types.ts` | `shared/ARCHITECTURE.md` |
+| 工作域模型 | `shared/src/work-model.ts` | `PERSONAL_WORK_ARCHITECTURE.md` |
+| 类型体系与 DB 对照 | `shared/ARCHITECTURE.md` | 根 `ARCHITECTURE.md` |
+| tRPC 契约 | `server/src/trpc/router.ts` | `server/AGENTS.md` §5 |
+| 数据库表结构 | `server/src/db/schema.ts` | `server/ARCHITECTURE.md` |
+| 实现状态（计划 vs 代码） | `IMPLEMENTATION_STATUS.md` | 根 `ARCHITECTURE.md`、`AGENTS.md` §9 |
+| 产品目标与领域语义 | `PROJECT_MANAGER_PRODUCT_DESIGN.md` | `PROJECT_MANAGER_PLATFORM_PLAN.md` |
+| 分阶段技术方案 | `PROJECT_MANAGER_PLATFORM_PLAN.md` | `IMPLEMENTATION_STATUS.md` |
+| 个人工作台产品需求 | `docs/个人工作台/个人工作台.md` | `待办知识库-RAG方案.md` |
+| 工作项跨域演进设计 | `PERSONAL_WORK_ARCHITECTURE.md` | — |
+| 未来待办索引 | `TODO/roadmap.md` | `TODO/*.md`（各文件职责见 roadmap §本目录文档映射） |
+| 全栈集成架构 | `ARCHITECTURE.md` | 包级 `ARCHITECTURE.md` |
+| 前端操作指南 | `client/AGENTS.md` | `client/ARCHITECTURE.md` |
+| 后端操作指南 | `server/AGENTS.md` | `server/ARCHITECTURE.md` |
+| 共享类型操作指南 | `shared/AGENTS.md` | `shared/ARCHITECTURE.md` |
+| Cursor 硬性规则 | `.cursor/rules/*.mdc` | Skill、Plan |
+| 本地 dev 启动 | `.cursor/skills/start-project/SKILL.md` | `README.md` |
+
+### 2.2 文档地图（引用层）
 
 | 包 | 操作指南 | 架构参考 |
 |----|----------|----------|
@@ -21,15 +55,9 @@
 | **server/** | `server/AGENTS.md` | `server/ARCHITECTURE.md` |
 | **shared/** | `shared/AGENTS.md` | `shared/ARCHITECTURE.md` |
 
-**硬性约束**：`.cursor/rules/`（`project-core.mdc` 全项目；`client.mdc` / `server.mdc` / `shared.mdc` 按目录）
+**Agent 控制层导航**：`agents/README.md` · **机读任务**：`agents/agent-orchestration.tasks.yaml`
 
-**启动项目**：`.cursor/skills/start-project/SKILL.md`（用户要求启动 / 跑 dev 时加载）
-
-**产品/规划**（方向参考，以代码为准）：
-
-- [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md) — **计划书 vs 代码对照（推荐先读）**
-- `PROJECT_MANAGER_PRODUCT_DESIGN.md`
-- `PROJECT_MANAGER_PLATFORM_PLAN.md`
+**实现与规划对照**（以代码为准）：[IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)
 
 ---
 
@@ -59,42 +87,40 @@ client  ──→  server/src/trpc/router（仅 AppRouter 类型引用）
 
 | 目标 | 前端 | 后端 | 共享 |
 |------|------|------|------|
-| 需求 CRUD UI | `client/src/pages/*` | `server/src/services/requirement-service.ts` | `shared/src/types.ts`（见 `shared/AGENTS.md`） |
-| 需求 API | — | `server/src/trpc/router.ts` | — |
-| 关联编辑 | `RequirementDetailPage` | `association-service.ts` | — |
-| Git 扫描 | `ScanCenterPage` | `scanner/workspace-scanner.ts` | — |
-| 关系图谱 | `GraphPage` | `graph-service.ts` | `RequirementGraph` |
-| 对话助手 | `ChatPanel` + `useNavigationAction` | `assistant-service.ts` + `routes/chat.ts` | `NavigationAction` |
-| 中文标签 | `client/src/utils/labels.ts` | — | `REQUIREMENT_STATUS_LABELS` 等 |
+| 开发域工作项 | `RequirementsPage` / `RequirementDetailPage` | `requirement-service.ts` + `association-service.ts` | `Requirement*` 类型 |
+| 个人工作台总览 | `PersonalWorkbenchPage` | `todo-service.ts` + `schedule-service.ts` | `PersonalWorkbenchSummary` |
+| 待办与 AI 结果 | `TodoPanel` + `AiResultPanel` | `todo-service.ts` + `ai-result-service.ts` | `TodoItem`, `TodoAiResult` |
+| 日程时间线 | `ScheduleTimeline` | `schedule-service.ts` | `ScheduleEvent`, `CalendarSource` |
+| 定时任务 | `RecurringTaskPanel` | `recurring-task-service.ts` | `RecurringTask` |
+| 周报生成 | `WeeklyReportPage` | `weekly-report-service.ts` | `WeeklyReport` |
+| 仓库扫描/分支管理 | `ScanCenterPage` + `RepositoriesPage` | `scanner/workspace-scanner.ts` + `repository-service.ts` + `cursor-service.ts` | `RepositoryBranches`, `RepositoryBranchSyncResult` |
+| 对话助手（开发/个人） | `ChatPanel` + `useNavigationAction` + `PersonalAssistantPanel` | `assistant-service.ts` + `personal-assistant-service.ts` + `routes/chat.ts` | `NavigationAction`, `PersonalAssistantResult` |
+| 飞书快捷会话 | `PersonFeishuLink` + `client/src/utils/feishu.ts` | `feishu-service.ts`（服务层能力预留） | `shared/src/feishu.ts` |
 
 ---
 
 ## 5. 跨包数据流
 
 ```
-server: router (Zod) → service (SQL) → shared 类型形状
-client: trpc.useQuery/useMutation → invalidate
+server: router (Zod) → service (SQL / 规则) → shared 类型形状
+client(dev): trpc.useQuery/useMutation → invalidate
+client(personal): trpc + /api/chat(context=personal) → refresh 指令回流
 关联 mutation: router 内 touchRequirement(requirementId)
-对话: client POST /api/chat SSE ← server assistant-service
+对话: client POST /api/chat SSE ← server assistant-service / personal-assistant-service
 ```
 
 ---
 
 ## 6. 运行与验证
 
-```bash
-pnpm install
-pnpm dev              # shared watch + server:3100 + client:5175
-pnpm build            # shared → server → client
-pnpm start            # 仅 server dist
-```
+命令与 DoD 见 **[agents/commands-checklist.md](./agents/commands-checklist.md)**。本地 dev 见 **`start-project` Skill**。
 
 | 服务 | 地址 |
 |------|------|
 | 前端 | http://localhost:5175 |
 | 后端 | http://localhost:3100 |
 
-**修改后最低验证**：
+**修改后最低验证**（细则见 `agents/commands-checklist.md` §本项目额外检查）：
 
 1. `pnpm build` 无报错
 2. 改 schema：删 `server/data/project-manager.db` 后重启
@@ -123,6 +149,12 @@ pnpm start            # 仅 server dist
 2. `server` — `assistant-service.ts`
 3. `client` — `useNavigationAction.ts`
 
+### 7.4 新增个人工作台能力（待办/日程/定时）
+
+1. `shared/src/types.ts` 增补 `Todo* / Schedule* / Recurring*` 类型
+2. `server/src/services` 实现 `todo/schedule/recurring/personal-assistant` 逻辑并在 `router.ts` 暴露
+3. `client/src/components/personal-workbench/*` 接入查询与 mutation，补齐 invalidate
+
 ---
 
 ## 8. 提交信息规范
@@ -133,15 +165,6 @@ pnpm start            # 仅 server dist
 
 ## 9. 方案 vs 实现
 
-完整对照表见 **[IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)**（按阶段、页面、数据模型、扫描、对话、验收标准逐项标注 ✅/⚠️/❌）。
+**唯一对照来源**：[IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)（按阶段、页面、数据模型、扫描、对话、验收标准标注 ✅/⚠️/❌）。
 
-**当前主要缺口（摘要）**：
-
-- 无 `projects` / `apps` / `dependencies` / `chat_sessions` 等表
-- 需求 `update` API 有、UI 无；无需求删除
-- 配置中心、`settings.setWorkspacePath` 持久化 UI 无
-- `assistant-ui`、LLM、Zustand、DB migration 未实现
-- 图谱只读；monorepo 子应用扫描未做
-- 外部系统仅 links 存 URL，无 API/MCP
-
-新增功能前先查 IMPLEMENTATION_STATUS，避免重复规划已实现项。
+新增功能前先查该文件，避免把已实现项写成规划或把 TODO 写成已上线。

@@ -1,0 +1,3355 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>个人工作台 — 个人助手</title>
+  <style>
+    :root {
+      --bg: #f4f5f9;
+      --surface: #fff;
+      --border: #e8eaf0;
+      --text: #1e293b;
+      --muted: #64748b;
+      --purple: #7c3aed;
+      --purple-light: #f3e8ff;
+      --purple-border: #ddd6fe;
+      --danger: #ef4444;
+      --danger-bg: #fef2f2;
+      --schedule-blue: #dbeafe;
+      --schedule-blue-border: #93c5fd;
+      --tina-w: 340px;
+      --content-pad: 20px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.5;
+      min-height: 100vh;
+      height: 100vh;
+      overflow: hidden;
+    }
+    button { font-family: inherit; }
+    .app { display: flex; min-height: 100vh; }
+
+    .content-row { flex: 1; display: flex; min-height: 0; overflow: hidden; width: 100%; height: 100vh; }
+    .workbench {
+      flex: 1; min-width: 0; display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+
+    .page-tabs {
+      display: flex; gap: 24px; padding: 0 var(--content-pad);
+      border-bottom: 1px solid var(--border); background: var(--surface);
+      flex-shrink: 0;
+    }
+    .page-tab {
+      padding: 8px 2px 10px; border: none; background: none;
+      font-size: 14px; font-weight: 500; color: var(--muted); cursor: pointer;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+    }
+    .page-tab.is-active { color: var(--text); font-weight: 700; border-bottom-color: var(--purple); }
+
+    .tab-panel { display: none; flex: 1; min-height: 0; overflow: hidden; }
+    .tab-panel.is-active { display: flex; flex-direction: column; }
+
+    .tab-panel-inner {
+      flex: 1; min-height: 0; overflow-y: auto;
+      padding: var(--content-pad);
+    }
+    .tab-panel-inner.workspace-shell {
+      display: flex; flex-direction: column; gap: 12px;
+      overflow: hidden; padding: 16px var(--content-pad);
+    }
+
+    .greeting-bar {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px;
+      padding: 10px 14px; flex-shrink: 0;
+      background: linear-gradient(90deg, #faf5ff 0%, #fff 100%);
+      border: 1px solid var(--purple-border); border-radius: 10px;
+      font-size: 13px; color: var(--text);
+    }
+    .greeting-bar em { font-style: normal; font-weight: 700; color: var(--purple); }
+    .greeting-stats { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+    .stat-pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; border-radius: 999px; font-size: 12px;
+      background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+    }
+    .stat-pill strong { color: var(--text); font-weight: 700; }
+    .stat-pill.is-warn { border-color: #fecaca; background: var(--danger-bg); color: var(--danger); }
+    .stat-pill.is-warn strong { color: var(--danger); }
+
+    .dual-panel,
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: minmax(280px, 36%) minmax(0, 1fr);
+      gap: 16px;
+      flex: 1;
+      min-height: 0;
+      align-items: stretch;
+    }
+    .panel-todo { min-width: 0; }
+    .panel-schedule { min-width: 0; }
+    .panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 0;
+      display: flex; flex-direction: column; min-height: 0;
+      height: 100%;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+    .panel-head {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; padding: 12px 16px;
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
+      background: #fafbfc;
+      border-radius: 12px 12px 0 0;
+    }
+    .panel-head-main {
+      display: flex; flex-direction: column; gap: 2px; min-width: 0;
+    }
+    .panel-title { font-size: 15px; font-weight: 700; flex-shrink: 0; line-height: 1.3; }
+    .panel-meta { font-size: 11px; color: var(--muted); line-height: 1.3; }
+    .panel-meta strong { color: var(--text); font-weight: 700; }
+    .panel-schedule .panel-head { background: linear-gradient(90deg, #eff6ff 0%, #fafbfc 100%); }
+    .panel-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; justify-content: flex-end; flex-shrink: 0; }
+    .panel-body {
+      flex: 1; min-height: 0; overflow: hidden;
+      padding: 0; display: flex; flex-direction: column;
+    }
+    .panel-todo .panel-body-scroll {
+      flex: 1; min-height: 0; overflow-y: auto;
+      padding: 12px 14px 16px;
+      scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;
+    }
+    .panel-todo .panel-body-scroll::-webkit-scrollbar { width: 6px; }
+    .panel-todo .panel-body-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+    .panel-schedule .panel-body { padding: 0; }
+    .btn-icon, .btn-add {
+      border-radius: 8px; cursor: pointer; font-size: 12px;
+    }
+    .btn-icon {
+      width: 28px; height: 28px; border: 1px solid var(--border);
+      background: #fff; display: flex; align-items: center; justify-content: center; color: var(--muted);
+    }
+    .btn-icon:hover { border-color: var(--purple-border); color: var(--purple); }
+    .btn-add {
+      padding: 5px 12px; border: 1px solid var(--border); background: #fff; color: var(--text);
+    }
+    .btn-add:hover { border-color: var(--purple-border); color: var(--purple); }
+    .btn-primary {
+      padding: 8px 16px; border: none; border-radius: 8px;
+      background: var(--purple); color: #fff; cursor: pointer; font-size: 13px;
+    }
+    .btn-primary:hover { background: #6d28d9; }
+    .btn-ghost {
+      padding: 8px 16px; border: 1px solid var(--border); border-radius: 8px;
+      background: #fff; cursor: pointer; font-size: 13px;
+    }
+
+    .todo-list { display: flex; flex-direction: column; gap: 10px; }
+    .todo-card {
+      border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
+      display: flex; flex-direction: column; gap: 0;
+      transition: opacity 0.2s, border-color 0.15s;
+    }
+    .todo-card-main {
+      display: flex; gap: 10px; align-items: flex-start; width: 100%;
+    }
+    .todo-card.is-done { opacity: 0.55; }
+    .todo-card.is-done .todo-title { text-decoration: line-through; color: var(--muted); }
+    .todo-check {
+      width: 18px; height: 18px; border: 2px solid #cbd5e1; border-radius: 50%;
+      flex-shrink: 0; margin-top: 2px; cursor: pointer; transition: all 0.15s;
+    }
+    .todo-check.is-checked {
+      background: var(--purple); border-color: var(--purple);
+      box-shadow: inset 0 0 0 3px #fff;
+    }
+    .todo-body { flex: 1; min-width: 0; }
+    .todo-title { font-weight: 600; font-size: 13px; }
+    .tag-overdue {
+      font-size: 11px; color: var(--danger); background: var(--danger-bg);
+      padding: 1px 6px; border-radius: 4px; margin-left: 6px;
+    }
+    .tag-urgent {
+      font-size: 11px; color: var(--danger); font-weight: 700; margin-right: 4px;
+    }
+    .todo-desc, .todo-deadline { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .todo-source {
+      display: inline-block; margin-top: 6px; font-size: 11px; color: #94a3b8;
+    }
+    .todo-ai-result {
+      width: 100%; margin-top: 10px; padding: 8px 10px;
+      border: 1px solid var(--purple-border); border-radius: 8px;
+      background: var(--purple-light); color: #5b21b6;
+      font-size: 12px; line-height: 1.45; text-align: left; cursor: pointer;
+      display: flex; align-items: center; gap: 6px; transition: background 0.15s;
+    }
+    .todo-ai-result:hover { background: #ede9fe; }
+    .todo-ai-result.is-pending { color: #7c3aed; cursor: default; }
+    .todo-ai-result.is-pending:hover { background: var(--purple-light); }
+    .todo-ai-result .ai-ico { font-size: 10px; flex-shrink: 0; }
+    .todo-ai-result .ai-arrow { margin-left: auto; opacity: 0.7; }
+    .todo-more {
+      border: none; background: none; color: var(--muted);
+      cursor: pointer; font-size: 16px; padding: 0 4px; position: relative;
+    }
+    .todo-more:hover { color: var(--text); }
+    .tag-done {
+      font-size: 11px; color: #059669; background: #ecfdf5;
+      padding: 1px 6px; border-radius: 4px; margin-left: 6px;
+    }
+    .todo-done-time { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+
+    .todo-completed-section {
+      margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border);
+    }
+    .todo-completed-toggle {
+      width: 100%; display: flex; align-items: center; gap: 8px;
+      padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+      background: #fafafa; cursor: pointer; font-size: 12px; color: var(--muted);
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .todo-completed-toggle:hover { background: #f1f5f9; border-color: #cbd5e1; }
+    .todo-completed-toggle .done-count {
+      color: var(--text); font-weight: 700; background: #e2e8f0;
+      padding: 1px 8px; border-radius: 999px; font-size: 11px;
+    }
+    .todo-completed-toggle .toggle-arrow {
+      margin-left: auto; transition: transform 0.2s; color: #94a3b8;
+    }
+    .todo-completed-section.is-expanded .toggle-arrow { transform: rotate(90deg); }
+    .todo-list-done {
+      margin-top: 10px; display: flex; flex-direction: column; gap: 10px;
+    }
+    .todo-list-done.is-collapsed { display: none; }
+    .todo-filter-menu { min-width: 132px; right: 0; left: auto; }
+    .todo-filter-menu button.is-active { color: var(--purple); font-weight: 600; background: var(--purple-light); }
+    .panel-actions .filter-wrap { position: relative; }
+
+    .schedule-layout {
+      display: grid; grid-template-columns: minmax(0, 1fr) 136px;
+      gap: 0; flex: 1; min-height: 0; height: 100%;
+    }
+    .schedule-layout.no-cal { grid-template-columns: 1fr; }
+    .timeline-scroll {
+      min-height: 0; overflow-y: auto; overflow-x: hidden;
+      padding: 8px 12px 12px 8px;
+      scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;
+    }
+    .timeline-scroll::-webkit-scrollbar { width: 6px; }
+    .timeline-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+    .timeline {
+      display: flex; align-items: stretch;
+      position: relative; min-width: 0;
+      --hour-h: 48px;
+      height: calc(24 * var(--hour-h));
+    }
+    .timeline-labels {
+      width: 44px; flex-shrink: 0; position: relative;
+    }
+    .time-label-item {
+      position: absolute; right: 4px; width: 40px; text-align: right;
+      font-size: 10px; color: var(--muted); line-height: 1;
+      transform: translateY(-50%);
+    }
+    .time-label-item.is-first { transform: translateY(0); }
+    .time-label-item.is-last { transform: translateY(-100%); }
+    .timeline-canvas {
+      flex: 1; position: relative; min-width: 0; min-height: 100%;
+    }
+    .timeline-grid {
+      position: absolute; inset: 0; pointer-events: none;
+    }
+    .time-slot {
+      position: absolute; left: 0; right: 0; height: 0;
+      border-top: 1px solid #f1f5f9; box-sizing: border-box;
+    }
+    .time-slot.is-day-end { border-bottom: 1px solid #f1f5f9; }
+    .timeline-events {
+      position: absolute; top: 0; left: 0; right: 8px; bottom: 0;
+      pointer-events: none;
+    }
+    .timeline-now {
+      position: absolute; left: 0; right: 8px; height: 2px;
+      background: #f97316; z-index: 3; pointer-events: none;
+    }
+    .timeline-now::before {
+      content: ""; position: absolute; left: 0; top: 50%; transform: translate(-50%, -50%);
+      width: 8px; height: 8px; border-radius: 50%; background: #f97316;
+    }
+    .timeline-now-label {
+      position: absolute; right: 0; top: -16px; font-size: 10px; color: #ea580c; font-weight: 600;
+    }
+    .event-block {
+      position: absolute; left: 0; right: 0;
+      background: var(--schedule-blue); border: 1px solid var(--schedule-blue-border);
+      border-radius: 8px; padding: 4px 6px; cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.15s;
+      box-sizing: border-box; overflow: visible;
+      min-height: 22px; pointer-events: auto; z-index: 1;
+    }
+    .event-block:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(37,99,235,0.15); z-index: 2; }
+    .event-block.is-merged {
+      border-style: dashed; border-width: 1.5px;
+      background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%);
+    }
+    .event-sources {
+      position: absolute; top: 4px; right: 6px; z-index: 2;
+      display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center;
+      gap: 3px; max-width: 52%; pointer-events: none;
+    }
+    .event-content {
+      position: relative; height: 100%; overflow: hidden;
+      padding-right: 46px; box-sizing: border-box;
+    }
+    .event-block.has-multi-src .event-content { padding-right: 92px; }
+    .event-time { font-size: 10px; color: #2563eb; margin-bottom: 2px; font-weight: 500; }
+    .event-title {
+      font-size: 12px; font-weight: 600; color: #1e40af; line-height: 1.35;
+      overflow: hidden; text-overflow: ellipsis;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    }
+    .event-src {
+      display: inline-flex; align-items: center; padding: 1px 6px; border-radius: 4px;
+      font-size: 9px; font-weight: 600; line-height: 1.4; white-space: nowrap;
+    }
+    .event-src.src-local { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+    .event-src.src-feishu { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
+    .event-src.src-dingtalk { background: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd; }
+    .event-src.src-outlook { background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; }
+    .schedule-sync-bar {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px;
+      padding: 8px 12px; border-bottom: 1px solid var(--border);
+      background: #fafbfc; flex-shrink: 0;
+    }
+    .schedule-sync-bar .sync-label { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+    .sync-channel {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 8px; border-radius: 999px; font-size: 11px; cursor: pointer;
+      border: 1px solid var(--border); background: #fff; color: var(--muted);
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+    .sync-channel.is-on { border-color: var(--purple-border); background: var(--purple-light); color: #5b21b6; font-weight: 600; }
+    .sync-channel.is-off { opacity: 0.55; text-decoration: line-through; }
+    .btn-sync {
+      margin-left: auto; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer;
+      border: 1px solid var(--purple-border); background: #fff; color: var(--purple);
+    }
+    .btn-sync:hover { background: var(--purple-light); }
+    .sync-meta { font-size: 10px; color: #94a3b8; width: 100%; margin-top: 2px; }
+    .schedule-detail-sources { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+    .schedule-detail-src-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: #fafafa;
+      font-size: 12px;
+    }
+    .modal.is-schedule-detail { max-width: 480px; }
+
+    .mini-cal {
+      font-size: 10px; border-left: 1px solid var(--border);
+      padding: 12px 10px 12px 12px; margin-left: 0;
+      background: #fafbfc; overflow-y: auto;
+    }
+    .cal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 8px; font-weight: 600; font-size: 12px;
+    }
+    .cal-header button {
+      border: none; background: none; cursor: pointer; padding: 2px 6px;
+      border-radius: 4px; color: var(--muted);
+    }
+    .cal-header button:hover { background: #f1f5f9; color: var(--text); }
+    .cal-grid {
+      display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center;
+    }
+    .cal-grid span { padding: 3px 0; border-radius: 4px; color: var(--muted); cursor: default; }
+    .cal-grid span.day { cursor: pointer; }
+    .cal-grid span.day:hover { background: #f1f5f9; }
+    .cal-grid .wk { font-size: 10px; color: #94a3b8; cursor: default; }
+    .cal-grid .today { background: var(--purple); color: #fff; font-weight: 700; }
+    .cal-grid .selected { outline: 1px solid var(--purple-border); background: var(--purple-light); }
+    .cal-note { margin-top: 10px; font-size: 11px; color: var(--muted); }
+
+    .toggle-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+    .toggle-switch {
+      width: 36px; height: 20px; background: #cbd5e1; border-radius: 10px;
+      position: relative; cursor: pointer; border: none; flex-shrink: 0;
+      transition: background 0.2s;
+    }
+    .toggle-switch::after {
+      content: ""; position: absolute; width: 16px; height: 16px;
+      background: #fff; border-radius: 50%; top: 2px; left: 2px;
+      transition: left 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    }
+    .toggle-switch.is-on { background: var(--purple); }
+    .toggle-switch.is-on::after { left: 18px; }
+
+    /* 定时任务 */
+    .cron-page {
+      max-width: 880px; margin: 0 auto; width: 100%;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .cron-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 16px; flex-wrap: wrap;
+    }
+    .cron-header-text h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+    .cron-header-text p { font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .cron-flow-tip {
+      padding: 12px 14px; border-radius: 10px; font-size: 12px; line-height: 1.6;
+      background: linear-gradient(90deg, #eff6ff, #faf5ff);
+      border: 1px solid #bfdbfe; color: #334155;
+    }
+    .cron-flow-tip strong { color: #1d4ed8; font-weight: 700; }
+    .cron-flow-tip em { font-style: normal; color: #6d28d9; font-weight: 600; }
+    .cron-action-label {
+      display: inline-block; font-size: 10px; font-weight: 600; color: #64748b;
+      text-transform: none; letter-spacing: 0; margin-bottom: 4px;
+    }
+    .cron-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 8px 16px 16px;
+    }
+    .cron-toolbar {
+      display: flex; justify-content: flex-end; padding: 8px 0 4px;
+      border-bottom: 1px solid var(--border); margin-bottom: 8px;
+    }
+    .cron-list { display: flex; flex-direction: column; gap: 10px; }
+    .cron-card {
+      background: #fafafa; border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px 16px; display: flex; align-items: flex-start; gap: 14px;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    }
+    .cron-card:hover { border-color: var(--purple-border); background: #fff; }
+    .cron-card.is-off { opacity: 0.72; }
+    .cron-main { flex: 1; min-width: 0; }
+    .cron-title { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+    .cron-meta {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--muted); margin-bottom: 10px;
+    }
+    .cron-meta .clock { opacity: 0.7; }
+    .cron-action {
+      display: flex; align-items: flex-start; gap: 8px;
+      font-size: 12px; color: #5b21b6; background: var(--purple-light);
+      border-radius: 8px; padding: 8px 10px; line-height: 1.5;
+    }
+    .cron-action .spark { flex-shrink: 0; }
+    .cron-ops {
+      display: flex; align-items: center; gap: 10px; flex-shrink: 0; position: relative;
+    }
+    .cron-more {
+      border: none; background: none; color: var(--muted); cursor: pointer;
+      font-size: 18px; padding: 4px; line-height: 1;
+    }
+    .cron-more:hover { color: var(--text); }
+
+    /* 下拉菜单 */
+    .dropdown {
+      position: absolute; top: 100%; right: 0; margin-top: 4px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; box-shadow: 0 8px 24px rgba(15,23,42,0.12);
+      min-width: 120px; z-index: 50; display: none; overflow: hidden;
+    }
+    .dropdown.is-open { display: block; }
+    .dropdown button {
+      display: block; width: 100%; text-align: left; padding: 10px 14px;
+      border: none; background: none; font-size: 13px; cursor: pointer; color: var(--text);
+    }
+    .dropdown button:hover { background: #f8fafc; }
+    .dropdown button.danger { color: var(--danger); }
+
+    /* 个人助手侧栏 */
+    .tina-panel {
+      width: var(--tina-w); background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex; flex-direction: column; flex-shrink: 0;
+      min-height: 0;
+    }
+    .tina-head {
+      padding: 14px 16px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .tina-head h2 { font-size: 15px; font-weight: 700; }
+    .tina-tools { display: flex; gap: 8px; }
+    .tina-tools button {
+      width: 28px; height: 28px; border: 1px solid var(--border);
+      border-radius: 8px; background: #fff; cursor: pointer; font-size: 13px; color: var(--muted);
+    }
+    .tina-tools button:hover { border-color: var(--purple-border); color: var(--purple); }
+    .tina-body { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+    .tina-welcome-card {
+      background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+      border: 1px solid var(--purple-border); border-radius: 12px;
+      padding: 14px; display: flex; gap: 12px; align-items: flex-start;
+    }
+    .tina-avatar {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: var(--purple); color: #fff;
+      display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
+    }
+    .tina-welcome-text { font-size: 12px; line-height: 1.65; color: #4c1d95; }
+    .tina-welcome-text strong { display: block; font-size: 13px; margin-bottom: 4px; color: #5b21b6; }
+    .chip-label { font-size: 12px; color: var(--muted); }
+    .chips { display: flex; flex-direction: column; gap: 8px; }
+    .chip {
+      display: block; width: 100%; text-align: left; padding: 10px 12px;
+      border: 1px solid var(--border); border-radius: 10px; background: #fafafa;
+      font-size: 12px; cursor: pointer; line-height: 1.4;
+    }
+    .chip:hover { border-color: var(--purple-border); background: var(--purple-light); }
+    .tina-messages { display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 80px; }
+    .msg {
+      max-width: 92%; padding: 10px 12px; border-radius: 12px; font-size: 12px; line-height: 1.55;
+      animation: fadeIn 0.25s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    .msg-user {
+      align-self: flex-end; background: var(--purple); color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .msg-bot {
+      align-self: flex-start; background: #f1f5f9; color: var(--text);
+      border-bottom-left-radius: 4px;
+    }
+    .msg-bot-block { align-self: flex-start; max-width: 96%; display: flex; flex-direction: column; gap: 8px; }
+    .msg-bot-block .msg-bot { max-width: 100%; }
+    .tina-cron-card {
+      background: #fff; border: 1px solid var(--purple-border); border-radius: 10px;
+      padding: 12px 14px; font-size: 12px; line-height: 1.55;
+    }
+    .tina-cron-head {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; margin-bottom: 8px;
+    }
+    .tina-cron-head strong { font-size: 13px; color: var(--text); }
+    .tina-cron-row { color: var(--muted); margin-top: 4px; }
+    .tina-cron-row span { color: var(--text); }
+    .ai-preview-meta { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+    .ai-preview-body {
+      max-height: min(60vh, 520px); overflow-y: auto;
+      padding: 4px 2px;
+    }
+    .modal.is-ai-result { max-width: 640px; }
+    .modal.is-ai-result .modal-body { max-height: 70vh; overflow-y: auto; }
+
+    /* AI 结果文档渲染 */
+    .ai-result-doc {
+      font-size: 13px; line-height: 1.65; color: var(--text);
+    }
+    .ai-result-doc .doc-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 6px;
+      background: var(--purple-light); color: #5b21b6;
+      font-size: 11px; font-weight: 600; margin-bottom: 10px;
+    }
+    .ai-result-doc h4 {
+      font-size: 15px; font-weight: 700; margin: 0 0 12px;
+      padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    }
+    .ai-result-doc h5 {
+      font-size: 13px; font-weight: 700; color: #334155;
+      margin: 14px 0 8px;
+    }
+    .ai-result-doc p { margin: 0 0 8px; color: var(--muted); }
+    .ai-result-doc ul, .ai-result-doc ol {
+      margin: 0 0 10px; padding-left: 18px;
+    }
+    .ai-result-doc li { margin-bottom: 6px; }
+    .ai-result-doc li::marker { color: var(--purple); }
+    .ai-result-doc .stat-row {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0 12px;
+    }
+    .ai-result-doc .stat-card {
+      background: #f8fafc; border: 1px solid var(--border); border-radius: 8px;
+      padding: 10px; text-align: center;
+    }
+    .ai-result-doc .stat-card .val {
+      font-size: 16px; font-weight: 700; color: var(--text); line-height: 1.2;
+    }
+    .ai-result-doc .stat-card .val.up { color: #059669; }
+    .ai-result-doc .stat-card .val.down { color: var(--danger); }
+    .ai-result-doc .stat-card .lbl { font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .ai-result-doc .check-list { list-style: none; padding: 0; margin: 0 0 10px; }
+    .ai-result-doc .check-list li {
+      display: flex; align-items: flex-start; gap: 8px;
+      padding: 8px 10px; border-radius: 8px; margin-bottom: 6px;
+      background: #f8fafc; border: 1px solid var(--border);
+    }
+    .ai-result-doc .check-list .ico { flex-shrink: 0; font-size: 14px; line-height: 1.4; }
+    .ai-result-doc .check-list .ico.ok { color: #059669; }
+    .ai-result-doc .check-list .ico.no { color: var(--danger); }
+    .ai-result-doc .check-list .ico.wait { color: #d97706; }
+    .ai-result-doc table {
+      width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 12px;
+    }
+    .ai-result-doc th, .ai-result-doc td {
+      border: 1px solid var(--border); padding: 8px 10px; text-align: left;
+    }
+    .ai-result-doc th { background: #f8fafc; font-weight: 600; color: #475569; }
+    .ai-result-doc .doc-conclusion {
+      margin-top: 12px; padding: 10px 12px; border-radius: 8px;
+      background: var(--purple-light); border: 1px solid var(--purple-border);
+      color: #5b21b6; font-size: 12px; line-height: 1.55;
+    }
+    .ai-result-doc .progress-item { margin-bottom: 10px; }
+    .ai-result-doc .progress-label {
+      display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;
+    }
+    .ai-result-doc .progress-bar {
+      height: 6px; background: #e2e8f0; border-radius: 999px; overflow: hidden;
+    }
+    .ai-result-doc .progress-bar span {
+      display: block; height: 100%; background: var(--purple); border-radius: 999px;
+    }
+
+    .todo-ai-panel {
+      width: 100%; margin-top: 10px; border: 1px solid var(--purple-border);
+      border-radius: 10px; overflow: hidden; background: #fff;
+    }
+    .todo-ai-panel-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 10px; background: var(--purple-light);
+      border-bottom: 1px solid var(--purple-border);
+    }
+    .todo-ai-panel-head span {
+      font-size: 12px; font-weight: 600; color: #5b21b6;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .todo-ai-panel-head button {
+      border: none; background: none; color: var(--purple);
+      font-size: 12px; cursor: pointer; padding: 2px 4px;
+    }
+    .todo-ai-panel-head button:hover { text-decoration: underline; }
+    .todo-ai-panel-body {
+      padding: 12px 12px 10px; max-height: 220px; overflow-y: auto;
+    }
+    .todo-ai-panel-foot {
+      display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px;
+      padding: 8px 10px; border-top: 1px solid var(--border); background: #fafafa;
+    }
+    .btn-sm {
+      padding: 5px 12px; font-size: 12px; border-radius: 6px; cursor: pointer;
+    }
+    .btn-sm.btn-revise {
+      margin-right: auto; color: var(--purple); border: 1px solid var(--purple-border);
+      background: var(--purple-light);
+    }
+    .btn-sm.btn-revise:hover { background: #ede9fe; }
+
+    .tina-revision-bar {
+      display: none; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 10px 16px; background: linear-gradient(90deg, #f5f3ff, #fff);
+      border-bottom: 1px solid var(--purple-border); font-size: 12px; color: #5b21b6;
+    }
+    .tina-revision-bar.is-visible { display: flex; }
+    .tina-revision-bar strong { font-weight: 700; }
+    .tina-revision-bar .rev-meta { color: var(--muted); font-size: 11px; margin-left: 6px; }
+    .tina-revision-exit {
+      border: 1px solid var(--purple-border); background: #fff; color: var(--purple);
+      border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; flex-shrink: 0;
+    }
+    .tina-revision-exit:hover { background: var(--purple-light); }
+    .tina-panel.is-revising { box-shadow: inset 0 0 0 2px var(--purple-border); }
+    .tina-panel.is-revising .tina-foot {
+      box-shadow: 0 -4px 16px rgba(124,58,237,0.08);
+    }
+    .msg-system {
+      align-self: center; max-width: 96%; padding: 6px 12px; border-radius: 999px;
+      background: #ede9fe; color: #6d28d9; font-size: 11px; text-align: center;
+    }
+    .history-list { display: flex; flex-direction: column; gap: 8px; }
+    .history-item {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+      width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px;
+      background: #fafafa; cursor: pointer; text-align: left; transition: border-color 0.15s, background 0.15s;
+    }
+    .history-item:hover { border-color: var(--purple-border); background: var(--purple-light); }
+    .history-item strong { font-size: 13px; color: var(--text); }
+    .history-item span { font-size: 12px; color: var(--muted); }
+    .history-item.is-active { border-color: var(--purple); background: var(--purple-light); }
+    .modal.is-history { max-width: 920px; }
+    .history-modal-layout {
+      display: grid; grid-template-columns: minmax(220px, 280px) 1fr;
+      gap: 16px; min-height: 360px; align-items: stretch;
+    }
+    .history-list-col { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+    .history-preview-col {
+      display: flex; flex-direction: column; gap: 10px; min-height: 0;
+      border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; background: #fafafa;
+    }
+    .history-preview-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-shrink: 0;
+    }
+    .history-preview-head strong { font-size: 13px; color: var(--text); }
+    .history-preview-head span { font-size: 11px; color: var(--muted); }
+    .history-preview-body {
+      flex: 1; min-height: 200px; max-height: min(52vh, 440px);
+      overflow-y: auto; padding: 2px 0;
+    }
+    .history-preview-empty {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      color: var(--muted); font-size: 12px; text-align: center; padding: 24px;
+    }
+    .history-preview-foot {
+      display: flex; justify-content: flex-end; gap: 8px; flex-shrink: 0;
+      padding-top: 10px; border-top: 1px solid var(--border);
+    }
+    .tina-ai-result-block { align-self: flex-start; max-width: 96%; display: flex; flex-direction: column; gap: 6px; }
+    .tina-ai-result-label {
+      font-size: 11px; color: #6d28d9; padding: 0 4px;
+    }
+    .tina-ai-result-doc {
+      background: #fff; border: 1px solid var(--purple-border); border-radius: 10px;
+      padding: 12px 14px; max-height: 260px; overflow-y: auto;
+    }
+    .tina-ai-result-doc .ai-result-doc { font-size: 12px; }
+    .ai-preview-actions {
+      display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px;
+      padding-top: 12px; border-top: 1px solid var(--border);
+    }
+    .tina-foot {
+      padding: 12px 16px 16px; border-top: 1px solid var(--border);
+      flex-shrink: 0; background: var(--surface);
+    }
+    .tina-input-wrap {
+      display: flex; align-items: flex-end; gap: 8px;
+      border: 1px solid var(--border); border-radius: 12px; padding: 8px 10px; background: #fafafa;
+    }
+    .tina-input-wrap:focus-within { border-color: var(--purple-border); box-shadow: 0 0 0 3px rgba(124,58,237,0.1); }
+    .tina-input-wrap textarea {
+      flex: 1; border: none; background: transparent; resize: none;
+      font-size: 13px; outline: none; min-height: 22px; max-height: 80px;
+    }
+    .attach-btn, .tina-send {
+      border: none; cursor: pointer; flex-shrink: 0;
+    }
+    .attach-btn { background: none; color: var(--muted); font-size: 16px; padding: 4px; }
+    .attach-btn:hover { color: var(--purple); }
+    .tina-send {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: var(--purple); color: #fff; font-size: 14px;
+    }
+    .tina-send:hover { background: #6d28d9; }
+    .tina-send:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* 弹窗 */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(15,23,42,0.45);
+      display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px;
+    }
+    .modal-overlay.is-open { display: flex; }
+    .modal {
+      background: var(--surface); border-radius: 12px; width: 100%; max-width: 480px;
+      box-shadow: 0 20px 50px rgba(15,23,42,0.18); overflow: hidden;
+    }
+    .modal-head {
+      padding: 18px 24px 14px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .modal-head h3 { font-size: 16px; font-weight: 700; color: var(--text); }
+    .modal-close {
+      border: none; background: none; font-size: 20px; cursor: pointer;
+      color: #94a3b8; line-height: 1; padding: 4px;
+    }
+    .modal-close:hover { color: var(--text); }
+    .modal-body { padding: 4px 24px 8px; display: flex; flex-direction: column; gap: 18px; }
+    .form-field label.form-label {
+      display: block; font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 8px;
+    }
+    .form-label .req { color: #ef4444; margin-left: 2px; }
+    .form-field input, .form-field textarea, .form-field select {
+      width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0;
+      border-radius: 8px; font-size: 13px; font-family: inherit; color: var(--text);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-field input::placeholder, .form-field textarea::placeholder { color: #cbd5e1; }
+    .form-field input:focus, .form-field textarea:focus, .form-field select:focus {
+      outline: none; border-color: var(--purple-border);
+      box-shadow: 0 0 0 3px rgba(124,58,237,0.08);
+    }
+    .input-with-count { position: relative; }
+    .input-with-count input { padding-right: 52px; }
+    .input-count {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      font-size: 12px; color: #94a3b8; pointer-events: none;
+    }
+    .time-range { display: flex; align-items: center; gap: 8px; }
+    .time-range .dash { color: #94a3b8; flex-shrink: 0; font-size: 14px; }
+    .datetime-field { flex: 1; position: relative; min-width: 0; }
+    .datetime-field input { padding-right: 36px; }
+    .datetime-field .cal-ico {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      color: #94a3b8; pointer-events: none; font-size: 15px; line-height: 1;
+    }
+    .textarea-wrap textarea { min-height: 96px; resize: vertical; display: block; }
+    .textarea-count { text-align: right; font-size: 12px; color: #94a3b8; margin-top: 6px; }
+    .radio-group { display: flex; align-items: center; gap: 28px; padding-top: 2px; }
+    .radio-item {
+      display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+      font-size: 13px; color: var(--text); user-select: none;
+    }
+    .radio-item input { position: absolute; opacity: 0; pointer-events: none; }
+    .radio-dot {
+      width: 16px; height: 16px; border: 2px solid #cbd5e1; border-radius: 50%;
+      position: relative; flex-shrink: 0; transition: border-color 0.15s;
+    }
+    .radio-item input:checked + .radio-dot { border-color: var(--purple); }
+    .radio-item input:checked + .radio-dot::after {
+      content: ""; position: absolute; width: 8px; height: 8px;
+      background: var(--purple); border-radius: 50%; top: 2px; left: 2px;
+    }
+    .modal-foot {
+      padding: 16px 24px 20px; display: flex; justify-content: flex-end; gap: 12px;
+    }
+    .modal-foot .btn-ghost { min-width: 76px; padding: 8px 20px; }
+    .modal-foot .btn-primary { min-width: 76px; padding: 8px 20px; }
+    .modal.is-cron { max-width: 520px; }
+
+    /* 定时任务弹窗 */
+    .btn-recognize {
+      width: 100%; margin-top: 10px; padding: 9px 12px;
+      border: 1px solid var(--purple-border); border-radius: 8px;
+      background: var(--purple-light); color: var(--purple);
+      font-size: 13px; cursor: pointer; transition: background 0.15s;
+    }
+    .btn-recognize:hover { background: #ede9fe; }
+    .input-clearable { position: relative; }
+    .input-clearable input { padding-right: 32px; }
+    .input-clear-btn {
+      position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+      width: 20px; height: 20px; border: none; background: none;
+      color: #94a3b8; font-size: 16px; line-height: 1; cursor: pointer;
+      border-radius: 50%; display: none;
+    }
+    .input-clearable.has-value .input-clear-btn { display: block; }
+    .input-clear-btn:hover { color: var(--muted); background: #f1f5f9; }
+    .repeat-extra { margin-top: 12px; display: none; }
+    .repeat-extra.is-visible { display: block; }
+    .weekday-picker { display: flex; gap: 8px; margin-bottom: 12px; }
+    .weekday-btn {
+      flex: 1; min-width: 0; height: 36px; border: 1px solid #e2e8f0;
+      border-radius: 8px; background: #fff; font-size: 13px; color: var(--text);
+      cursor: pointer; transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+    .weekday-btn:hover { border-color: var(--purple-border); }
+    .weekday-btn.is-active {
+      border-color: var(--purple); background: var(--purple-light); color: var(--purple); font-weight: 600;
+    }
+    .time-field-wrap { position: relative; }
+    .time-field-wrap input { padding-left: 36px; }
+    .time-field-wrap .time-ico {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      color: #94a3b8; pointer-events: none; font-size: 14px; line-height: 1;
+    }
+    .cron-instruction { min-height: 88px; resize: vertical; }
+    .cron-action-field textarea {
+      min-height: 72px; resize: none; background: #f8fafc; color: var(--muted);
+    }
+    .form-hint { font-size: 12px; color: var(--muted); font-weight: 400; margin-left: 4px; }
+
+    /* Toast */
+    .toast-wrap {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      z-index: 300; display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+    }
+    .toast {
+      background: #1e293b; color: #fff; padding: 10px 18px; border-radius: 10px;
+      font-size: 13px; box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      animation: toastIn 0.3s ease;
+    }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    .dropdown-wrap { position: relative; flex-shrink: 0; }
+
+    @media (max-width: 1280px) {
+      :root { --tina-w: 300px; }
+      .workspace-grid { grid-template-columns: minmax(260px, 34%) minmax(0, 1fr); }
+    }
+
+    @media (max-width: 1100px) {
+      .tab-panel-inner.workspace-shell { overflow-y: auto; }
+      .workspace-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(420px, 52vh) minmax(320px, 1fr);
+      }
+      .panel { height: auto; min-height: 0; }
+      .panel-schedule { order: 1; }
+      .panel-todo { order: 2; }
+      .schedule-layout { grid-template-columns: 1fr 120px; min-height: 380px; }
+      .mini-cal {
+        border-left: 1px solid var(--border); padding-left: 10px;
+      }
+    }
+
+    @media (max-width: 900px) {
+      body { overflow: auto; height: auto; }
+      .content-row { flex-direction: column; overflow-y: auto; }
+      .tina-panel {
+        width: 100%; border-left: none; border-top: 1px solid var(--border);
+        max-height: 420px;
+      }
+      .workbench { overflow: visible; }
+      .tab-panel { overflow: visible; }
+      .tab-panel-inner { overflow: visible; }
+    }
+
+    @media (max-width: 640px) {
+      :root { --content-pad: 14px; }
+      .greeting-stats { margin-left: 0; width: 100%; }
+      .panel-head { flex-direction: column; align-items: flex-start; }
+      .panel-actions { width: 100%; justify-content: space-between; }
+      .cron-header { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+      <div class="content-row">
+        <main class="workbench">
+          <div class="page-tabs" role="tablist">
+            <button type="button" class="page-tab is-active" data-tab="schedule" role="tab" aria-selected="true">日程与事项</button>
+            <button type="button" class="page-tab" data-tab="cron" role="tab">定时任务</button>
+          </div>
+
+          <!-- 日程与事项 -->
+          <div class="tab-panel is-active" id="panelSchedule">
+            <div class="tab-panel-inner workspace-shell">
+            <div class="greeting-bar" id="greetingText">
+              <span>上午好，今日工作概览</span>
+              <div class="greeting-stats">
+                <span class="stat-pill">日程 <strong id="statSchedule">6</strong> 条</span>
+                <span class="stat-pill">待办 <strong id="statTodo">3</strong> 项</span>
+                <span class="stat-pill is-warn">逾期 <strong id="statOverdue">1</strong> 项</span>
+                <span class="stat-pill">已完成 <strong id="statDone">3</strong> 项</span>
+              </div>
+            </div>
+            <div class="workspace-grid">
+              <section class="panel panel-todo">
+                <div class="panel-head">
+                  <div class="panel-head-main">
+                    <h3 class="panel-title">待办事项</h3>
+                    <span class="panel-meta"><strong id="todoPanelMeta">3</strong> 项进行中 · <strong id="todoOverdueMeta">1</strong> 项逾期</span>
+                  </div>
+                  <div class="panel-actions">
+                    <div class="filter-wrap">
+                      <button type="button" class="btn-icon" id="btnFilterTodo" title="筛选待办">☰</button>
+                      <div class="dropdown todo-filter-menu" id="todoFilterMenu">
+                        <button type="button" data-filter="active" class="is-active">进行中</button>
+                        <button type="button" data-filter="all">全部待办</button>
+                        <button type="button" data-filter="done">已完成</button>
+                        <button type="button" data-filter="overdue">已逾期</button>
+                      </div>
+                    </div>
+                    <button type="button" class="btn-add" id="btnAddTodo">+ 添加事项</button>
+                  </div>
+                </div>
+                <div class="panel-body">
+                <div class="panel-body-scroll">
+                <div class="todo-list" id="todoList">
+                  <article class="todo-card" data-id="1">
+                    <div class="todo-card-main">
+                      <div class="todo-check" role="checkbox" tabindex="0" aria-checked="false"></div>
+                      <div class="todo-body">
+                        <div><span class="todo-title">做会议纪要</span></div>
+                        <p class="todo-desc">定时任务物化待办 · 每7天重复1次，截止17:00</p>
+                        <p class="todo-deadline">2026/04/30 17:00</p>
+                        <span class="todo-source">来源：定时任务</span>
+                      </div>
+                      <div class="dropdown-wrap">
+                        <button type="button" class="todo-more" aria-label="更多">⋯</button>
+                        <div class="dropdown">
+                          <button type="button" data-action="edit">编辑</button>
+                          <button type="button" data-action="cancel">取消待办</button>
+                          <button type="button" data-action="delete" class="danger">删除</button>
+                        </div>
+                      </div>
+                    </div>
+                    <button type="button" class="todo-ai-result" data-result-type="minutes">
+                      <span class="ai-ico">◆</span>
+                      <span>个人助手已生成结果报告，待查看确认</span>
+                      <span class="ai-arrow">›</span>
+                    </button>
+                  </article>
+                  <article class="todo-card" data-id="2">
+                    <div class="todo-card-main">
+                      <div class="todo-check"></div>
+                      <div class="todo-body">
+                        <div><span class="todo-title">基金定投弱势群体</span><span class="tag-overdue">已逾期</span></div>
+                        <p class="todo-desc">需人工线下确认，个人助手无法自动完成</p>
+                      </div>
+                      <div class="dropdown-wrap">
+                        <button type="button" class="todo-more">⋯</button>
+                        <div class="dropdown">
+                          <button type="button" data-action="edit">编辑</button>
+                          <button type="button" data-action="cancel">取消待办</button>
+                          <button type="button" data-action="delete" class="danger">删除</button>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                  <article class="todo-card" data-id="3">
+                    <div class="todo-card-main">
+                      <div class="todo-check"></div>
+                      <div class="todo-body">
+                        <div><span class="todo-title">基金选品 Agent-Mona</span></div>
+                        <p class="todo-desc">个人助手正在根据能力模型生成初步分析…</p>
+                      </div>
+                      <div class="dropdown-wrap">
+                        <button type="button" class="todo-more">⋯</button>
+                        <div class="dropdown">
+                          <button type="button" data-action="edit">编辑</button>
+                          <button type="button" data-action="cancel">取消待办</button>
+                          <button type="button" data-action="delete" class="danger">删除</button>
+                        </div>
+                      </div>
+                    </div>
+                    <button type="button" class="todo-ai-result is-pending" disabled>
+                      <span class="ai-ico">◆</span>
+                      <span>个人助手正在生成初步结果…</span>
+                    </button>
+                  </article>
+                </div>
+                <div class="todo-completed-section" id="todoCompletedSection">
+                  <button type="button" class="todo-completed-toggle" id="todoCompletedToggle">
+                    <span>查看历史已完成</span>
+                    <span class="done-count" id="todoDoneCount">3</span>
+                    <span class="toggle-arrow">›</span>
+                  </button>
+                  <div class="todo-list todo-list-done is-collapsed" id="todoDoneList">
+                    <article class="todo-card is-done" data-id="d1">
+                      <div class="todo-card-main">
+                        <div class="todo-check is-checked" aria-checked="true"></div>
+                        <div class="todo-body">
+                          <div><span class="todo-title">完成UI改版方案</span><span class="tag-done">已完成</span></div>
+                          <p class="todo-desc">个人助手已生成方案草稿并确认</p>
+                          <p class="todo-done-time">完成于 2026/06/12 18:30</p>
+                        </div>
+                        <div class="dropdown-wrap">
+                          <button type="button" class="todo-more">⋯</button>
+                          <div class="dropdown">
+                            <button type="button" data-action="view">查看详情</button>
+                            <button type="button" data-action="restore">恢复为待办</button>
+                            <button type="button" data-action="delete" class="danger">删除</button>
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                    <article class="todo-card is-done" data-id="d2">
+                      <div class="todo-card-main">
+                        <div class="todo-check is-checked" aria-checked="true"></div>
+                        <div class="todo-body">
+                          <div><span class="todo-title">协议合规审核</span><span class="tag-done">已完成</span></div>
+                          <p class="todo-desc">合规清单已全部通过</p>
+                          <p class="todo-done-time">完成于 2026/06/10 11:20</p>
+                        </div>
+                        <div class="dropdown-wrap">
+                          <button type="button" class="todo-more">⋯</button>
+                          <div class="dropdown">
+                            <button type="button" data-action="view">查看详情</button>
+                            <button type="button" data-action="restore">恢复为待办</button>
+                            <button type="button" data-action="delete" class="danger">删除</button>
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                    <article class="todo-card is-done" data-id="d3">
+                      <div class="todo-card-main">
+                        <div class="todo-check is-checked" aria-checked="true"></div>
+                        <div class="todo-body">
+                          <div><span class="todo-title">第三方模型对接文档</span><span class="tag-done">已完成</span></div>
+                          <p class="todo-done-time">完成于 2026/06/05 16:45</p>
+                        </div>
+                        <div class="dropdown-wrap">
+                          <button type="button" class="todo-more">⋯</button>
+                          <div class="dropdown">
+                            <button type="button" data-action="view">查看详情</button>
+                            <button type="button" data-action="restore">恢复为待办</button>
+                            <button type="button" data-action="delete" class="danger">删除</button>
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                  </div>
+                </div>
+                </div>
+                </div>
+              </section>
+
+              <section class="panel panel-schedule">
+                <div class="panel-head">
+                  <div class="panel-head-main">
+                    <h3 class="panel-title">我的日程</h3>
+                    <span class="panel-meta" id="scheduleDayMeta">今日 · 2026/06/17 · <strong id="schedulePanelMeta">6</strong> 条日程</span>
+                  </div>
+                  <div class="panel-actions">
+                    <button type="button" class="btn-add" id="btnSyncSchedule" title="同步外部日历">⟳ 同步</button>
+                    <button type="button" class="btn-add" id="btnAddSchedule">+ 添加日程</button>
+                    <div class="toggle-row">
+                      <span>日历</span>
+                      <button type="button" class="toggle-switch is-on" id="toggleCal" aria-checked="true"></button>
+                    </div>
+                  </div>
+                </div>
+                <div class="panel-body">
+                <div class="schedule-sync-bar" id="scheduleSyncBar">
+                  <span class="sync-label">已连接</span>
+                  <button type="button" class="sync-channel is-on" data-channel="feishu">飞书</button>
+                  <button type="button" class="sync-channel is-on" data-channel="dingtalk">钉钉</button>
+                  <button type="button" class="sync-channel is-on" data-channel="outlook">Outlook</button>
+                  <button type="button" class="sync-channel is-on" data-channel="local">本地</button>
+                  <span class="sync-meta" id="scheduleSyncMeta">最近同步：刚刚 · 原始 8 条，去重后 6 条</span>
+                </div>
+                <div class="schedule-layout" id="scheduleLayout">
+                  <div class="timeline-scroll">
+                    <div class="timeline" id="dayTimeline" aria-label="今日日程时间轴 0-24 时"></div>
+                  </div>
+                  <aside class="mini-cal" id="miniCal">
+                    <div class="cal-header">
+                      <button type="button" id="calPrev" aria-label="上月">‹</button>
+                      <span id="calTitle">2026 年 6 月</span>
+                      <button type="button" id="calNext" aria-label="下月">›</button>
+                    </div>
+                    <div class="cal-grid" id="calGrid"></div>
+                    <p class="cal-note">今日共 6 条日程（2 条跨渠道重复已合并）</p>
+                  </aside>
+                </div>
+                </div>
+              </section>
+            </div>
+            </div>
+          </div>
+
+          <!-- 定时任务 -->
+          <div class="tab-panel" id="panelCron">
+            <div class="tab-panel-inner">
+            <div class="cron-page">
+              <div class="cron-header">
+                <div class="cron-header-text">
+                  <h3>定时任务</h3>
+                  <p>配置重复规则，到期<strong>自动生成待办</strong>；个人助手在<strong>待办层</strong>按能力模型分析，不在此直接执行 AI。</p>
+                </div>
+                <button type="button" class="btn-add" id="btnAddCron">+ 新建定时任务</button>
+              </div>
+              <div class="cron-flow-tip">
+                <strong>能力链路：</strong>定时任务（调度）→ 物化待办（工作单元）→ <em>个人助手初步结果</em>（能力范围内，挂在待办下方确认）
+              </div>
+              <div class="cron-panel">
+            <div class="cron-list" id="cronList">
+              <article class="cron-card" data-id="c1">
+                <div class="cron-main">
+                  <div class="cron-title">做会议纪要</div>
+                  <div class="cron-meta"><span class="clock">🕐</span> 每周四 17:00:00</div>
+                  <div class="cron-action">
+                    <span class="cron-action-label">待办生成</span>
+                    <span class="spark">📋</span>
+                    <span>每周四 17:00 自动生成待办「做会议纪要」，再由个人助手生成纪要初稿</span>
+                  </div>
+                </div>
+                <div class="cron-ops">
+                  <button type="button" class="toggle-switch is-on cron-toggle" aria-checked="true"></button>
+                  <div class="dropdown-wrap">
+                    <button type="button" class="cron-more" aria-label="更多">⋯</button>
+                    <div class="dropdown">
+                      <button type="button" data-action="edit">编辑任务</button>
+                      <button type="button" data-action="run">立即生成待办</button>
+                      <button type="button" data-action="delete" class="danger">删除</button>
+                    </div>
+                  </div>
+                </div>
+              </article>
+              <article class="cron-card is-off" data-id="c2">
+                <div class="cron-main">
+                  <div class="cron-title">复盘港股收盘情况</div>
+                  <div class="cron-meta"><span class="clock">🕐</span> 每周二 01:00:00</div>
+                  <div class="cron-action">
+                    <span class="cron-action-label">待办生成</span>
+                    <span class="spark">📋</span>
+                    <span>每周二 01:00 自动生成待办「复盘港股收盘情况」</span>
+                  </div>
+                </div>
+                <div class="cron-ops">
+                  <button type="button" class="toggle-switch cron-toggle" aria-checked="false"></button>
+                  <div class="dropdown-wrap">
+                    <button type="button" class="cron-more">⋯</button>
+                    <div class="dropdown">
+                      <button type="button" data-action="edit">编辑任务</button>
+                      <button type="button" data-action="run">立即生成待办</button>
+                      <button type="button" data-action="delete" class="danger">删除</button>
+                    </div>
+                  </div>
+                </div>
+              </article>
+              <article class="cron-card is-off" data-id="c3">
+                <div class="cron-main">
+                  <div class="cron-title">复盘港股收盘情况</div>
+                  <div class="cron-meta"><span class="clock">🕐</span> 每天 09:00:00</div>
+                  <div class="cron-action">
+                    <span class="cron-action-label">待办生成</span>
+                    <span class="spark">📋</span>
+                    <span>每天 09:00 自动生成待办「复盘港股收盘情况」</span>
+                  </div>
+                </div>
+                <div class="cron-ops">
+                  <button type="button" class="toggle-switch cron-toggle" aria-checked="false"></button>
+                  <div class="dropdown-wrap">
+                    <button type="button" class="cron-more">⋯</button>
+                    <div class="dropdown">
+                      <button type="button" data-action="edit">编辑任务</button>
+                      <button type="button" data-action="run">立即生成待办</button>
+                      <button type="button" data-action="delete" class="danger">删除</button>
+                    </div>
+                  </div>
+                </div>
+              </article>
+              <article class="cron-card is-off" data-id="c4">
+                <div class="cron-main">
+                  <div class="cron-title">复盘港股收盘情况</div>
+                  <div class="cron-meta"><span class="clock">🕐</span> 每天 17:00:00</div>
+                  <div class="cron-action">
+                    <span class="cron-action-label">待办生成</span>
+                    <span class="spark">📋</span>
+                    <span>每天 17:00 自动生成待办「复盘港股收盘情况」</span>
+                  </div>
+                </div>
+                <div class="cron-ops">
+                  <button type="button" class="toggle-switch cron-toggle" aria-checked="false"></button>
+                  <div class="dropdown-wrap">
+                    <button type="button" class="cron-more">⋯</button>
+                    <div class="dropdown">
+                      <button type="button" data-action="edit">编辑任务</button>
+                      <button type="button" data-action="run">立即生成待办</button>
+                      <button type="button" data-action="delete" class="danger">删除</button>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            </div>
+              </div>
+            </div>
+            </div>
+          </div>
+        </main>
+
+        <aside class="tina-panel">
+          <div class="tina-head">
+            <h2>个人助手</h2>
+            <div class="tina-tools">
+              <button type="button" id="tinaNewChat" title="新建对话">💬</button>
+              <button type="button" id="tinaHistory" title="历史对话">🕐</button>
+              <button type="button" id="tinaSettings" title="Soul设置">⚙️</button>
+            </div>
+          </div>
+          <div class="tina-revision-bar" id="tinaRevisionBar">
+            <div>正在修改待办「<strong id="tinaRevisionTitle">—</strong>」<span class="rev-meta" id="tinaRevisionMeta">第 1 版</span></div>
+            <button type="button" class="tina-revision-exit" id="tinaRevisionExit">退出修改</button>
+          </div>
+          <div class="tina-body" id="tinaBody">
+            <div class="tina-welcome-card" id="tinaWelcome">
+              <div class="tina-avatar">🤖</div>
+              <div class="tina-welcome-text">
+                <strong>Hi，我是你的个人助手</strong>
+                我会先判断你的话是<strong>需执行的待办</strong>，还是<strong>会议/面试/出差等日历安排</strong>——只有前者才创建待办，后者写入「我的日程」。
+              </div>
+            </div>
+            <p class="chip-label">试试这样说</p>
+            <div class="chips">
+              <button type="button" class="chip" data-prompt="明天下午3点开项目评审会">明天下午3点开项目评审会</button>
+              <button type="button" class="chip" data-prompt="下周二上午10点面试产品经理">下周二上午10点面试产品经理</button>
+              <button type="button" class="chip" data-prompt="周三去北京出差">周三去北京出差</button>
+              <button type="button" class="chip" data-prompt="本周五提醒我完成UI改版方案">本周五提醒我完成UI改版方案</button>
+              <button type="button" class="chip" data-prompt="提醒我每天下午5点复盘港股收盘情况">提醒我每天下午5点复盘港股收盘情况</button>
+              <button type="button" class="chip" data-prompt="提醒我下周三完成协议合规审核">提醒我下周三完成协议合规审核</button>
+            </div>
+            <div class="tina-messages" id="tinaMessages"></div>
+          </div>
+          <div class="tina-foot">
+            <div class="tina-input-wrap">
+              <button type="button" class="attach-btn" id="tinaAttach" title="附件">📎</button>
+              <textarea id="tinaInput" rows="1" placeholder="向个人助手提问"></textarea>
+              <button type="button" class="tina-send" id="tinaSend" title="发送">↑</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+  </div>
+
+  <!-- 通用弹窗 -->
+  <div class="modal-overlay" id="modalOverlay" aria-hidden="true">
+    <div class="modal" id="modalBox" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <h3 id="modalTitle">添加事项</h3>
+        <button type="button" class="modal-close" id="modalClose">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-foot">
+        <button type="button" class="btn-ghost" id="modalCancel">取消</button>
+        <button type="button" class="btn-primary" id="modalConfirm">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-wrap" id="toastWrap"></div>
+
+  <script>
+    (function() {
+      var state = {
+        calYear: 2026, calMonth: 5,
+        todoFilter: 'active', completedExpanded: false,
+        todoIdSeq: 10, cronIdSeq: 10, aiResults: {},
+        todoThreads: {}, activeRevisionTodoId: null, previewTodoId: null,
+        selectedHistoryTodoId: null,
+        scheduleChannels: { feishu: true, dingtalk: true, outlook: true, local: true },
+        lastScheduleSync: '刚刚',
+        scheduleIdSeq: 20
+      };
+
+      function toast(msg) {
+        var wrap = document.getElementById('toastWrap');
+        var el = document.createElement('div');
+        el.className = 'toast';
+        el.textContent = msg;
+        wrap.appendChild(el);
+        setTimeout(function() { el.remove(); }, 2800);
+      }
+
+      function closeAllDropdowns(except) {
+        document.querySelectorAll('.dropdown.is-open').forEach(function(d) {
+          if (d !== except) d.classList.remove('is-open');
+        });
+      }
+
+      document.addEventListener('click', function() { closeAllDropdowns(); });
+
+      /* Tab 切换 */
+      document.querySelectorAll('.page-tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+          var key = tab.dataset.tab;
+          document.querySelectorAll('.page-tab').forEach(function(t) {
+            t.classList.toggle('is-active', t === tab);
+            t.setAttribute('aria-selected', t === tab ? 'true' : 'false');
+          });
+          document.getElementById('panelSchedule').classList.toggle('is-active', key === 'schedule');
+          document.getElementById('panelCron').classList.toggle('is-active', key === 'cron');
+        });
+      });
+
+      /* 待办勾选与操作 */
+      function formatDoneTime(date) {
+        var y = date.getFullYear();
+        var m = String(date.getMonth() + 1).padStart(2, '0');
+        var d = String(date.getDate()).padStart(2, '0');
+        var h = String(date.getHours()).padStart(2, '0');
+        var min = String(date.getMinutes()).padStart(2, '0');
+        return y + '/' + m + '/' + d + ' ' + h + ':' + min;
+      }
+
+      function ensureDoneTimeEl(card) {
+        var body = card.querySelector('.todo-body');
+        if (!body) return null;
+        var el = body.querySelector('.todo-done-time');
+        if (!el) {
+          el = document.createElement('p');
+          el.className = 'todo-done-time';
+          body.appendChild(el);
+        }
+        return el;
+      }
+
+      function ensureDoneTag(card) {
+        var titleRow = card.querySelector('.todo-body > div');
+        if (!titleRow || titleRow.querySelector('.tag-done')) return;
+        var tag = document.createElement('span');
+        tag.className = 'tag-done';
+        tag.textContent = '已完成';
+        titleRow.appendChild(tag);
+      }
+
+      function moveTodoToCompleted(card) {
+        card.classList.add('is-done');
+        var check = card.querySelector('.todo-check');
+        if (check) {
+          check.classList.add('is-checked');
+          check.setAttribute('aria-checked', 'true');
+        }
+        ensureDoneTag(card);
+        card.querySelector('.tag-overdue') && card.querySelector('.tag-overdue').remove();
+        var timeEl = ensureDoneTimeEl(card);
+        if (timeEl) timeEl.textContent = '完成于 ' + formatDoneTime(new Date());
+        document.getElementById('todoDoneList').prepend(card);
+        updateTodoStats();
+        applyTodoFilter();
+      }
+
+      function restoreTodoFromCompleted(card) {
+        card.classList.remove('is-done');
+        var check = card.querySelector('.todo-check');
+        if (check) {
+          check.classList.remove('is-checked');
+          check.setAttribute('aria-checked', 'false');
+        }
+        var doneTag = card.querySelector('.tag-done');
+        if (doneTag) doneTag.remove();
+        var timeEl = card.querySelector('.todo-done-time');
+        if (timeEl) timeEl.remove();
+        document.getElementById('todoList').prepend(card);
+        updateTodoStats();
+        applyTodoFilter();
+        toast('已恢复为进行中待办');
+      }
+
+      function confirmAIResult(todoId, options) {
+        options = options || {};
+        var card = document.querySelector('.todo-card[data-id="' + todoId + '"]');
+        if (!card) {
+          toast('未找到对应待办');
+          return false;
+        }
+        if (card.classList.contains('is-done') || card.closest('#todoDoneList')) {
+          toast('该待办已完成');
+          return false;
+        }
+        var title = card.querySelector('.todo-title').textContent;
+        var descEl = card.querySelector('.todo-desc');
+        if (descEl) descEl.textContent = '个人助手结果已确认';
+        if (state.activeRevisionTodoId === todoId) {
+          state.activeRevisionTodoId = null;
+          hideRevisionBar();
+        }
+        moveTodoToCompleted(card);
+        if (options.closeModal !== false && modalOverlay.classList.contains('is-open')) {
+          closeModal();
+        }
+        toast('已确认结果，待办「' + title + '」已自动完成');
+        return true;
+      }
+
+      function applyTodoFilter() {
+        var filter = state.todoFilter;
+        var activeList = document.getElementById('todoList');
+        var doneList = document.getElementById('todoDoneList');
+        var section = document.getElementById('todoCompletedSection');
+        var toggle = document.getElementById('todoCompletedToggle');
+
+        activeList.style.display = (filter === 'done') ? 'none' : '';
+
+        if (filter === 'active' || filter === 'overdue') {
+          section.style.display = 'none';
+        } else {
+          section.style.display = '';
+        }
+
+        if (filter === 'done') {
+          doneList.classList.remove('is-collapsed');
+          section.classList.add('is-expanded');
+          toggle.style.display = 'none';
+        } else if (filter === 'all') {
+          toggle.style.display = '';
+          doneList.classList.remove('is-collapsed');
+          section.classList.add('is-expanded');
+          state.completedExpanded = true;
+        } else if (filter === 'active') {
+          toggle.style.display = '';
+          doneList.classList.add('is-collapsed');
+          section.classList.remove('is-expanded');
+        } else {
+          toggle.style.display = '';
+          doneList.classList.toggle('is-collapsed', !state.completedExpanded);
+          section.classList.toggle('is-expanded', state.completedExpanded);
+        }
+
+        if (filter === 'overdue') {
+          activeList.querySelectorAll('.todo-card').forEach(function(c) {
+            c.style.display = (!c.classList.contains('is-done') && c.querySelector('.tag-overdue')) ? '' : 'none';
+          });
+        } else if (filter === 'active') {
+          activeList.querySelectorAll('.todo-card').forEach(function(c) {
+            c.style.display = c.classList.contains('is-done') ? 'none' : '';
+          });
+        } else if (filter !== 'done') {
+          activeList.querySelectorAll('.todo-card').forEach(function(c) {
+            c.style.display = '';
+          });
+        }
+
+        document.querySelectorAll('#todoFilterMenu button').forEach(function(btn) {
+          btn.classList.toggle('is-active', btn.dataset.filter === filter);
+        });
+      }
+
+      function handleTodoListClick(e) {
+        var check = e.target.closest('.todo-check');
+        if (check) {
+          var card = check.closest('.todo-card');
+          var inDoneList = !!card.closest('#todoDoneList');
+          if (inDoneList) {
+            restoreTodoFromCompleted(card);
+            return;
+          }
+          var done = check.classList.toggle('is-checked');
+          if (done) {
+            moveTodoToCompleted(card);
+            toast('已标记完成，可在下方查看历史');
+          } else {
+            card.classList.remove('is-done');
+            check.setAttribute('aria-checked', 'false');
+            updateTodoStats();
+          }
+          return;
+        }
+        var aiResult = e.target.closest('.todo-ai-result:not(.is-pending):not([disabled])');
+        if (aiResult) {
+          var card = aiResult.closest('.todo-card');
+          var panel = card.querySelector('.todo-ai-panel');
+          if (panel) {
+            panel.hidden = !panel.hidden;
+            if (!panel.hidden) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          } else {
+            openAIResultPreview(
+              card.querySelector('.todo-title').textContent,
+              card.dataset.id
+            );
+          }
+          return;
+        }
+        var aiExpand = e.target.closest('[data-action="expand-ai"]');
+        if (aiExpand) {
+          openAIResultPreview(
+            aiExpand.closest('.todo-card').querySelector('.todo-title').textContent,
+            aiExpand.closest('.todo-card').dataset.id
+          );
+          return;
+        }
+        var aiConfirm = e.target.closest('[data-action="confirm-ai"]');
+        if (aiConfirm) {
+          var confirmCard = aiConfirm.closest('.todo-card');
+          if (confirmCard) confirmAIResult(confirmCard.dataset.id, { closeModal: false });
+          return;
+        }
+        var aiRevise = e.target.closest('[data-action="revise-ai"]');
+        if (aiRevise) {
+          openRevisionChat(aiRevise.closest('.todo-card').dataset.id);
+          return;
+        }
+        var more = e.target.closest('.todo-more');
+        if (more) {
+          e.stopPropagation();
+          var dd = more.nextElementSibling;
+          closeAllDropdowns(dd);
+          dd.classList.toggle('is-open');
+          return;
+        }
+        var action = e.target.closest('.dropdown button');
+        if (action) {
+          e.stopPropagation();
+          var card = action.closest('.todo-card');
+          var title = card.querySelector('.todo-title').textContent;
+          var act = action.dataset.action;
+          action.closest('.dropdown').classList.remove('is-open');
+          if (act === 'delete') { card.remove(); updateTodoStats(); toast('已删除：' + title); }
+          else if (act === 'cancel') { card.remove(); updateTodoStats(); toast('已取消待办：' + title); }
+          else if (act === 'edit') openModal('editTodo', { title: title });
+          else if (act === 'restore') restoreTodoFromCompleted(card);
+          else if (act === 'view') toast('查看已完成待办：' + title);
+        }
+      }
+
+      document.getElementById('todoList').addEventListener('click', handleTodoListClick);
+      document.getElementById('todoDoneList').addEventListener('click', handleTodoListClick);
+
+      function updateTodoStats() {
+        var active = document.querySelectorAll('#todoList .todo-card').length;
+        var done = document.querySelectorAll('#todoDoneList .todo-card').length;
+        var overdue = document.querySelectorAll('#todoList .tag-overdue').length;
+        document.getElementById('statTodo').textContent = String(active);
+        document.getElementById('statOverdue').textContent = String(overdue);
+        document.getElementById('statDone').textContent = String(done);
+        document.getElementById('todoDoneCount').textContent = String(done);
+        var todoMeta = document.getElementById('todoPanelMeta');
+        var overdueMeta = document.getElementById('todoOverdueMeta');
+        if (todoMeta) todoMeta.textContent = String(active);
+        if (overdueMeta) overdueMeta.textContent = String(overdue);
+      }
+
+      document.getElementById('btnFilterTodo').addEventListener('click', function(e) {
+        e.stopPropagation();
+        var menu = document.getElementById('todoFilterMenu');
+        closeAllDropdowns(menu);
+        menu.classList.toggle('is-open');
+      });
+
+      document.getElementById('todoFilterMenu').addEventListener('click', function(e) {
+        var btn = e.target.closest('button[data-filter]');
+        if (!btn) return;
+        e.stopPropagation();
+        state.todoFilter = btn.dataset.filter;
+        if (state.todoFilter === 'done') state.completedExpanded = true;
+        else if (state.todoFilter === 'active') state.completedExpanded = false;
+        applyTodoFilter();
+        document.getElementById('todoFilterMenu').classList.remove('is-open');
+        var labels = { active: '进行中', all: '全部待办', done: '已完成', overdue: '已逾期' };
+        toast('筛选：' + (labels[state.todoFilter] || state.todoFilter));
+      });
+
+      document.getElementById('todoCompletedToggle').addEventListener('click', function() {
+        state.completedExpanded = !state.completedExpanded;
+        applyTodoFilter();
+      });
+
+      applyTodoFilter();
+      updateTodoStats();
+
+      /* 日程 */
+      document.getElementById('toggleCal').addEventListener('click', function(e) {
+        e.stopPropagation();
+        var on = this.classList.toggle('is-on');
+        this.setAttribute('aria-checked', on ? 'true' : 'false');
+        document.getElementById('miniCal').style.display = on ? '' : 'none';
+        document.getElementById('scheduleLayout').classList.toggle('no-cal', !on);
+      });
+
+      var SCHEDULE_SOURCE_META = {
+        local: { label: '本地', className: 'src-local' },
+        feishu: { label: '飞书', className: 'src-feishu' },
+        dingtalk: { label: '钉钉', className: 'src-dingtalk' },
+        outlook: { label: 'Outlook', className: 'src-outlook' }
+      };
+
+      /* 各渠道原始日程（含跨渠道重复项，展示前会去重合并） */
+      var scheduleRawEvents = [
+        { id: 's1', start: '09:00', end: '09:30', title: '晨间站会', sources: ['dingtalk'] },
+        { id: 's2', start: '09:05', end: '09:30', title: '晨间站会', sources: ['feishu'] },
+        { id: 's3', start: '10:30', end: '11:30', title: '产品需求评审', sources: ['local'] },
+        { id: 's4', start: '13:30', end: '14:00', title: '客户方案演示', sources: ['outlook'] },
+        { id: 's5', start: '14:00', end: '15:00', title: 'Q2 资源预算对齐', sources: ['outlook'] },
+        { id: 's6', start: '14:00', end: '15:00', title: 'Q2 资源预算对齐', sources: ['feishu'] },
+        { id: 's7', start: '16:00', end: '17:00', title: '交互设计走查', sources: ['feishu'] },
+        { id: 's8', start: '19:00', end: '20:00', title: '运营数据复盘', sources: ['local'] }
+      ];
+
+      var scheduleEvents = [];
+
+      function timeToMinutes(timeStr) {
+        var parts = timeStr.split(':');
+        return parseInt(parts[0], 10) * 60 + parseInt(parts[1] || '0', 10);
+      }
+
+      function normalizeScheduleTitle(title) {
+        return String(title).replace(/\s+/g, '').toLowerCase();
+      }
+
+      function isSameScheduleEvent(a, b) {
+        if (normalizeScheduleTitle(a.title) !== normalizeScheduleTitle(b.title)) return false;
+        if (a.end !== b.end) return false;
+        return Math.abs(timeToMinutes(a.start) - timeToMinutes(b.start)) <= 15;
+      }
+
+      function eventMatchesEnabledChannels(ev) {
+        return ev.sources.some(function(src) { return state.scheduleChannels[src]; });
+      }
+
+      function mergeScheduleEvents(rawList) {
+        var merged = [];
+        rawList.forEach(function(ev) {
+          var hit = null;
+          for (var i = 0; i < merged.length; i++) {
+            if (isSameScheduleEvent(merged[i], ev)) { hit = merged[i]; break; }
+          }
+          if (hit) {
+            ev.sources.forEach(function(src) {
+              if (hit.sources.indexOf(src) < 0) hit.sources.push(src);
+            });
+            hit.merged = hit.sources.length > 1;
+            if (!hit.rawIds) hit.rawIds = [hit.id];
+            if (hit.rawIds.indexOf(ev.id) < 0) hit.rawIds.push(ev.id);
+          } else {
+            merged.push({
+              id: ev.id,
+              start: ev.start,
+              end: ev.end,
+              title: ev.title,
+              sources: ev.sources.slice(),
+              merged: ev.sources.length > 1,
+              rawIds: [ev.id]
+            });
+          }
+        });
+        return merged;
+      }
+
+      function rebuildScheduleEvents() {
+        var filtered = scheduleRawEvents.filter(eventMatchesEnabledChannels);
+        scheduleEvents = mergeScheduleEvents(filtered);
+      }
+
+      function buildSourceTagsHtml(sources) {
+        return sources.map(function(src) {
+          var meta = SCHEDULE_SOURCE_META[src] || { label: src, className: 'src-local' };
+          return '<span class="event-src ' + meta.className + '">' + meta.label + '</span>';
+        }).join('');
+      }
+
+      function formatSyncTime() {
+        var now = new Date();
+        return String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+      }
+
+      function updateScheduleMeta() {
+        var displayCount = scheduleEvents.length;
+        var rawFiltered = scheduleRawEvents.filter(eventMatchesEnabledChannels).length;
+        var dedupCount = rawFiltered - displayCount;
+        var statEl = document.getElementById('statSchedule');
+        var calNote = document.querySelector('.cal-note');
+        var syncMeta = document.getElementById('scheduleSyncMeta');
+        if (statEl) statEl.textContent = String(displayCount);
+        if (calNote) {
+          calNote.textContent = '今日共 ' + displayCount + ' 条日程' +
+            (dedupCount > 0 ? '（' + dedupCount + ' 条跨渠道重复已合并）' : '');
+        }
+        if (syncMeta) {
+          syncMeta.textContent = '最近同步：' + state.lastScheduleSync +
+            ' · 原始 ' + rawFiltered + ' 条，去重后 ' + displayCount + ' 条';
+        }
+        var dayMeta = document.getElementById('scheduleDayMeta');
+        if (dayMeta) {
+          var now = new Date();
+          var dateStr = now.getFullYear() + '/' +
+            String(now.getMonth() + 1).padStart(2, '0') + '/' +
+            String(now.getDate()).padStart(2, '0');
+          var dedupText = dedupCount > 0 ? ' · 已合并 ' + dedupCount + ' 组重复' : '';
+          dayMeta.innerHTML = '今日 · ' + dateStr + ' · <strong id="schedulePanelMeta">' +
+            displayCount + '</strong> 条日程' + dedupText;
+        }
+      }
+
+      function getTimelineHourHeight() {
+        var timeline = document.getElementById('dayTimeline');
+        if (!timeline) return 48;
+        var raw = getComputedStyle(timeline).getPropertyValue('--hour-h').trim();
+        return parseFloat(raw) || 48;
+      }
+
+      function minutesToTimelinePx(minutes, hourH) {
+        return (minutes / 60) * hourH;
+      }
+
+      function renderDayTimeline() {
+        rebuildScheduleEvents();
+        var timeline = document.getElementById('dayTimeline');
+        if (!timeline) return;
+        timeline.innerHTML = '';
+
+        var hourH = getTimelineHourHeight();
+        var labelsCol = document.createElement('div');
+        labelsCol.className = 'timeline-labels';
+        var canvas = document.createElement('div');
+        canvas.className = 'timeline-canvas';
+        var grid = document.createElement('div');
+        grid.className = 'timeline-grid';
+        for (var hour = 0; hour <= 24; hour++) {
+          var topPx = minutesToTimelinePx(hour * 60, hourH);
+          var slot = document.createElement('div');
+          slot.className = 'time-slot' + (hour === 24 ? ' is-day-end' : '');
+          slot.style.top = topPx + 'px';
+          slot.dataset.hour = String(hour);
+          grid.appendChild(slot);
+
+          var label = document.createElement('span');
+          label.className = 'time-label-item' +
+            (hour === 0 ? ' is-first' : hour === 24 ? ' is-last' : '');
+          label.style.top = topPx + 'px';
+          label.textContent = String(hour).padStart(2, '0') + ':00';
+          labelsCol.appendChild(label);
+        }
+        canvas.appendChild(grid);
+
+        var eventsLayer = document.createElement('div');
+        eventsLayer.className = 'timeline-events';
+        scheduleEvents.forEach(function(ev) {
+          var startMin = timeToMinutes(ev.start);
+          var endMin = timeToMinutes(ev.end);
+          var durationMin = Math.max(endMin - startMin, 15);
+          var topPx = minutesToTimelinePx(startMin, hourH);
+          var heightPx = Math.max(minutesToTimelinePx(durationMin, hourH), 24);
+
+          var block = document.createElement('div');
+          block.className = 'event-block' +
+            (ev.merged ? ' is-merged has-multi-src' : '') +
+            (!ev.merged && ev.sources.length > 1 ? ' has-multi-src' : '');
+          block.dataset.event = ev.title;
+          block.dataset.eventId = ev.id;
+          block.style.top = topPx + 'px';
+          block.style.height = heightPx + 'px';
+          block.innerHTML =
+            '<div class="event-sources">' + buildSourceTagsHtml(ev.sources) + '</div>' +
+            '<div class="event-content">' +
+              '<div class="event-time">' + ev.start + ' – ' + ev.end + '</div>' +
+              '<div class="event-title">' + escapeHtml(ev.title) + '</div>' +
+            '</div>';
+          eventsLayer.appendChild(block);
+        });
+        canvas.appendChild(eventsLayer);
+
+        var markerMinutes = 10 * 60 + 36;
+        var nowTopPx = minutesToTimelinePx(markerMinutes, hourH);
+        var nowLine = document.createElement('div');
+        nowLine.className = 'timeline-now';
+        nowLine.style.top = nowTopPx + 'px';
+        nowLine.innerHTML = '<span class="timeline-now-label">' +
+          String(Math.floor(markerMinutes / 60)).padStart(2, '0') + ':' +
+          String(markerMinutes % 60).padStart(2, '0') + '</span>';
+        canvas.appendChild(nowLine);
+
+        timeline.appendChild(labelsCol);
+        timeline.appendChild(canvas);
+
+        var scrollEl = timeline.closest('.timeline-scroll');
+        if (scrollEl && markerMinutes > 120) {
+          scrollEl.scrollTop = Math.max(0, nowTopPx - scrollEl.clientHeight * 0.35);
+        }
+        updateScheduleMeta();
+      }
+
+      document.getElementById('scheduleLayout').addEventListener('click', function(e) {
+        var block = e.target.closest('.event-block');
+        if (!block) return;
+        var ev = scheduleEvents.filter(function(item) {
+          return item.id === block.dataset.eventId;
+        })[0];
+        if (ev) openScheduleDetailModal(ev);
+      });
+
+      document.getElementById('scheduleSyncBar').addEventListener('click', function(e) {
+        var ch = e.target.closest('[data-channel]');
+        if (!ch) return;
+        var key = ch.dataset.channel;
+        if (!SCHEDULE_SOURCE_META[key]) return;
+        state.scheduleChannels[key] = !state.scheduleChannels[key];
+        ch.classList.toggle('is-on', state.scheduleChannels[key]);
+        ch.classList.toggle('is-off', !state.scheduleChannels[key]);
+        renderDayTimeline();
+        toast((state.scheduleChannels[key] ? '已启用 ' : '已隐藏 ') + SCHEDULE_SOURCE_META[key].label + ' 日程');
+      });
+
+      document.getElementById('btnSyncSchedule').addEventListener('click', function() {
+        toast('正在同步飞书、钉钉、Outlook…');
+        setTimeout(function() {
+          state.lastScheduleSync = formatSyncTime();
+          renderDayTimeline();
+          toast('日程同步完成，已去重整理');
+        }, 700);
+      });
+
+      function openScheduleDetailModal(ev) {
+        var modalBox = document.getElementById('modalBox');
+        modalBox.classList.remove('is-cron', 'is-ai-result', 'is-history');
+        modalBox.classList.add('is-schedule-detail');
+        document.getElementById('modalTitle').textContent = '日程详情';
+        var sourcesHtml = ev.sources.map(function(src) {
+          var meta = SCHEDULE_SOURCE_META[src] || { label: src, className: 'src-local' };
+          return '<div class="schedule-detail-src-row"><span class="event-src ' + meta.className + '">' +
+            meta.label + '</span><span style="color:var(--muted);font-size:11px">渠道已连接</span></div>';
+        }).join('');
+        var dedupNote = ev.merged
+          ? '<p class="ai-preview-meta">该日程在多个渠道存在相同条目，系统已自动去重合并，来源如下。</p>'
+          : '<p class="ai-preview-meta">来源渠道如下，可在上方开关控制是否展示。</p>';
+        document.getElementById('modalBody').innerHTML =
+          dedupNote +
+          '<p style="font-weight:700;font-size:14px;margin-bottom:6px">' + escapeHtml(ev.title) + '</p>' +
+          '<p class="ai-preview-meta">' + ev.start + ' – ' + ev.end + '</p>' +
+          '<div class="schedule-detail-sources">' + sourcesHtml + '</div>';
+        modalConfirmHandler = function() { closeModal(); };
+        modalOverlay.classList.add('is-open');
+        modalOverlay.setAttribute('aria-hidden', 'false');
+      }
+
+      renderDayTimeline();
+
+      function renderCal() {
+        var y = state.calYear, m = state.calMonth;
+        document.getElementById('calTitle').textContent = y + ' 年 ' + (m + 1) + ' 月';
+        var grid = document.getElementById('calGrid');
+        grid.innerHTML = '';
+        ['日','一','二','三','四','五','六'].forEach(function(w) {
+          var s = document.createElement('span'); s.className = 'wk'; s.textContent = w; grid.appendChild(s);
+        });
+        var first = new Date(y, m, 1).getDay();
+        var days = new Date(y, m + 1, 0).getDate();
+        for (var i = 0; i < first; i++) grid.appendChild(document.createElement('span'));
+        var today = new Date();
+        for (var d = 1; d <= days; d++) {
+          var span = document.createElement('span');
+          span.className = 'day';
+          span.textContent = d;
+          if (y === today.getFullYear() && m === today.getMonth() && d === today.getDate()) span.classList.add('today');
+          span.addEventListener('click', function(ev) {
+            document.querySelectorAll('.cal-grid .selected').forEach(function(x) { x.classList.remove('selected'); });
+            ev.target.classList.add('selected');
+            toast('已选择 ' + state.calYear + '/' + (state.calMonth + 1) + '/' + ev.target.textContent);
+          });
+          grid.appendChild(span);
+        }
+      }
+      document.getElementById('calPrev').addEventListener('click', function() {
+        state.calMonth--; if (state.calMonth < 0) { state.calMonth = 11; state.calYear--; }
+        renderCal();
+      });
+      document.getElementById('calNext').addEventListener('click', function() {
+        state.calMonth++; if (state.calMonth > 11) { state.calMonth = 0; state.calYear++; }
+        renderCal();
+      });
+      renderCal();
+
+      /* 定时任务 */
+      document.getElementById('cronList').addEventListener('click', function(e) {
+        var toggle = e.target.closest('.cron-toggle');
+        if (toggle) {
+          e.stopPropagation();
+          var card = toggle.closest('.cron-card');
+          var on = toggle.classList.toggle('is-on');
+          toggle.setAttribute('aria-checked', on ? 'true' : 'false');
+          card.classList.toggle('is-off', !on);
+          var title = card.querySelector('.cron-title').textContent;
+          toast(on ? '已启用：' + title : '已停用：' + title);
+          return;
+        }
+        var more = e.target.closest('.cron-more');
+        if (more) {
+          e.stopPropagation();
+          var dd = more.nextElementSibling;
+          closeAllDropdowns(dd);
+          dd.classList.toggle('is-open');
+          return;
+        }
+        var action = e.target.closest('.dropdown button');
+        if (action) {
+          e.stopPropagation();
+          var card = action.closest('.cron-card');
+          var title = card.querySelector('.cron-title').textContent;
+          var act = action.dataset.action;
+          action.closest('.dropdown').classList.remove('is-open');
+          if (act === 'delete') { card.remove(); toast('已删除定时任务：' + title); }
+          else if (act === 'run') {
+            var result = materializeTodoFromCron(title);
+            toast('已物化待办「' + title + '」' + (result.cap.canAuto ? '，个人助手正在分析' : '，请手动处理'));
+          }
+          else if (act === 'edit') {
+            var meta = card.querySelector('.cron-meta').textContent.replace(/🕐\s*/, '').trim();
+            openModal('editCron', { title: title, meta: meta });
+          }
+        }
+      });
+
+      /* 弹窗 */
+      var modalOverlay = document.getElementById('modalOverlay');
+      var modalConfirmHandler = null;
+
+      function bindCharCount(inputId, countId, max) {
+        var input = document.getElementById(inputId);
+        var countEl = document.getElementById(countId);
+        if (!input || !countEl) return;
+        function update() { countEl.textContent = input.value.length + '/' + max; }
+        input.addEventListener('input', update);
+        update();
+      }
+
+      var todoFormHtml = function(data) {
+        data = data || {};
+        return '<div class="form-field">' +
+          '<label class="form-label">标题<span class="req">*</span></label>' +
+          '<div class="input-with-count">' +
+          '<input type="text" id="fTitle" maxlength="40" placeholder="请输入" value="' + (data.title || '') + '" />' +
+          '<span class="input-count" id="fTitleCount">0/40</span></div></div>' +
+          '<div class="form-field">' +
+          '<label class="form-label">事项时间<span class="req">*</span></label>' +
+          '<div class="time-range">' +
+          '<div class="datetime-field"><input type="text" id="fStart" placeholder="开始时间 (选填)" value="' + (data.start || '') + '" /><span class="cal-ico">📅</span></div>' +
+          '<span class="dash">-</span>' +
+          '<div class="datetime-field"><input type="text" id="fEnd" placeholder="截止时间" value="' + (data.end || '') + '" /><span class="cal-ico">📅</span></div>' +
+          '</div></div>' +
+          '<div class="form-field">' +
+          '<label class="form-label">事项描述<span class="req">*</span></label>' +
+          '<div class="textarea-wrap">' +
+          '<textarea id="fDesc" maxlength="40" placeholder="请输入内容..." rows="4">' + (data.desc || '') + '</textarea>' +
+          '<div class="textarea-count" id="fDescCount">0/40</div></div></div>' +
+          '<div class="form-field">' +
+          '<label class="form-label">优先级<span class="req">*</span></label>' +
+          '<div class="radio-group">' +
+          '<label class="radio-item"><input type="radio" name="fPriority" value="normal"' + (data.priority !== 'urgent' ? ' checked' : '') + ' /><span class="radio-dot"></span>普通</label>' +
+          '<label class="radio-item"><input type="radio" name="fPriority" value="urgent"' + (data.priority === 'urgent' ? ' checked' : '') + ' /><span class="radio-dot"></span>紧急</label>' +
+          '</div></div>';
+      };
+
+      var scheduleFormHtml = function(data) {
+        data = data || {};
+        var importantYes = data.important !== false;
+        return '<div class="form-field">' +
+          '<label class="form-label">标题<span class="req">*</span></label>' +
+          '<div class="input-with-count">' +
+          '<input type="text" id="fTitle" maxlength="40" placeholder="请输入" value="' + (data.title || '') + '" />' +
+          '<span class="input-count" id="fTitleCount">0/40</span></div></div>' +
+          '<div class="form-field">' +
+          '<label class="form-label">日程时间<span class="req">*</span></label>' +
+          '<div class="time-range">' +
+          '<div class="datetime-field"><input type="text" id="fStart" placeholder="开始时间 (选填)" value="' + (data.start || '') + '" /><span class="cal-ico">📅</span></div>' +
+          '<span class="dash">-</span>' +
+          '<div class="datetime-field"><input type="text" id="fEnd" placeholder="结束时间" value="' + (data.end || '') + '" /><span class="cal-ico">📅</span></div>' +
+          '</div></div>' +
+          '<div class="form-field">' +
+          '<label class="form-label">备注<span class="req">*</span></label>' +
+          '<div class="textarea-wrap">' +
+          '<textarea id="fDesc" maxlength="40" placeholder="请输入内容..." rows="4">' + (data.desc || '') + '</textarea>' +
+          '<div class="textarea-count" id="fDescCount">0/40</div></div></div>' +
+          '<div class="form-field">' +
+          '<label class="form-label">是否重要<span class="req">*</span></label>' +
+          '<div class="radio-group">' +
+          '<label class="radio-item"><input type="radio" name="fImportant" value="yes"' + (importantYes ? ' checked' : '') + ' /><span class="radio-dot"></span>是</label>' +
+          '<label class="radio-item"><input type="radio" name="fImportant" value="no"' + (!importantYes ? ' checked' : '') + ' /><span class="radio-dot"></span>否</label>' +
+          '</div></div>';
+      };
+
+      function parseCronMeta(meta) {
+        var result = { repeat: 'weekly', weekday: 3, time: '17:00' };
+        if (!meta) return result;
+        var timeMatch = meta.match(/(\d{1,2}:\d{2})/);
+        if (timeMatch) result.time = timeMatch[1];
+        if (/每天/.test(meta)) result.repeat = 'daily';
+        else if (/每月/.test(meta)) result.repeat = 'monthly';
+        else if (/每周/.test(meta)) {
+          result.repeat = 'weekly';
+          var dayMap = { '一': 0, '二': 1, '三': 2, '四': 3, '五': 4, '六': 5, '日': 6 };
+          var dayMatch = meta.match(/周([一二三四五六日])/);
+          if (dayMatch) result.weekday = dayMap[dayMatch[1]];
+        }
+        return result;
+      }
+
+      function buildCronActionSummary(name, repeat, weekday, time) {
+        name = name || '任务';
+        var timeShort = (time || '17:00').slice(0, 5);
+        var dayLabels = ['一', '二', '三', '四', '五', '六', '日'];
+        var prefix = '';
+        if (repeat === 'daily') prefix = '每天 ' + timeShort;
+        else if (repeat === 'weekly') prefix = '每周' + dayLabels[weekday != null ? weekday : 3] + ' ' + timeShort;
+        else prefix = '每月 ' + timeShort;
+        return prefix + ' 自动生成待办「' + (name || '任务') + '」';
+      }
+
+      function buildCronMaterializeHint(title, canAuto) {
+        if (canAuto) return '物化后个人助手将按能力模型生成初步结果';
+        return '物化后需人工处理，个人助手仅提醒';
+      }
+
+      function materializeTodoFromCron(cronTitle) {
+        var cap = evaluateAICapability(cronTitle, '');
+        var card = addTodoCard({
+          title: cronTitle,
+          desc: buildCronMaterializeHint(cronTitle, cap.canAuto),
+          deadline: formatDeadline(new Date(Date.now() + 3600000)),
+          source: '定时任务',
+          triggerAI: cap.canAuto
+        });
+        updateTodoStats();
+        return { card: card, cap: cap };
+      }
+
+      function getCronFormValues() {
+        var repeatEl = document.querySelector('input[name="fCronRepeat"]:checked');
+        var repeat = repeatEl ? repeatEl.value : 'weekly';
+        var activeDay = document.querySelector('.weekday-btn.is-active');
+        var weekday = activeDay ? parseInt(activeDay.dataset.day, 10) : 3;
+        var timeEl = document.getElementById('fCronTime');
+        var time = timeEl ? timeEl.value : '17:00';
+        var nameEl = document.getElementById('fCronName');
+        var name = nameEl ? nameEl.value.trim() : '';
+        return { repeat: repeat, weekday: weekday, time: time, name: name };
+      }
+
+      function updateCronActionSummary() {
+        var actionEl = document.getElementById('fCronAction');
+        if (!actionEl) return;
+        var v = getCronFormValues();
+        actionEl.value = buildCronActionSummary(v.name, v.repeat, v.weekday, v.time);
+      }
+
+      function toggleCronWeeklyPanel() {
+        var repeatEl = document.querySelector('input[name="fCronRepeat"]:checked');
+        var panel = document.getElementById('cronWeeklyPanel');
+        if (!panel || !repeatEl) return;
+        panel.classList.toggle('is-visible', repeatEl.value === 'weekly');
+      }
+
+      function setupCronFormBindings() {
+        var nameInput = document.getElementById('fCronName');
+        var clearBtn = document.getElementById('fCronNameClear');
+        var wrap = nameInput ? nameInput.closest('.input-clearable') : null;
+
+        function syncClearBtn() {
+          if (wrap) wrap.classList.toggle('has-value', !!(nameInput && nameInput.value));
+        }
+
+        if (nameInput) {
+          nameInput.addEventListener('input', function() {
+            syncClearBtn();
+            updateCronActionSummary();
+          });
+          syncClearBtn();
+        }
+        if (clearBtn && nameInput) {
+          clearBtn.addEventListener('click', function() {
+            nameInput.value = '';
+            syncClearBtn();
+            updateCronActionSummary();
+            nameInput.focus();
+          });
+        }
+
+        document.querySelectorAll('input[name="fCronRepeat"]').forEach(function(radio) {
+          radio.addEventListener('change', function() {
+            toggleCronWeeklyPanel();
+            updateCronActionSummary();
+          });
+        });
+
+        document.querySelectorAll('.weekday-btn').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            document.querySelectorAll('.weekday-btn').forEach(function(b) { b.classList.remove('is-active'); });
+            btn.classList.add('is-active');
+            updateCronActionSummary();
+          });
+        });
+
+        var timeEl = document.getElementById('fCronTime');
+        if (timeEl) timeEl.addEventListener('change', updateCronActionSummary);
+
+        var recognizeBtn = document.getElementById('btnCronRecognize');
+        if (recognizeBtn) {
+          recognizeBtn.addEventListener('click', function() {
+            var instructionEl = document.getElementById('fCronInstruction');
+            var text = instructionEl ? instructionEl.value.trim() : '';
+            if (!text) { toast('请先输入 AI 指令'); return; }
+            if (nameInput) {
+              nameInput.value = text;
+              syncClearBtn();
+            }
+            if (/每天|每日/.test(text)) {
+              var dailyRadio = document.querySelector('input[name="fCronRepeat"][value="daily"]');
+              if (dailyRadio) dailyRadio.checked = true;
+            } else if (/每月/.test(text)) {
+              var monthlyRadio = document.querySelector('input[name="fCronRepeat"][value="monthly"]');
+              if (monthlyRadio) monthlyRadio.checked = true;
+            } else {
+              var weeklyRadio = document.querySelector('input[name="fCronRepeat"][value="weekly"]');
+              if (weeklyRadio) weeklyRadio.checked = true;
+            }
+            toggleCronWeeklyPanel();
+            updateCronActionSummary();
+            toast('识别完成，已填充任务信息');
+          });
+        }
+
+        toggleCronWeeklyPanel();
+        updateCronActionSummary();
+      }
+
+      var cronFormHtml = function(data) {
+        data = data || {};
+        var parsed = data.meta ? parseCronMeta(data.meta) : {};
+        var repeat = data.repeat || parsed.repeat || 'weekly';
+        var weekday = data.weekday != null ? data.weekday : (parsed.weekday != null ? parsed.weekday : 3);
+        var time = data.time || parsed.time || '17:00';
+        var instruction = data.instruction != null ? data.instruction : (data.title || '');
+        var taskName = data.title || '';
+        var actionSummary = data.actionSummary || buildCronActionSummary(taskName, repeat, weekday, time);
+        var days = ['一', '二', '三', '四', '五', '六', '日'];
+        var weekdayBtns = days.map(function(d, i) {
+          return '<button type="button" class="weekday-btn' + (i === weekday ? ' is-active' : '') + '" data-day="' + i + '">' + d + '</button>';
+        }).join('');
+
+        return '<div class="form-field">' +
+          '<label class="form-label">自然语言指令<span class="req">*</span></label>' +
+          '<textarea id="fCronInstruction" class="cron-instruction" rows="3" placeholder="描述重复提醒，如：每周四 17 点提醒我做会议纪要">' + instruction + '</textarea>' +
+          '<button type="button" class="btn-recognize" id="btnCronRecognize">开始识别</button>' +
+          '</div>' +
+          '<div class="form-field">' +
+          '<label class="form-label">任务名称<span class="req">*</span></label>' +
+          '<div class="input-clearable' + (taskName ? ' has-value' : '') + '">' +
+          '<input type="text" id="fCronName" placeholder="请输入" value="' + taskName + '" />' +
+          '<button type="button" class="input-clear-btn" id="fCronNameClear" aria-label="清除">&times;</button>' +
+          '</div></div>' +
+          '<div class="form-field">' +
+          '<label class="form-label">重复周期<span class="req">*</span></label>' +
+          '<div class="radio-group">' +
+          '<label class="radio-item"><input type="radio" name="fCronRepeat" value="daily"' + (repeat === 'daily' ? ' checked' : '') + ' /><span class="radio-dot"></span>每天</label>' +
+          '<label class="radio-item"><input type="radio" name="fCronRepeat" value="weekly"' + (repeat === 'weekly' ? ' checked' : '') + ' /><span class="radio-dot"></span>每周</label>' +
+          '<label class="radio-item"><input type="radio" name="fCronRepeat" value="monthly"' + (repeat === 'monthly' ? ' checked' : '') + ' /><span class="radio-dot"></span>每月</label>' +
+          '</div>' +
+          '</div>' +
+          '<div class="repeat-extra' + (repeat === 'weekly' ? ' is-visible' : '') + '" id="cronWeeklyPanel">' +
+          '<div class="weekday-picker">' + weekdayBtns + '</div>' +
+          '</div>' +
+          '<div class="time-field-wrap" style="margin-top:12px">' +
+          '<span class="time-ico">🕐</span>' +
+          '<input type="time" id="fCronTime" value="' + time + '" />' +
+          '</div>' +
+          '</div>' +
+          '<div class="form-field cron-action-field">' +
+          '<label class="form-label">待办生成说明<span class="form-hint">（识别后自动生成，到期写入待办列表）</span></label>' +
+          '<textarea id="fCronAction" readonly rows="3">' + actionSummary + '</textarea>' +
+          '</div>';
+      };
+
+      function setupFormCounters() {
+        bindCharCount('fTitle', 'fTitleCount', 40);
+        bindCharCount('fDesc', 'fDescCount', 40);
+      }
+
+      function openModal(type, data) {
+        data = data || {};
+        var title = document.getElementById('modalTitle');
+        var body = document.getElementById('modalBody');
+        if (type === 'addTodo') {
+          document.getElementById('modalBox').classList.remove('is-cron', 'is-ai-result');
+          title.textContent = '添加事项';
+          body.innerHTML = todoFormHtml();
+          setupFormCounters();
+          modalConfirmHandler = function() {
+            var t = document.getElementById('fTitle').value.trim();
+            var desc = document.getElementById('fDesc').value.trim();
+            var end = document.getElementById('fEnd').value.trim();
+            if (!t) { toast('请填写标题'); return; }
+            if (!desc) { toast('请填写事项描述'); return; }
+            if (!end) { toast('请填写截止时间'); return; }
+            var priority = document.querySelector('input[name="fPriority"]:checked');
+            addTodoCard({ title: t, desc: desc, deadline: end, urgent: priority && priority.value === 'urgent' });
+            closeModal();
+            toast('已添加待办：' + t);
+          };
+        } else if (type === 'addSchedule') {
+          document.getElementById('modalBox').classList.remove('is-cron', 'is-ai-result');
+          title.textContent = '添加日程';
+          body.innerHTML = scheduleFormHtml();
+          setupFormCounters();
+          modalConfirmHandler = function() {
+            var t = document.getElementById('fTitle').value.trim();
+            var desc = document.getElementById('fDesc').value.trim();
+            var end = document.getElementById('fEnd').value.trim();
+            if (!t) { toast('请填写标题'); return; }
+            if (!desc) { toast('请填写备注'); return; }
+            if (!end) { toast('请填写结束时间'); return; }
+            closeModal();
+            toast('已添加日程：' + t);
+          };
+        } else if (type === 'addCron' || type === 'editCron') {
+          var modalBox = document.getElementById('modalBox');
+          modalBox.classList.add('is-cron');
+          title.textContent = type === 'addCron' ? '新建任务' : '编辑任务';
+          body.innerHTML = cronFormHtml(data);
+          setupCronFormBindings();
+          modalConfirmHandler = function() {
+            var instruction = document.getElementById('fCronInstruction').value.trim();
+            var t = document.getElementById('fCronName').value.trim();
+            if (!instruction) { toast('请填写 AI 指令'); return; }
+            if (!t) { toast('请填写任务名称'); return; }
+            closeModal();
+            toast((type === 'addCron' ? '已创建' : '已保存') + '定时任务：' + t);
+          };
+        } else if (type === 'editTodo') {
+          document.getElementById('modalBox').classList.remove('is-cron', 'is-ai-result');
+          title.textContent = '编辑待办';
+          body.innerHTML = todoFormHtml({ title: data.title || '', priority: data.priority || 'normal' });
+          setupFormCounters();
+          modalConfirmHandler = function() {
+            var t = document.getElementById('fTitle').value.trim();
+            if (!t) { toast('请填写标题'); return; }
+            closeModal();
+            toast('已保存待办：' + t);
+          };
+        }
+        modalOverlay.classList.add('is-open');
+        modalOverlay.setAttribute('aria-hidden', 'false');
+        var firstInput = body.querySelector('input, textarea');
+        if (firstInput) setTimeout(function() { firstInput.focus(); }, 50);
+      }
+
+      function closeModal() {
+        modalOverlay.classList.remove('is-open');
+        modalOverlay.setAttribute('aria-hidden', 'true');
+        document.getElementById('modalBox').classList.remove('is-cron', 'is-ai-result', 'is-history', 'is-schedule-detail');
+        state.previewTodoId = null;
+        state.selectedHistoryTodoId = null;
+        modalConfirmHandler = null;
+      }
+
+      function evaluateAICapability(title, desc) {
+        var text = (title + ' ' + (desc || '')).toLowerCase();
+        var manual = ['电话', '回访', '线下', '见面', '签字', '定投', '弱势群体'];
+        var auto = [
+          { key: '会议纪要', type: 'minutes' },
+          { key: '纪要', type: 'minutes' },
+          { key: '复盘', type: 'review' },
+          { key: '审核', type: 'audit' },
+          { key: '方案', type: 'plan' },
+          { key: '报告', type: 'report' },
+          { key: '分析', type: 'analysis' },
+          { key: '选品', type: 'pick' }
+        ];
+        var i;
+        for (i = 0; i < manual.length; i++) {
+          if (text.indexOf(manual[i]) >= 0) return { canAuto: false, reason: '需人工处理' };
+        }
+        for (i = 0; i < auto.length; i++) {
+          if (text.indexOf(auto[i].key) >= 0) {
+            return {
+              canAuto: true,
+              label: '个人助手已生成结果报告，待查看确认',
+              resultType: auto[i].type
+            };
+          }
+        }
+        return { canAuto: false };
+      }
+
+      function buildAIResultHtml(type, todoTitle) {
+        todoTitle = todoTitle || '任务';
+        var templates = {
+          minutes: function() {
+            return '<div class="ai-result-doc">' +
+              '<span class="doc-badge">AI 生成 · 会议纪要</span>' +
+              '<h4>会议纪要初稿</h4>' +
+              '<p>关联待办：' + todoTitle + ' · 生成时间：刚刚</p>' +
+              '<h5>一、本周重点进展</h5>' +
+              '<div class="progress-item"><div class="progress-label"><span>AI企微客服联调</span><span>80%</span></div>' +
+              '<div class="progress-bar"><span style="width:80%"></span></div></div>' +
+              '<div class="progress-item"><div class="progress-label"><span>第三方模型平台灰度</span><span>60%</span></div>' +
+              '<div class="progress-bar"><span style="width:60%"></span></div></div>' +
+              '<ul><li>FinFAM 项目接口文档待补充</li><li>协议合规审核需排期至下周三</li></ul>' +
+              '<h5>二、结论与建议</h5>' +
+              '<div class="doc-conclusion">建议周五前完成 UI 改版方案评审，并将纪要同步至团队群。</div></div>';
+          },
+          review: function() {
+            return '<div class="ai-result-doc">' +
+              '<span class="doc-badge">AI 生成 · 复盘简报</span>' +
+              '<h4>港股收盘复盘</h4>' +
+              '<div class="stat-row">' +
+              '<div class="stat-card"><div class="val up">+0.82%</div><div class="lbl">恒指涨跌</div></div>' +
+              '<div class="stat-card"><div class="val">18,432</div><div class="lbl">收盘点位</div></div>' +
+              '<div class="stat-card"><div class="val down">-1.2%</div><div class="lbl">南向净流出</div></div></div>' +
+              '<h5>板块表现</h5><ol><li><strong>科技</strong>：领涨，AI 概念持续活跃</li>' +
+              '<li><strong>医药</strong>：跟涨，创新药政策预期改善</li>' +
+              '<li><strong>地产</strong>：承压，成交数据偏弱</li></ol>' +
+              '<div class="doc-conclusion">短期观望，关注政策面与美联储表态；重点跟踪科技龙头财报。</div></div>';
+          },
+          audit: function() {
+            return '<div class="ai-result-doc">' +
+              '<span class="doc-badge">AI 生成 · 合规审核</span>' +
+              '<h4>协议合规审核清单</h4>' +
+              '<p>待办：' + todoTitle + '</p>' +
+              '<ul class="check-list">' +
+              '<li><span class="ico ok">✓</span><span>协议版本与模板库一致</span></li>' +
+              '<li><span class="ico ok">✓</span><span>关键条款（保密、知识产权）已标注</span></li>' +
+              '<li><span class="ico no">✗</span><span>授权范围说明待补充（第 3.2 条）</span></li>' +
+              '<li><span class="ico wait">!</span><span>数据出境条款需法务二次确认</span></li></ul>' +
+              '<div class="doc-conclusion">共 4 项检查，2 项通过、1 项缺失、1 项待确认。建议补充授权范围后再提交。</div></div>';
+          },
+          plan: function() {
+            return '<div class="ai-result-doc">' +
+              '<span class="doc-badge">AI 生成 · 方案草稿</span>' +
+              '<h4>UI 改版方案（初稿）</h4>' +
+              '<h5>一、背景与目标</h5><p>统一个人工作台视觉规范，提升待办/日程信息密度与可读性。</p>' +
+              '<h5>二、实施步骤</h5><ol><li>梳理现有组件与色板</li><li>输出高保真稿并评审</li><li>分模块灰度上线</li></ol>' +
+              '<h5>三、风险与排期</h5><ul><li>风险：与旧版样式并存期需兼容</li><li>排期：预计 2 周完成首版</li></ul>' +
+              '<div class="doc-conclusion">请确认后进入设计评审，我可继续细化交互说明。</div></div>';
+          },
+          report: function() {
+            return '<div class="ai-result-doc">' +
+              '<span class="doc-badge">AI 生成 · 结果报告</span>' +
+              '<h4>执行结果摘要</h4>' +
+              '<p>已汇总与「' + todoTitle + '」相关的关键数据与结论。</p>' +
+              '<ul><li>数据采集完成，覆盖 3 个数据源</li><li>异常项 0 条，待人工复核 1 条</li></ul>' +
+              '<div class="doc-conclusion">报告已就绪，确认后可同步至相关协作者。</div></div>';
+          },
+          analysis: function() {
+            return '<div class="ai-result-doc">' +
+              '<span class="doc-badge">AI 生成 · 初步分析</span>' +
+              '<h4>数据分析摘要</h4>' +
+              '<table><thead><tr><th>指标</th><th>本期</th><th>环比</th></tr></thead><tbody>' +
+              '<tr><td>活跃用户数</td><td>12,480</td><td style="color:#059669">+5.2%</td></tr>' +
+              '<tr><td>任务完成率</td><td>78%</td><td style="color:#059669">+2.1%</td></tr>' +
+              '<tr><td>逾期率</td><td>9%</td><td style="color:#ef4444">+1.0%</td></tr></tbody></table>' +
+              '<div class="doc-conclusion">整体趋势向好，需关注逾期率小幅上升。</div></div>';
+          },
+          pick: function() {
+            return '<div class="ai-result-doc">' +
+              '<span class="doc-badge">AI 生成 · 选品分析</span>' +
+              '<h4>基金选品分析初稿</h4>' +
+              '<table><thead><tr><th>产品</th><th>风险等级</th><th>近3月收益</th><th>建议</th></tr></thead><tbody>' +
+              '<tr><td>Agent-Mona A</td><td>R3</td><td>+4.2%</td><td>关注</td></tr>' +
+              '<tr><td>稳健增利 B</td><td>R2</td><td>+2.1%</td><td>适合配置</td></tr>' +
+              '<tr><td>成长精选 C</td><td>R4</td><td>-1.3%</td><td>谨慎</td></tr></tbody></table>' +
+              '<div class="doc-conclusion">以上为 AI 初步筛选结果，最终决策需人工确认合规与适配性。</div></div>';
+          }
+        };
+        var fn = templates[type] || templates.report;
+        return fn();
+      }
+
+      function mountAIResultPanel(card, html) {
+        var existing = card.querySelector('.todo-ai-panel');
+        if (existing) existing.remove();
+        var panel = document.createElement('div');
+        panel.className = 'todo-ai-panel';
+        panel.innerHTML =
+          '<div class="todo-ai-panel-head">' +
+          '<span><span class="ai-ico">◆</span> 个人助手初步结果</span>' +
+          '<button type="button" data-action="expand-ai">全屏查看</button></div>' +
+          '<div class="todo-ai-panel-body"></div>' +
+          '<div class="todo-ai-panel-foot">' +
+          '<button type="button" class="btn-sm btn-revise" data-action="revise-ai">修改结果</button>' +
+          '<button type="button" class="btn-ghost btn-sm" data-action="expand-ai">查看详情</button>' +
+          '<button type="button" class="btn-primary btn-sm" data-action="confirm-ai">确认结果</button></div>';
+        panel.querySelector('.todo-ai-panel-body').innerHTML = html;
+        card.appendChild(panel);
+      }
+
+      function escapeHtml(text) {
+        return String(text)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      function getTodoMeta(todoId) {
+        var card = document.querySelector('.todo-card[data-id="' + todoId + '"]');
+        if (!card) return null;
+        var btn = card.querySelector('.todo-ai-result');
+        return {
+          id: todoId,
+          title: card.querySelector('.todo-title').textContent,
+          resultType: btn ? (btn.dataset.resultType || 'report') : 'report'
+        };
+      }
+
+      function ensureTodoThread(todoId) {
+        if (!state.todoThreads[todoId]) {
+          var meta = getTodoMeta(todoId);
+          if (!meta) return null;
+          state.todoThreads[todoId] = {
+            todoId: todoId,
+            title: meta.title,
+            resultType: meta.resultType,
+            revision: 1,
+            messages: []
+          };
+        }
+        return state.todoThreads[todoId];
+      }
+
+      function hideTinaExtras() {
+        document.getElementById('tinaWelcome').style.display = 'none';
+        var chipLabel = document.querySelector('.chip-label');
+        var chips = document.querySelector('.chips');
+        if (chipLabel) chipLabel.style.display = 'none';
+        if (chips) chips.style.display = 'none';
+      }
+
+      function countThreadDialogMessages(thread) {
+        return thread.messages.filter(function(m) {
+          return m.role === 'user' || m.role === 'bot';
+        }).length;
+      }
+
+      function getAIResultHtmlForTodo(todoId) {
+        if (state.aiResults[todoId]) return state.aiResults[todoId];
+        var meta = getTodoMeta(todoId);
+        if (!meta) return '';
+        return buildAIResultHtml(meta.resultType, meta.title);
+      }
+
+      function pushThreadAIResult(todoId, html, revision) {
+        var thread = ensureTodoThread(todoId);
+        if (!thread || !html) return;
+        var last = thread.messages[thread.messages.length - 1];
+        if (last && last.role === 'ai-result' && last.revision === revision) return;
+        thread.messages.push({
+          role: 'ai-result',
+          html: html,
+          revision: revision || thread.revision || 1,
+          at: Date.now()
+        });
+      }
+
+      function showRevisionBar(thread) {
+        document.getElementById('tinaRevisionBar').classList.add('is-visible');
+        document.getElementById('tinaRevisionTitle').textContent = thread.title;
+        document.getElementById('tinaRevisionMeta').textContent =
+          '第 ' + thread.revision + ' 版 · ' + countThreadDialogMessages(thread) + ' 条对话';
+        document.querySelector('.tina-panel').classList.add('is-revising');
+        tinaInput.placeholder = '描述你想如何修改结果，可多次对话调整…';
+      }
+
+      function hideRevisionBar() {
+        document.getElementById('tinaRevisionBar').classList.remove('is-visible');
+        document.querySelector('.tina-panel').classList.remove('is-revising');
+        tinaInput.placeholder = '向个人助手提问';
+      }
+
+      function appendMsg(role, text, options) {
+        options = options || {};
+        var el = document.createElement('div');
+        if (role === 'system') {
+          el.className = 'msg-system';
+        } else {
+          el.className = 'msg ' + (role === 'user' ? 'msg-user' : 'msg-bot');
+        }
+        el.textContent = text;
+        tinaMessages.appendChild(el);
+        document.getElementById('tinaBody').scrollTop = 99999;
+        if (options.persist !== false && state.activeRevisionTodoId && role !== 'system') {
+          var thread = ensureTodoThread(state.activeRevisionTodoId);
+          if (thread) thread.messages.push({ role: role, text: text, at: Date.now() });
+        }
+        return el;
+      }
+
+      function appendAIResultMsg(html, revision, options) {
+        options = options || {};
+        var block = document.createElement('div');
+        block.className = 'tina-ai-result-block';
+        var label = document.createElement('div');
+        label.className = 'tina-ai-result-label';
+        label.textContent = '◆ 个人助手初步结果 · 第 ' + (revision || 1) + ' 版';
+        var doc = document.createElement('div');
+        doc.className = 'tina-ai-result-doc';
+        doc.innerHTML = html;
+        block.appendChild(label);
+        block.appendChild(doc);
+        tinaMessages.appendChild(block);
+        document.getElementById('tinaBody').scrollTop = 99999;
+        if (options.persist !== false && state.activeRevisionTodoId) {
+          pushThreadAIResult(state.activeRevisionTodoId, html, revision || 1);
+        }
+        return block;
+      }
+
+      function renderThreadMessage(m) {
+        if (m.role === 'ai-result') {
+          appendAIResultMsg(m.html, m.revision, { persist: false });
+          return;
+        }
+        appendMsg(m.role, m.text, { persist: false });
+      }
+
+      function ensureThreadShowsLatestResult(thread) {
+        var html = getAIResultHtmlForTodo(thread.todoId);
+        if (!html) return;
+        var hasResult = thread.messages.some(function(m) { return m.role === 'ai-result'; });
+        if (!hasResult) {
+          pushThreadAIResult(thread.todoId, html, thread.revision || 1);
+        }
+      }
+
+      function renderTinaThread(thread) {
+        ensureThreadShowsLatestResult(thread);
+        tinaMessages.innerHTML = '';
+        appendMsg('system', '— 历史对话 · 待办「' + thread.title + '」—', { persist: false });
+        thread.messages.forEach(function(m) {
+          renderThreadMessage(m);
+        });
+      }
+
+      function openRevisionChat(todoId) {
+        var thread = ensureTodoThread(todoId);
+        if (!thread) { toast('未找到对应待办'); return; }
+        state.activeRevisionTodoId = todoId;
+        if (thread.messages.length === 0) {
+          thread.messages.push({
+            role: 'bot',
+            text: '已载入待办「' + thread.title + '」的 AI 结果（第 ' + thread.revision + ' 版）。请告诉我需要怎么改，例如：「把联调进度改成 90%」「补充 FinFAM 风险项」「结论写得更简洁」。',
+            at: Date.now()
+          });
+        }
+        hideTinaExtras();
+        renderTinaThread(thread);
+        showRevisionBar(thread);
+        closeModal();
+        tinaInput.focus();
+        document.querySelector('.tina-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        toast('已进入修改对话，可在个人助手中多轮调整结果');
+      }
+
+      function exitRevisionChat() {
+        state.activeRevisionTodoId = null;
+        hideRevisionBar();
+        toast('已退出结果修改');
+      }
+
+      function applyResultRevision(todoId, instruction, resultType, title) {
+        var thread = state.todoThreads[todoId];
+        var rev = thread ? thread.revision + 1 : 2;
+        var html = state.aiResults[todoId] || buildAIResultHtml(resultType, title);
+        var note = instruction
+          .replace(/^(请|帮我|把|将|修改|更新|调整|麻烦)/, '')
+          .replace(/(一下|看看)$/, '')
+          .trim();
+
+        if (/进度|联调|80|90|70|\d+\s*%/.test(instruction)) {
+          var pct = '90';
+          var pm = instruction.match(/(\d{1,3})\s*%/);
+          if (pm) pct = pm[1];
+          else if (/90/.test(instruction)) pct = '90';
+          else if (/80/.test(instruction)) pct = '80';
+          html = html.replace(/width:\d+%/g, 'width:' + pct + '%');
+          html = html.replace(/<span>\d+%<\/span>/g, '<span>' + pct + '%</span>');
+        }
+
+        if (/补充|加入|添加|增加|还要/.test(instruction)) {
+          var insert =
+            '<h5>根据反馈补充</h5><ul><li>' + escapeHtml(note || instruction) + '</li></ul>';
+          html = html.replace('<div class="doc-conclusion">', insert + '<div class="doc-conclusion">');
+        }
+
+        if (/缩短|精简|简要|简洁|短一点/.test(instruction)) {
+          html = html.replace(/<ol>[\s\S]*?<\/ol>/, '<ol><li>（已按你的要求精简要点）</li></ol>');
+          html = html.replace(
+            /<div class="doc-conclusion">[\s\S]*?<\/div>/,
+            '<div class="doc-conclusion">已精简表述，请确认是否满足要求。</div>'
+          );
+        }
+
+        if (/结论|建议/.test(instruction) && note.length > 3) {
+          html = html.replace(
+            /<div class="doc-conclusion">[\s\S]*?<\/div>/,
+            '<div class="doc-conclusion">' + escapeHtml(note) + '</div>'
+          );
+        }
+
+        if (/删除|去掉|移除/.test(instruction)) {
+          if (/补充|风险|FinFAM/.test(instruction)) {
+            html = html.replace(/<h5>根据反馈补充[\s\S]*?<\/ul>/, '');
+          }
+        }
+
+        if (/表格|选品|基金/.test(instruction) && resultType === 'pick') {
+          html = html.replace(
+            '</tbody></table>',
+            '<tr><td>用户关注项</td><td>R3</td><td>—</td><td>待补充</td></tr></tbody></table>'
+          );
+        }
+
+        html = html.replace(/<span class="doc-badge">[^<]*<\/span>/, '');
+        html = html.replace(
+          '<div class="ai-result-doc">',
+          '<div class="ai-result-doc"><span class="doc-badge">AI 生成 · 第 ' + rev + ' 版</span>'
+        );
+
+        return html;
+      }
+
+      function buildRevisionReply(instruction, revision) {
+        if (/进度|%/.test(instruction)) {
+          return '已按你的要求更新进度数据，结果现为第 ' + revision + ' 版。左侧待办下方已同步，如需继续调整请直接说。';
+        }
+        if (/补充|加入|添加/.test(instruction)) {
+          return '已补充相关内容，并更新为第 ' + revision + ' 版。还要调整哪些部分？';
+        }
+        if (/缩短|精简|简洁/.test(instruction)) {
+          return '已精简表述，现为第 ' + revision + ' 版。若满意可点击「确认结果」。';
+        }
+        if (/结论|建议/.test(instruction)) {
+          return '已更新结论/建议，现为第 ' + revision + ' 版。';
+        }
+        return '已根据你的反馈更新结果（第 ' + revision + ' 版）。可继续描述修改点，或确认结果。';
+      }
+
+      function syncTodoResultPanel(todoId, html) {
+        state.aiResults[todoId] = html;
+        var thread = state.todoThreads[todoId];
+        pushThreadAIResult(todoId, html, thread ? thread.revision : 1);
+        var card = document.querySelector('.todo-card[data-id="' + todoId + '"]');
+        if (card) mountAIResultPanel(card, html);
+      }
+
+      function handleRevisionMessage(text) {
+        var todoId = state.activeRevisionTodoId;
+        var thread = state.todoThreads[todoId];
+        if (!thread) return;
+
+        setTimeout(function() {
+          var html = applyResultRevision(todoId, text, thread.resultType, thread.title);
+          thread.revision += 1;
+          syncTodoResultPanel(todoId, html);
+          showRevisionBar(thread);
+          appendMsg('bot', buildRevisionReply(text, thread.revision));
+        }, 700);
+      }
+
+      function seedTodoThread(todoId, messages, revision) {
+        var meta = getTodoMeta(todoId);
+        if (!meta) return;
+        state.todoThreads[todoId] = {
+          todoId: todoId,
+          title: meta.title,
+          resultType: meta.resultType,
+          revision: revision || 1,
+          messages: messages || []
+        };
+      }
+
+      function updateHistoryPreview(todoId) {
+        var preview = document.getElementById('historyPreviewBody');
+        var headTitle = document.getElementById('historyPreviewTitle');
+        var headMeta = document.getElementById('historyPreviewMeta');
+        var continueBtn = document.getElementById('historyContinueBtn');
+        if (!preview) return;
+        state.selectedHistoryTodoId = todoId;
+        document.querySelectorAll('[data-history-todo]').forEach(function(el) {
+          el.classList.toggle('is-active', el.dataset.historyTodo === todoId);
+        });
+        var thread = state.todoThreads[todoId];
+        if (!thread) {
+          preview.innerHTML = '<div class="history-preview-empty">未找到关联待办</div>';
+          if (headTitle) headTitle.textContent = '—';
+          if (headMeta) headMeta.textContent = '';
+          if (continueBtn) continueBtn.disabled = true;
+          return;
+        }
+        if (headTitle) headTitle.textContent = thread.title;
+        if (headMeta) {
+          headMeta.textContent = '第 ' + thread.revision + ' 版 · ' +
+            countThreadDialogMessages(thread) + ' 条对话';
+        }
+        if (continueBtn) continueBtn.disabled = false;
+        var html = getAIResultHtmlForTodo(todoId);
+        if (html) {
+          preview.innerHTML = html;
+        } else {
+          preview.innerHTML =
+            '<div class="history-preview-empty">该待办暂无 AI 初步结果<br>选择后可继续对话创建</div>';
+        }
+      }
+
+      function openThreadHistoryModal() {
+        var ids = Object.keys(state.todoThreads);
+        if (!ids.length) {
+          toast('暂无与待办关联的历史对话');
+          return;
+        }
+        var modalBox = document.getElementById('modalBox');
+        modalBox.classList.remove('is-cron', 'is-ai-result');
+        modalBox.classList.add('is-history');
+        document.getElementById('modalTitle').textContent = '历史对话';
+        var defaultId = state.activeRevisionTodoId && state.todoThreads[state.activeRevisionTodoId]
+          ? state.activeRevisionTodoId
+          : ids[0];
+        var listHtml = ids.map(function(id) {
+          var t = state.todoThreads[id];
+          var active = defaultId === id ? ' is-active' : '';
+          var hasResult = !!getAIResultHtmlForTodo(id);
+          return '<button type="button" class="history-item' + active + '" data-history-todo="' + id + '">' +
+            '<strong>' + escapeHtml(t.title) + '</strong>' +
+            '<span>第 ' + t.revision + ' 版 · ' + countThreadDialogMessages(t) + ' 条对话' +
+            (hasResult ? ' · 含 AI 结果' : '') + '</span></button>';
+        }).join('');
+        document.getElementById('modalBody').innerHTML =
+          '<p class="ai-preview-meta">选择左侧历史对话，右侧可查看个人助手初步结果；确认后可继续多轮修改。</p>' +
+          '<div class="history-modal-layout">' +
+          '<div class="history-list-col"><div class="history-list">' + listHtml + '</div></div>' +
+          '<div class="history-preview-col">' +
+          '<div class="history-preview-head">' +
+          '<strong id="historyPreviewTitle">—</strong>' +
+          '<span id="historyPreviewMeta"></span></div>' +
+          '<div class="history-preview-body" id="historyPreviewBody"></div>' +
+          '<div class="history-preview-foot">' +
+          '<button type="button" class="btn-sm btn-revise" id="historyContinueBtn" data-action="history-continue">继续修改</button>' +
+          '<button type="button" class="btn-primary btn-sm" data-action="history-open-chat">进入对话</button>' +
+          '</div></div></div>';
+        updateHistoryPreview(defaultId);
+        modalConfirmHandler = null;
+        modalOverlay.classList.add('is-open');
+        modalOverlay.setAttribute('aria-hidden', 'false');
+      }
+
+      function formatDeadline(date) {
+        var y = date.getFullYear();
+        var m = String(date.getMonth() + 1).padStart(2, '0');
+        var d = String(date.getDate()).padStart(2, '0');
+        var h = String(date.getHours()).padStart(2, '0');
+        var min = String(date.getMinutes()).padStart(2, '0');
+        return y + '/' + m + '/' + d + ' ' + h + ':' + min;
+      }
+
+      var SCHEDULE_EVENT_RE = /(?:开|参加|出席|预约了?).{0,16}?(?:会议|会)|(?:项目)?评审会?|面试|面谈|谈话|出差|差旅|外出|培训|演练|约见|拜访|演示|路演|座谈|研讨会|汇报会|站会|晨会|夕会|周会|例会|飞抵|航班|行程|接机|参观|签约|发布会|听课|考试/;
+      var ACTION_TODO_RE = /(?:完成|提交|整理|编写|撰写|审核|核对|处理|跟进|落实|发送|更新|修复|排查|确认|填写|交付|改完|做完|写好|发邮件|汇总|准备|制作|输出|上线|部署|验收|复盘|回访)/;
+
+      function isScheduleEvent(text) {
+        if (SCHEDULE_EVENT_RE.test(text)) return true;
+        if (/(\d{1,2}\s*[点:：]|下午|上午)/.test(text) && /(?:去|到|在|参加|出席)/.test(text) && !ACTION_TODO_RE.test(text)) {
+          return true;
+        }
+        return false;
+      }
+
+      function isActionTodo(text) {
+        if (ACTION_TODO_RE.test(text)) return true;
+        if (/提醒我/.test(text) && /(?:完成|提交|整理|审核|处理|准备|写好|改完)/.test(text)) return true;
+        return false;
+      }
+
+      function resolveIntentType(text) {
+        var schedule = isScheduleEvent(text);
+        var action = isActionTodo(text);
+        var repeat = /每天|每日|每个工作日|每周|每星期|每月|每个月/.test(text);
+
+        if (repeat) {
+          if (schedule && !action) return 'schedule';
+          return 'cron';
+        }
+        if (schedule && !action) return 'schedule';
+        if (action) return 'todo';
+        if (/提醒我|记得|别忘了|截止|deadline/.test(text)) return 'todo';
+        if (/(\d{1,2}\s*[点:：]|下午|上午)/.test(text) && /去|到|在|参加|出席/.test(text)) return 'schedule';
+        return 'todo';
+      }
+
+      function getIntentCategoryLabel(type, text) {
+        if (type === 'schedule') {
+          if (/面试/.test(text)) return '面试安排';
+          if (/出差|差旅/.test(text)) return '出差行程';
+          if (/会议|开会|评审|周会|例会|站会/.test(text)) return '会议安排';
+          if (/培训/.test(text)) return '培训安排';
+          return '日历安排';
+        }
+        if (type === 'cron') return '重复执行任务';
+        return '待执行事项';
+      }
+
+      function padClockTime(hour, minute) {
+        return String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+      }
+
+      function parseScheduleDateTime(text) {
+        var date = new Date();
+        if (/明天/.test(text)) date.setDate(date.getDate() + 1);
+        else if (/后天/.test(text)) date.setDate(date.getDate() + 2);
+        else if (/下周/.test(text) && !/周[一二三四五六日]/.test(text)) date.setDate(date.getDate() + 7);
+        else {
+          var dayMap = { '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '日': 0 };
+          var weekMatch = text.match(/(?:下)?周([一二三四五六日])/);
+          if (weekMatch) {
+            var target = dayMap[weekMatch[1]];
+            var offset = (target - date.getDay() + 7) % 7;
+            if (/下周/.test(text) || offset === 0) offset = offset || 7;
+            date.setDate(date.getDate() + offset);
+          }
+        }
+
+        var startH = 10;
+        var startM = 0;
+        var durationMin = 60;
+        var timeMatch = text.match(/(\d{1,2})\s*[点:：]\s*(\d{0,2})?/);
+        if (/下午\s*3\s*点|15\s*点/.test(text)) { startH = 15; startM = 0; }
+        else if (/下午\s*5\s*点|17\s*点/.test(text)) { startH = 17; startM = 0; }
+        else if (/上午\s*10\s*点|10\s*点/.test(text)) { startH = 10; startM = 0; }
+        else if (timeMatch) {
+          startH = parseInt(timeMatch[1], 10);
+          startM = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
+          if (/下午/.test(text) && startH < 12) startH += 12;
+          if (/上午/.test(text) && startH === 12) startH = 0;
+        }
+
+        if (/半小时|30分钟/.test(text)) durationMin = 30;
+        else if (/两小时|2小时|120分钟/.test(text)) durationMin = 120;
+        else if (/45分钟/.test(text)) durationMin = 45;
+
+        var endTotal = startH * 60 + startM + durationMin;
+        var endH = Math.floor(endTotal / 60) % 24;
+        var endM = endTotal % 60;
+        var startTime = padClockTime(startH, startM);
+        var endTime = padClockTime(endH, endM);
+        return {
+          startTime: startTime,
+          endTime: endTime,
+          scheduleTime: startTime + ' – ' + endTime,
+          dateLabel: formatDeadline(date).split(' ')[0]
+        };
+      }
+
+      function extractScheduleTitle(text) {
+        if (/项目评审/.test(text)) return '项目评审会';
+        if (/面试/.test(text)) {
+          var roleMatch = text.match(/面试(.{0,16})/);
+          var role = roleMatch ? roleMatch[1].replace(/[，。的在]/g, '').trim() : '';
+          return role ? '面试 · ' + role : '面试';
+        }
+        if (/出差|差旅/.test(text)) {
+          var placeMatch = text.match(/去(.{0,10})出差|出差(?:到|去)?(.{0,10})/);
+          var place = placeMatch ? (placeMatch[1] || placeMatch[2] || '').replace(/[，。]/g, '').trim() : '';
+          return place ? '出差 · ' + place : '出差行程';
+        }
+        if (/培训/.test(text)) return '培训';
+        if (/周会|例会/.test(text)) return '团队周会';
+        if (/演示/.test(text)) return '方案演示';
+        if (/拜访/.test(text)) return '客户拜访';
+        var meetMatch = text.match(/开(.+?)会/);
+        if (meetMatch) return meetMatch[1].replace(/^[我你]/, '').trim() + '会';
+        if (/会议/.test(text)) return '会议';
+        return '日程安排';
+      }
+
+      function addScheduleFromParsed(parsed) {
+        var id = 's' + (++state.scheduleIdSeq);
+        scheduleRawEvents.push({
+          id: id,
+          start: parsed.startTime || '10:00',
+          end: parsed.endTime || '11:00',
+          title: parsed.title,
+          sources: ['local']
+        });
+        renderDayTimeline();
+        return id;
+      }
+
+      function parseNaturalLanguage(text) {
+        var parsed = {
+          type: 'todo',
+          title: text.replace(/^(提醒|帮我|请)/, '').trim(),
+          desc: '',
+          deadline: '',
+          urgent: /紧急|urgent|!!/.test(text),
+          source: '自然语言',
+          repeat: null,
+          intentLabel: '待执行事项',
+          startTime: '',
+          endTime: '',
+          scheduleTime: ''
+        };
+
+        parsed.type = resolveIntentType(text);
+        parsed.intentLabel = getIntentCategoryLabel(parsed.type, text);
+
+        if (parsed.type === 'cron') {
+          if (/每天|每日|每个工作日/.test(text)) {
+            parsed.repeat = { type: 'daily', time: '17:00' };
+            parsed.title = extractCronTitle(text, '复盘港股收盘情况');
+          } else if (/每周|每星期/.test(text)) {
+            parsed.repeat = { type: 'weekly', weekday: 3, time: '17:00' };
+            parsed.title = extractCronTitle(text, '做会议纪要');
+          } else if (/每月|每个月/.test(text)) {
+            var dayMatch = text.match(/(?:每月|每个月)\s*(\d{1,2})\s*[号日]/);
+            parsed.repeat = { type: 'monthly', day: dayMatch ? parseInt(dayMatch[1], 10) : 15, time: '17:00' };
+            parsed.title = extractCronTitle(text, '客户回访');
+          }
+          var timeMatch = text.match(/(\d{1,2})\s*[点:：]\s*(\d{0,2})?/);
+          if (timeMatch && parsed.repeat) {
+            var hh = String(parseInt(timeMatch[1], 10)).padStart(2, '0');
+            var mm = timeMatch[2] ? String(parseInt(timeMatch[2], 10)).padStart(2, '0') : '00';
+            parsed.repeat.time = hh + ':' + mm;
+          }
+          if (/下午\s*5\s*点|下午5点|17\s*点/.test(text) && parsed.repeat) parsed.repeat.time = '17:00';
+          if (/下午\s*3\s*点|15\s*点/.test(text) && parsed.repeat) parsed.repeat.time = '15:00';
+          parsed.desc = buildCronMetaText(parsed.repeat) + ' · 来源：自然语言';
+        } else if (parsed.type === 'schedule') {
+          parsed.title = extractScheduleTitle(text);
+          var sched = parseScheduleDateTime(text);
+          parsed.startTime = sched.startTime;
+          parsed.endTime = sched.endTime;
+          parsed.scheduleTime = sched.scheduleTime;
+          parsed.deadline = sched.dateLabel + ' ' + sched.startTime;
+        } else {
+          parsed.title = extractTodoTitle(text);
+          var due = new Date();
+          if (/明天/.test(text)) due.setDate(due.getDate() + 1);
+          else if (/后天/.test(text)) due.setDate(due.getDate() + 2);
+          else if (/本周五|周五/.test(text)) {
+            due.setDate(due.getDate() + ((5 - due.getDay() + 7) % 7 || 7));
+          } else if (/下周三|周三/.test(text)) {
+            due.setDate(due.getDate() + ((3 - due.getDay() + 7) % 7 || 7));
+          }
+          due.setHours(/下午/.test(text) ? 18 : 17, 0, 0, 0);
+          parsed.deadline = formatDeadline(due);
+        }
+
+        return parsed;
+      }
+
+      function extractCronTitle(text, fallback) {
+        if (/回访/.test(text)) return '每月客户回访';
+        if (/复盘|港股/.test(text)) return '复盘港股收盘情况';
+        if (/会议纪要|纪要/.test(text)) return '做会议纪要';
+        return fallback;
+      }
+
+      function extractTodoTitle(text) {
+        if (/UI改版|UI改造/.test(text)) return '完成UI改版方案';
+        if (/合规审核|协议/.test(text)) return '协议合规审核';
+        if (/UI/.test(text)) return '完成UI改版方案';
+        return text.replace(/^(提醒|帮我|请|我)/, '').replace(/(本周|下周|明天|后天).*$/, '').trim() || '新待办事项';
+      }
+
+      function buildCronMetaText(repeat) {
+        if (!repeat) return '';
+        var dayLabels = ['一', '二', '三', '四', '五', '六', '日'];
+        if (repeat.type === 'daily') return '每天 ' + repeat.time + ':00';
+        if (repeat.type === 'weekly') return '每周' + dayLabels[repeat.weekday != null ? repeat.weekday : 3] + ' ' + repeat.time + ':00';
+        return '每月' + repeat.day + '日 ' + repeat.time + ':00';
+      }
+
+      function buildCronActionText(repeat, title) {
+        title = title || '任务';
+        if (!repeat) return '自动生成待办「' + title + '」';
+        var dayLabels = ['一', '二', '三', '四', '五', '六', '日'];
+        if (repeat.type === 'daily') return '每天 ' + repeat.time + ' 自动生成待办「' + title + '」';
+        if (repeat.type === 'weekly') {
+          return '每周' + dayLabels[repeat.weekday != null ? repeat.weekday : 3] + ' ' + repeat.time + ' 自动生成待办「' + title + '」';
+        }
+        if (repeat.type === 'monthly') return '每月' + repeat.day + '日 ' + repeat.time + ' 自动生成待办「' + title + '」';
+        return '按周期自动生成待办「' + title + '」';
+      }
+
+      function addTodoCard(opts) {
+        opts = opts || {};
+        var id = opts.id || ('t' + (++state.todoIdSeq));
+        var cap = evaluateAICapability(opts.title, opts.desc);
+        var html = '<article class="todo-card" data-id="' + id + '"><div class="todo-card-main">' +
+          '<div class="todo-check"></div><div class="todo-body">' +
+          '<div>' + (opts.urgent ? '<span class="tag-urgent">!!紧急</span>' : '') +
+          '<span class="todo-title"></span></div>' +
+          (opts.desc ? '<p class="todo-desc"></p>' : '') +
+          (opts.deadline ? '<p class="todo-deadline"></p>' : '') +
+          (opts.source ? '<span class="todo-source">来源：' + opts.source + '</span>' : '') +
+          '</div><div class="dropdown-wrap"><button type="button" class="todo-more">⋯</button><div class="dropdown">' +
+          '<button type="button" data-action="edit">编辑</button><button type="button" data-action="cancel">取消待办</button>' +
+          '<button type="button" data-action="delete" class="danger">删除</button></div></div></div></article>';
+        var wrap = document.createElement('div');
+        wrap.innerHTML = html;
+        var card = wrap.firstChild;
+        card.querySelector('.todo-title').textContent = opts.title;
+        if (opts.desc) card.querySelector('.todo-desc').textContent = opts.desc;
+        if (opts.deadline) card.querySelector('.todo-deadline').textContent = opts.deadline;
+        document.getElementById('todoList').prepend(card);
+        updateTodoStats();
+
+        if (opts.aiPending || (cap.canAuto && opts.triggerAI !== false)) {
+          attachAIGeneration(card, cap, opts.aiPending);
+        } else if (opts.aiResult) {
+          attachAIResult(card, opts.aiResult.label, opts.aiResult.resultType);
+        }
+        return card;
+      }
+
+      function attachAIResult(card, label, resultType) {
+        var todoTitle = card.querySelector('.todo-title').textContent;
+        var html = buildAIResultHtml(resultType, todoTitle);
+        var id = card.dataset.id;
+        state.aiResults[id] = html;
+        pushThreadAIResult(id, html, 1);
+
+        var btn = card.querySelector('.todo-ai-result');
+        if (!btn) {
+          btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'todo-ai-result';
+          btn.innerHTML = '<span class="ai-ico">◆</span><span></span><span class="ai-arrow">›</span>';
+          card.appendChild(btn);
+        }
+        btn.querySelector('span:nth-child(2)').textContent = label;
+        btn.dataset.resultType = resultType;
+
+        mountAIResultPanel(card, html);
+      }
+
+      function attachAIGeneration(card, cap, startPending) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'todo-ai-result is-pending';
+        btn.disabled = true;
+        btn.innerHTML = '<span class="ai-ico">◆</span><span>个人助手正在生成初步结果…</span>';
+        card.appendChild(btn);
+        var delay = startPending ? 2500 : 1200;
+        setTimeout(function() {
+          if (!card.isConnected) return;
+          btn.remove();
+          attachAIResult(card, cap.label, cap.resultType);
+          var descEl = card.querySelector('.todo-desc');
+          if (descEl) descEl.textContent = '个人助手已生成初步结果，请查看确认';
+        }, delay);
+      }
+
+      function addCronCard(opts) {
+        opts = opts || {};
+        var id = opts.id || ('c' + (++state.cronIdSeq));
+        var meta = buildCronMetaText(opts.repeat);
+        var action = buildCronActionText(opts.repeat, opts.title);
+        var html = '<article class="cron-card' + (opts.enabled === false ? ' is-off' : '') + '" data-id="' + id + '">' +
+          '<div class="cron-main"><div class="cron-title"></div>' +
+          '<div class="cron-meta"><span class="clock">🕐</span> <span class="meta-text"></span></div>' +
+          '<div class="cron-action"><span class="spark">✨</span><span class="action-text"></span></div></div>' +
+          '<div class="cron-ops"><button type="button" class="toggle-switch' + (opts.enabled !== false ? ' is-on' : '') + ' cron-toggle" aria-checked="' + (opts.enabled !== false ? 'true' : 'false') + '"></button>' +
+          '<div class="dropdown-wrap"><button type="button" class="cron-more">⋯</button><div class="dropdown">' +
+          '<button type="button" data-action="edit">编辑任务</button><button type="button" data-action="run">立即生成待办</button>' +
+          '<button type="button" data-action="delete" class="danger">删除</button></div></div></div></article>';
+        var wrap = document.createElement('div');
+        wrap.innerHTML = html;
+        var card = wrap.firstChild;
+        card.querySelector('.cron-title').textContent = opts.title;
+        card.querySelector('.meta-text').textContent = meta;
+        card.querySelector('.action-text').textContent = action;
+        document.getElementById('cronList').prepend(card);
+        return card;
+      }
+
+      function openAIResultPreview(title, todoId) {
+        state.previewTodoId = todoId;
+        var html = state.aiResults[todoId];
+        if (!html) {
+          var card = document.querySelector('.todo-card[data-id="' + todoId + '"]');
+          var type = card && card.querySelector('.todo-ai-result') ? card.querySelector('.todo-ai-result').dataset.resultType : 'report';
+          html = buildAIResultHtml(type || 'report', title);
+        }
+        var thread = state.todoThreads[todoId];
+        var revText = thread ? ' · 当前第 ' + thread.revision + ' 版' : '';
+        var modalBox = document.getElementById('modalBox');
+        modalBox.classList.remove('is-cron', 'is-ai-result', 'is-history');
+        modalBox.classList.add('is-ai-result');
+        document.getElementById('modalTitle').textContent = 'AI 初步结果';
+        document.getElementById('modalBody').innerHTML =
+          '<p class="ai-preview-meta">待办：' + escapeHtml(title) + revText + ' · 不满意可修改结果并关联历史对话</p>' +
+          '<div class="ai-preview-body">' + html + '</div>' +
+          '<div class="ai-preview-actions">' +
+          '<button type="button" class="btn-sm btn-revise" data-action="revise-ai-preview">修改结果</button></div>';
+        modalConfirmHandler = function() {
+          if (state.previewTodoId) {
+            confirmAIResult(state.previewTodoId);
+          } else {
+            closeModal();
+          }
+        };
+        modalOverlay.classList.add('is-open');
+        modalOverlay.setAttribute('aria-hidden', 'false');
+      }
+
+      function executeParsedIntent(parsed, userText) {
+        if (parsed.type === 'cron') {
+          addCronCard({
+            title: parsed.title,
+            repeat: parsed.repeat,
+            enabled: true
+          });
+          return {
+            reply: '好的，已创建定时任务「' + parsed.title + '」，周期：' + buildCronMetaText(parsed.repeat) +
+              '。到期将自动生成待办；若事项在能力范围内，个人助手会在待办下方生成初步结果。',
+            cronCard: parsed
+          };
+        }
+        if (parsed.type === 'schedule') {
+          addScheduleFromParsed(parsed);
+          return {
+            reply: '已识别为「' + parsed.intentLabel + '」，无需创建待办。已写入日程「' + parsed.title + '」（' + parsed.scheduleTime + '），可在「我的日程」查看。',
+            scheduleOnly: true
+          };
+        }
+        var cap = evaluateAICapability(parsed.title, parsed.desc);
+        var card = addTodoCard({
+          title: parsed.title,
+          desc: cap.canAuto ? '个人助手将根据能力模型生成初步结果' : (cap.reason || parsed.desc || '来源：自然语言'),
+          deadline: parsed.deadline,
+          urgent: parsed.urgent,
+          source: parsed.source,
+          triggerAI: cap.canAuto
+        });
+        var reply = cap.canAuto
+          ? '已识别为「' + parsed.intentLabel + '」，已添加待办「' + parsed.title + '」，截止：' + parsed.deadline + '。我已开始生成初步结果，完成后会显示在待办下方；不满意可点「修改结果」继续对话调整。'
+          : '已识别为「' + parsed.intentLabel + '」，已添加待办「' + parsed.title + '」，截止：' + parsed.deadline + '。该事项需你手动完成，到期前我会提醒。';
+        if (userText && card) {
+          seedTodoThread(card.dataset.id, [
+            { role: 'user', text: userText, at: Date.now() },
+            { role: 'bot', text: reply, at: Date.now() }
+          ], 1);
+        }
+        return { reply: reply, todoId: card ? card.dataset.id : null, todoCap: cap };
+      }
+
+      document.getElementById('btnAddTodo').addEventListener('click', function() { openModal('addTodo'); });
+      document.getElementById('btnAddSchedule').addEventListener('click', function() { openModal('addSchedule'); });
+      document.getElementById('btnAddCron').addEventListener('click', function() { openModal('addCron'); });
+      document.getElementById('modalClose').addEventListener('click', closeModal);
+      document.getElementById('modalCancel').addEventListener('click', closeModal);
+      modalOverlay.addEventListener('click', function(e) { if (e.target === modalOverlay) closeModal(); });
+      document.getElementById('modalConfirm').addEventListener('click', function() {
+        if (modalConfirmHandler) modalConfirmHandler();
+      });
+
+      document.getElementById('modalBody').addEventListener('click', function(e) {
+        var revisePreview = e.target.closest('[data-action="revise-ai-preview"]');
+        if (revisePreview && state.previewTodoId) {
+          openRevisionChat(state.previewTodoId);
+          return;
+        }
+        var historyItem = e.target.closest('[data-history-todo]');
+        if (historyItem) {
+          updateHistoryPreview(historyItem.dataset.historyTodo);
+          return;
+        }
+        var historyContinue = e.target.closest('[data-action="history-continue"], [data-action="history-open-chat"]');
+        if (historyContinue && state.selectedHistoryTodoId) {
+          openRevisionChat(state.selectedHistoryTodoId);
+        }
+      });
+
+      /* 个人助手对话 */
+      var tinaInput = document.getElementById('tinaInput');
+      var tinaMessages = document.getElementById('tinaMessages');
+
+      function appendTinaCronCard(parsed) {
+        var block = document.createElement('div');
+        block.className = 'msg-bot-block';
+        var msg = document.createElement('div');
+        msg.className = 'msg msg-bot';
+        msg.textContent = '好的，已创建定时任务。到期将自动生成待办；AI 分析在待办层触发，你可在「定时任务」Tab 管理规则。';
+        block.appendChild(msg);
+        var card = document.createElement('div');
+        card.className = 'tina-cron-card';
+        card.innerHTML =
+          '<div class="tina-cron-head"><strong></strong><button type="button" class="toggle-switch is-on cron-toggle" aria-checked="true"></button></div>' +
+          '<div class="tina-cron-row">重复周期：<span class="meta"></span></div>' +
+          '<div class="tina-cron-row">待办生成：<span class="action"></span></div>';
+        card.querySelector('strong').textContent = parsed.title;
+        card.querySelector('.meta').textContent = buildCronMetaText(parsed.repeat);
+        card.querySelector('.action').textContent = buildCronActionText(parsed.repeat, parsed.title);
+        block.appendChild(card);
+        tinaMessages.appendChild(block);
+        document.getElementById('tinaBody').scrollTop = 99999;
+      }
+
+      function handleTinaMessage(text) {
+        if (state.activeRevisionTodoId) {
+          handleRevisionMessage(text);
+          return;
+        }
+        var parsed = parseNaturalLanguage(text);
+        var result = executeParsedIntent(parsed, text);
+        if (parsed.type === 'cron') {
+          appendMsg('bot', result.reply);
+          appendTinaCronCard(parsed);
+          return;
+        }
+        appendMsg('bot', result.reply);
+      }
+
+      function sendTina() {
+        var text = tinaInput.value.trim();
+        if (!text) return;
+        hideTinaExtras();
+        appendMsg('user', text);
+        tinaInput.value = '';
+        setTimeout(function() { handleTinaMessage(text); }, 600);
+      }
+
+      document.querySelectorAll('.chip').forEach(function(chip) {
+        chip.addEventListener('click', function() {
+          tinaInput.value = chip.dataset.prompt || chip.textContent;
+          sendTina();
+        });
+      });
+
+      document.getElementById('tinaSend').addEventListener('click', sendTina);
+      tinaInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTina(); }
+      });
+
+      document.getElementById('tinaNewChat').addEventListener('click', function() {
+        if (state.activeRevisionTodoId) exitRevisionChat();
+        tinaMessages.innerHTML = '';
+        document.getElementById('tinaWelcome').style.display = '';
+        var chipLabel = document.querySelector('.chip-label');
+        var chips = document.querySelector('.chips');
+        if (chipLabel) chipLabel.style.display = '';
+        if (chips) chips.style.display = '';
+        tinaInput.value = '';
+        toast('已开始新对话');
+      });
+      document.getElementById('tinaRevisionExit').addEventListener('click', exitRevisionChat);
+      document.getElementById('tinaHistory').addEventListener('click', openThreadHistoryModal);
+      document.getElementById('tinaSettings').addEventListener('click', function() { toast('Soul设置（Demo）'); });
+      document.getElementById('tinaAttach').addEventListener('click', function() { toast('附件上传（Demo）'); });
+
+      /* 支持 URL hash 打开定时任务 Tab：#cron */
+      if (location.hash === '#cron') {
+        document.querySelector('.page-tab[data-tab="cron"]').click();
+      }
+
+      /* Demo：待办 #3 模拟 AI 生成完成 */
+      setTimeout(function() {
+        var card = document.querySelector('.todo-card[data-id="3"]');
+        if (!card) return;
+        var pending = card.querySelector('.todo-ai-result.is-pending');
+        if (!pending) return;
+        var cap = evaluateAICapability('基金选品 Agent-Mona', '选品');
+        pending.remove();
+        attachAIResult(card, cap.label, cap.resultType);
+        var descEl = card.querySelector('.todo-desc');
+        if (descEl) descEl.textContent = '个人助手已生成初步结果，请查看确认';
+      }, 3200);
+
+      /* 初始化 Demo 待办 #1 的渲染结果与历史对话 */
+      (function initDemoAIResults() {
+        var card1 = document.querySelector('.todo-card[data-id="1"]');
+        if (card1) {
+          var htmlV1 = buildAIResultHtml('minutes', '做会议纪要');
+          seedTodoThread('1', [
+            {
+              role: 'user',
+              text: '每周四提醒我整理会议纪要',
+              at: Date.now() - 86400000
+            },
+            {
+              role: 'bot',
+              text: '已创建定时任务「做会议纪要」，并生成本期纪要初稿。如需调整请告诉我。',
+              at: Date.now() - 86300000
+            },
+            {
+              role: 'ai-result',
+              html: htmlV1,
+              revision: 1,
+              at: Date.now() - 86200000
+            },
+            {
+              role: 'user',
+              text: '把联调进度改成 90%，补充 FinFAM 接口延期风险',
+              at: Date.now() - 3600000
+            },
+            {
+              role: 'bot',
+              text: '已按你的要求更新进度与补充项，现为第 2 版。',
+              at: Date.now() - 3500000
+            }
+          ], 1);
+          var htmlV2 = applyResultRevision(
+            '1',
+            '把联调进度改成 90%，补充 FinFAM 接口延期风险',
+            'minutes',
+            '做会议纪要'
+          );
+          state.todoThreads['1'].revision = 2;
+          state.todoThreads['1'].messages.push({
+            role: 'ai-result',
+            html: htmlV2,
+            revision: 2,
+            at: Date.now() - 3400000
+          });
+          state.aiResults['1'] = htmlV2;
+          mountAIResultPanel(card1, htmlV2);
+        }
+      })();
+    })();
+  </script>
+</body>
+</html>

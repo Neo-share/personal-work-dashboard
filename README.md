@@ -1,6 +1,6 @@
 # 个人驾驶舱
 
-个人定制的本地工作管理平台，以「工作项」为中心，按工作域管理开发、生活、学习等个人工作；开发域把 CodeLab 工作区内的 Git 仓库、协作联系人与上线节奏串在一起，数据保存在本机，不依赖云端服务。
+个人定制的本地工作管理平台，以「工作项」为中心，按工作域管理开发、生活、学习等个人工作；开发域把 CodeLab 工作区内的 Git 仓库、协作联系人与上线节奏串在一起，数据保存在本机。
 
 ## 能做什么
 
@@ -10,18 +10,17 @@
 - **关系图谱**：可视化工作项与仓库、人员、里程碑之间的关联
 - **对话助手**：通过自然语言跳转页面、筛选工作项、打开详情或扫描中心
 - **扫描中心**：对工作区执行 Git 扫描，更新仓库资产快照
+- **个人工作台**：待办、日程、定时任务与个人助手（详见产品需求文档）
 
 ## 技术栈
 
-- Monorepo：pnpm workspace（`client` / `server` / `shared`）
-- 前端：React + Vite + TypeScript + Ant Design + tRPC + TanStack Query
-- 后端：Node.js + Fastify + tRPC + SQLite + simple-git
-- 共享类型：`shared/`
+见 **[agents/project-baseline.md](./agents/project-baseline.md)**（唯一来源）。
 
 ## 启动
 
+见 **[`.cursor/skills/start-project/SKILL.md`](./.cursor/skills/start-project/SKILL.md)** 或：
+
 ```bash
-cd project-manager
 pnpm install
 pnpm dev
 ```
@@ -31,17 +30,15 @@ pnpm dev
 
 ## 目录结构
 
-```text
-project-manager/
-├── client/      # React 前端
-├── server/      # Fastify + tRPC + SQLite
-├── shared/      # 前后端共享类型
-└── README.md
-```
+见 **[agents/project-baseline.md §目录映射](./agents/project-baseline.md)**。
 
-## 更多文档
+## 文档
 
-- [产品设计说明书](./PROJECT_MANAGER_PRODUCT_DESIGN.md)
-- [平台技术方案](./PROJECT_MANAGER_PLATFORM_PLAN.md)
-- [Monorepo 指南](./AGENTS.md) · [架构说明](./ARCHITECTURE.md)
-- [实现状态对照](./IMPLEMENTATION_STATUS.md)（计划书 vs 代码，供开发参考）
+权威映射见 **[AGENTS.md §文档映射](./AGENTS.md#2-文档映射ssot)**。
+
+| 读者 | 入口 |
+|------|------|
+| AI Agent | [AGENTS.md](./AGENTS.md) |
+| 人类开发者 | 本文件 + [ARCHITECTURE.md](./ARCHITECTURE.md) |
+| 实现进度 | [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md) |
+| 产品规划 | [产品设计](./PROJECT_MANAGER_PRODUCT_DESIGN.md) · [技术方案](./PROJECT_MANAGER_PLATFORM_PLAN.md) |

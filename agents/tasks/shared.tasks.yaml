@@ -1,0 +1,45 @@
+schema_version: 1
+kind: subdomain_tasks
+domain: shared
+scope: shared
+paths:
+  - shared/
+tasks:
+  - id: shared-task-001-type-change
+    title: 修改共享领域类型
+    owner_scope: shared
+    risk_level: high
+    inputs:
+      - shared/AGENTS.md
+      - shared/src/types.ts
+    outputs:
+      - shared/src/types.ts
+    verify:
+      - "pnpm agent:scope:shared"
+      - "pnpm --filter @project-manager/shared build"
+      - "pnpm agent:gate"
+    rollback:
+      - "git checkout -- shared/"
+    approval:
+      required: true
+      reason: "共享类型是前后端契约，需要同步调用方"
+  - id: shared-task-002-navigation-action
+    title: 新增对话导航 action
+    owner_scope: shared
+    risk_level: high
+    inputs:
+      - shared/src/types.ts
+      - server/src/services/assistant-service.ts
+      - client/src/hooks/useNavigationAction.ts
+    outputs:
+      - shared/src/types.ts
+      - server/src/services/assistant-service.ts
+      - client/src/hooks/useNavigationAction.ts
+    verify:
+      - "pnpm agent:scope:all"
+      - "pnpm agent:gate"
+    rollback:
+      - "git checkout -- shared/ server/src/services/assistant-service.ts client/src/hooks/useNavigationAction.ts"
+    approval:
+      required: true
+      reason: "导航 action 横跨 shared/server/client"

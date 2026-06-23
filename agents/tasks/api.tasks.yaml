@@ -1,0 +1,46 @@
+schema_version: 1
+kind: subdomain_tasks
+domain: api
+scope: api
+paths:
+  - server/
+tasks:
+  - id: api-task-001-trpc-procedure
+    title: 新增或修改 tRPC procedure
+    owner_scope: api
+    risk_level: high
+    inputs:
+      - server/AGENTS.md
+      - server/src/trpc/router.ts
+      - server/src/services/
+    outputs:
+      - server/src/trpc/router.ts
+      - server/src/services/
+    verify:
+      - "pnpm agent:scope:api"
+      - "pnpm --filter @project-manager/server build"
+      - "pnpm agent:gate"
+    rollback:
+      - "git checkout -- server/"
+    approval:
+      required: true
+      reason: "API 契约变更会影响前端类型和调用方"
+  - id: api-task-002-schema-change
+    title: 修改 SQLite schema 或数据映射
+    owner_scope: api
+    risk_level: high
+    inputs:
+      - server/src/db/schema.ts
+      - server/src/services/
+      - shared/src/types.ts
+    outputs:
+      - server/src/db/schema.ts
+      - server/src/services/
+    verify:
+      - "pnpm agent:scope:api"
+      - "pnpm agent:gate"
+    rollback:
+      - "git checkout -- server/"
+    approval:
+      required: true
+      reason: "本项目无 migration，schema 改动需要人工确认 DB 处理"

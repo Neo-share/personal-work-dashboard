@@ -2,7 +2,7 @@
 
 > **读者优先级：AI Agent > 人类开发者**
 >
-> 修改 `client/` 时先读本文件，架构细节见同目录 `ARCHITECTURE.md`。Monorepo 总览见根目录 `../AGENTS.md`。
+> 修改 `client/` 时先读本文件，架构细节见同目录 `ARCHITECTURE.md`。Monorepo 总览与 SSOT 映射见根目录 [../AGENTS.md](../AGENTS.md#2-文档映射ssot)。
 
 ---
 
@@ -22,7 +22,9 @@
 | 修改导航/布局壳 | `src/App.tsx` | `src/styles/global.css` |
 | 全局样式/主题 | `src/styles/global.css` | — |
 | 列表/表格复用 | `src/components/RequirementList.tsx` | 各 Page |
-| 对话 UI | `src/components/ChatPanel.tsx` | — |
+| 开发助手 UI | `src/components/ChatPanel.tsx` | — |
+| 个人工作台 | `src/pages/PersonalWorkbenchPage.tsx` | `src/components/personal-workbench/*` |
+| 个人助手 UI | `src/components/personal-workbench/PersonalAssistantPanel.tsx` | `src/pages/PersonalWorkbenchPage.tsx` |
 | 助手导航执行 | `src/hooks/useNavigationAction.ts` | — |
 | 中文标签 | `src/utils/labels.ts` | `../shared/src/types.ts` |
 | tRPC 客户端 | `src/lib/trpc.ts` | `src/main.tsx` |
@@ -44,8 +46,8 @@ client/
     ├── main.tsx              bootstrap + Provider 栈
     ├── App.tsx               路由 + 导航 + ChatPanel 挂载
     ├── lib/trpc.ts           createTRPCReact<AppRouter>
-    ├── pages/                7 个页面（default export）
-    ├── components/           ChatPanel, RequirementList
+    ├── pages/                9 个页面（default export）
+    ├── components/           ChatPanel, RequirementList, personal-workbench/*
     ├── hooks/                useNavigationAction
     ├── utils/labels.ts       中文标签 helper
     └── styles/global.css     全局 CSS 变量与布局 class
@@ -57,13 +59,15 @@ client/
 
 | 路径 | 页面 | 主要 tRPC / API |
 |------|------|-----------------|
-| `/` | `MyWorkbenchPage` | `workbench.summary` |
+| `/` | `PersonalWorkbenchPage` | `personalWorkbench.summary`, `todos.*`, `schedule.*`, `recurringTasks.*`, `assistant.*` |
+| `/dev-dashboard` | `MyWorkbenchPage` | `workbench.summary` |
 | `/requirements` | `RequirementsPage` | `requirements.list`, `create`；`?riskOnly=1`, `?keyword=` |
 | `/requirements/:id` | `RequirementDetailPage` | `requirements.detail` + 关联 mutations |
+| `/weekly-report` | `WeeklyReportPage` | `weeklyReport.generate` |
 | `/graph` | `GraphPage` | `graph.get`；`?requirementId=` |
-| `/repositories` | `RepositoriesPage` | `repositories.list`, `requirements` |
-| `/people` | `PeoplePage` | `people.list`, `create` |
-| `/scan` | `ScanCenterPage` | `repositories.scanWorkspace`, `latestScan`, `settings.getWorkspacePath` |
+| `/repositories` | `RepositoriesPage` | `repositories.list`, `branches`, `setBranchNote`, `syncBranches`, `openInCursor` |
+| `/people` | `PeoplePage` | `people.list`, `create`, `update`, `delete` |
+| `/scan` | `ScanCenterPage` | `settings.get/set*`, `repositories.scanWorkspace`, `latestScan` |
 
 全局：`ChatPanel` → `POST /api/chat`（SSE，非 tRPC）
 
@@ -84,14 +88,7 @@ mutation 成功 → trpc.useUtils() → utils.xxx.invalidate()
 
 ## 6. 编码约束
 
-硬性约束见 **`.cursor/rules/client.mdc`** 与 **`.cursor/rules/project-core.mdc`**。
-
-要点：
-
-- React 函数组件；页面 **default export**
-- Ant Design 5 + `global.css` 布局 class（`.app-shell`, `.content-card`, `.panel-grid` 等）
-- mutation 后 invalidate 相关 query
-- UI 中文；枚举用 `shared` 常量或 `utils/labels.ts`
+硬性约束见 **`.cursor/rules/client.mdc`**、**`.cursor/rules/project-core.mdc`** 与 **[agents/engineering-rules.md](../agents/engineering-rules.md)**（唯一来源，本处不重复）。
 
 ---
 
@@ -100,8 +97,8 @@ mutation 成功 → trpc.useUtils() → utils.xxx.invalidate()
 | 陷阱 | 说明 | 处理 |
 |------|------|------|
 | **AppRouter 跨包引用** | `lib/trpc.ts` 引 server 源码类型 | 改 server router 后 client 类型自动跟随；勿从 shared 导出 AppRouter |
-| **requirements.update 无 UI** | 后端 API 已有 | 做编辑表单时接 `trpc.requirements.update` |
-| **settings.setWorkspacePath 无 UI** | 扫描页仅 mutation 传参 | 需持久化路径时接 `settings.setWorkspacePath` |
+| **双助手并存** | 开发域 `ChatPanel` 与个人域 `PersonalAssistantPanel` 走同一 `/api/chat` | 区分 `context=dev/personal`，避免串用数据流 |
+| **个人域刷新依赖 refresh 指令** | 个人助手通过 SSE `refresh` 驱动 query 失效 | 新增助手能力时同步更新 refresh 目标与 invalidate |
 | **对话非 LLM** | ChatPanel 展示规则引擎回复 | 勿在前端接 OpenAI，除非用户明确要求 |
 | **生产部署** | `pnpm build` → `client/dist/` | 需静态服务器托管；API 走反向代理 |
 
@@ -132,16 +129,17 @@ mutation 成功 → trpc.useUtils() → utils.xxx.invalidate()
 2. 改 `RequirementDetailPage` / `RequirementsPage` / `RequirementList`
 3. `pnpm build`
 
+### 8.5 新增个人工作台能力
+
+1. 优先落在 `src/components/personal-workbench/*`
+2. 接入 `trpc.todos/schedule/recurringTasks/personalWorkbench` 对应 procedure
+3. mutation 成功后同步 invalidate `todos.list`、`schedule.listDay`、`recurringTasks.list`、`personalWorkbench.summary`
+
 ---
 
 ## 9. 本地开发
 
-```bash
-# 在 monorepo 根目录
-pnpm dev          # 推荐：同时启动 shared watch + server + client
-pnpm --filter @project-manager/client dev   # 仅前端（需 server 已运行）
-pnpm --filter @project-manager/client build
-```
+见 **[`.cursor/skills/start-project/SKILL.md`](../.cursor/skills/start-project/SKILL.md)** 与 **[agents/commands-checklist.md](../agents/commands-checklist.md)**。
 
 - 开发地址：http://localhost:5175
 - API 代理：`/trpc`、`/health`、`/api` → http://localhost:3100（`vite.config.ts`）

@@ -1,0 +1,15 @@
+---
+description: Worktree 多 Agent 目录锁定
+alwaysApply: true
+---
+
+# Worktree Agent 感知规则
+
+| 路径特征 | 角色 | 允许修改 | 禁止修改 |
+|---|---|---|---|
+| 含 `-api` | 后端 Agent | `server/**`, `agents/**`, `ops/**` | `client/**`, `shared/**` |
+| 含 `-web` | 前端 Agent | `client/**`, `agents/**`, `ops/**` | `server/**`, `shared/**` |
+| 含 `-shared` | 契约 Agent | `shared/**`, `agents/**`, `ops/**` | `client/**`, `server/**` |
+| 主 checkout | 通用 Agent | 按 S2/G.2 确认范围 | 未确认路径 |
+
+越界写入须拒绝，并提示应由对应窗口或对应 scope 处理。

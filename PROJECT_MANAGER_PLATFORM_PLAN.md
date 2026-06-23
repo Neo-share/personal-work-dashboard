@@ -1,8 +1,8 @@
 # 项目管理平台方案
 
-关联产品设计说明书：[项目管理平台产品设计说明书](./PROJECT_MANAGER_PRODUCT_DESIGN.md)
+> **SSOT**：分阶段技术方案与实施任务的**唯一来源**。实现进度见 [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)，勿在本文件写实现状态。
 
-> **实现进度**：见 [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)（计划书 vs 当前代码对照）。
+关联产品设计说明书：[项目管理平台产品设计说明书](./PROJECT_MANAGER_PRODUCT_DESIGN.md)
 
 ## 背景判断
 

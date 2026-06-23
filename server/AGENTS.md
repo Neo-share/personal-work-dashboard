@@ -2,7 +2,7 @@
 
 > **读者优先级：AI Agent > 人类开发者**
 >
-> 修改 `server/` 时先读本文件，架构细节见同目录 `ARCHITECTURE.md`。Monorepo 总览见根目录 `../AGENTS.md`。
+> 修改 `server/` 时先读本文件，架构细节见同目录 `ARCHITECTURE.md`。Monorepo 总览与 SSOT 映射见根目录 [../AGENTS.md](../AGENTS.md#2-文档映射ssot)。
 
 ---
 
@@ -25,7 +25,9 @@
 | DB 连接与 settings KV | `src/db/index.ts` | — |
 | Git 扫描 | `src/scanner/workspace-scanner.ts` | `src/services/repository-service.ts` |
 | 关系图谱数据 | `src/services/graph-service.ts` | — |
-| 对话意图 | `src/services/assistant-service.ts` | `src/routes/chat.ts` |
+| 开发助手意图 | `src/services/assistant-service.ts` | `src/routes/chat.ts` |
+| 个人助手意图 | `src/services/personal-assistant-service.ts` | `src/routes/chat.ts` |
+| 待办/日程/定时任务 | `src/services/todo-service.ts` / `schedule-service.ts` / `recurring-task-service.ts` | `src/trpc/router.ts` |
 | HTTP 入口/插件注册 | `src/index.ts` | — |
 | SSE 路由 | `src/routes/chat.ts` | — |
 
@@ -51,7 +53,16 @@ server/
     │   ├── people-service.ts
     │   ├── association-service.ts
     │   ├── graph-service.ts
-    │   └── assistant-service.ts
+    │   ├── weekly-report-service.ts
+    │   ├── todo-service.ts
+    │   ├── schedule-service.ts
+    │   ├── recurring-task-service.ts
+    │   ├── ai-result-service.ts
+    │   ├── assistant-session-service.ts
+    │   ├── assistant-service.ts
+    │   ├── personal-assistant-service.ts
+    │   ├── cursor-service.ts
+    │   └── feishu-service.ts
     ├── scanner/
     │   └── workspace-scanner.ts
     └── db/
@@ -77,16 +88,23 @@ router (Zod 校验) → service (业务 + SQL) → 返回 shared 类型形状
 ## 5. tRPC 命名空间速查
 
 ```
-settings.getWorkspacePath | setWorkspacePath
+settings.getWorkspacePath | setWorkspacePath | getIgnoreDirs | setIgnoreDirs
 workbench.summary
-requirements.list | detail | create | update
+personalWorkbench.summary
+weeklyReport.generate
+requirements.list | detail | create | update | delete
 requirements.addRepository | removeRepository
-requirements.addPerson | removePerson
-requirements.addMilestone | removeMilestone
+requirements.addPerson | removePerson | addMilestone | removeMilestone | updateMilestone
 requirements.addLink | removeLink
 graph.get({ requirementId? })
-repositories.list | detail | requirements | scanWorkspace | latestScan
-people.list | create
+repositories.list | detail | requirements | branches | setBranchNote | deleteBranch | syncBranches
+repositories.scanWorkspace | latestScan | openInCursor
+people.list | create | update | delete
+todos.list | detail | create | update | complete | restore | cancel | delete
+todos.aiResults | confirmAiResult | reviseAiResult
+schedule.listDay | detail | createLocal | delete | sources | setSourceEnabled
+recurringTasks.list | create | update | toggle | delete | materializeNow
+assistant.sessions | messages | createSession | appendMessage | resolveIntent
 ```
 
 完整 Zod input 见 `src/trpc/router.ts`；契约详述见 `ARCHITECTURE.md § API`。
@@ -105,24 +123,24 @@ people.list | create
 | Service | 核心函数 |
 |---------|----------|
 | `requirement-service` | `listRequirements`, `getRequirementDetail`, `createRequirement`, `updateRequirement`, `getWorkbenchSummary` |
-| `repository-service` | `listRepositories`, `getRepositoryById`, `runWorkspaceScan`, `getLatestScanSnapshot` |
-| `people-service` | `listPeople`, `createPerson` |
+| `repository-service` | `listRepositoriesLive`, `listRepositoryBranches`, `setRepositoryBranchNote`, `syncRepositoryBranches`, `runWorkspaceScan` |
+| `cursor-service` | `openRepositoryInCursor` |
+| `people-service` | `listPeople`, `createPerson`, `updatePerson`, `deletePerson` |
 | `association-service` | `add/remove*` 系列, `getRepositoryRequirements`, `touchRequirement` |
 | `graph-service` | `getRequirementGraph` |
-| `assistant-service` | `resolveAssistantIntent` |
+| `weekly-report-service` | `generateWeeklyReport` |
+| `todo-service` | `listTodos`, `createTodo`, `confirmAiResult`, `getPersonalWorkbenchSummary` |
+| `schedule-service` | `listDaySchedule`, `createLocalSchedule`, `setCalendarSourceEnabled` |
+| `recurring-task-service` | `createRecurringTask`, `materializeRecurringTask` |
+| `assistant-session-service` | `listAssistantSessions`, `getAssistantMessages`, `appendAssistantMessage` |
+| `assistant-service` | `resolveAssistantIntent`（开发域） |
+| `personal-assistant-service` | `resolvePersonalAssistantIntent`（个人工作台） |
 
 ---
 
 ## 7. 编码约束
 
-硬性约束见 **`.cursor/rules/server.mdc`** 与 **`.cursor/rules/project-core.mdc`**。
-
-要点：
-
-- ESM；相对 import **带 `.js` 后缀**
-- JSON 列：`JSON.stringify` / `JSON.parse`
-- `is_dirty`：INTEGER ↔ boolean
-- 助手为**规则引擎**，非 LLM
+硬性约束见 **`.cursor/rules/server.mdc`**、**`.cursor/rules/project-core.mdc`** 与 **[agents/engineering-rules.md](../agents/engineering-rules.md)**（唯一来源，本处不重复）。
 
 ---
 
@@ -164,7 +182,15 @@ people.list | create
 - `action.type` 须为 `NavigationActionType`（`shared`）
 - 同步改 client `useNavigationAction.ts`
 
-### 9.4 修改扫描逻辑
+### 9.4 新增个人助手意图
+
+编辑 `src/services/personal-assistant-service.ts`：
+
+- 返回 `{ reply, refresh?, modifyTodoId?, modifyVersion? }`
+- 如新增刷新目标，同步更新 `shared` 的 `PersonalAssistantRefresh`
+- 同步改 `client/src/components/personal-workbench/PersonalAssistantPanel.tsx` 的事件消费逻辑
+
+### 9.5 修改扫描逻辑
 
 1. `src/scanner/workspace-scanner.ts`
 2. 必要时改 `repository-service.runWorkspaceScan`
@@ -174,13 +200,7 @@ people.list | create
 
 ## 10. 本地开发
 
-```bash
-# 在 monorepo 根目录
-pnpm dev          # 推荐：shared watch + server + client
-pnpm --filter @project-manager/server dev   # 仅后端 tsx watch
-pnpm --filter @project-manager/server build
-pnpm start        # node dist/index.js（需先 build）
-```
+见 **[`.cursor/skills/start-project/SKILL.md`](../.cursor/skills/start-project/SKILL.md)** 与 **[agents/commands-checklist.md](../agents/commands-checklist.md)**。
 
 - 默认端口：**3100**（`process.env.PORT` 可覆盖）
 - 数据库：`server/data/project-manager.db`

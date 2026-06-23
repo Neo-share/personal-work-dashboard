@@ -1,0 +1,43 @@
+schema_version: 1
+kind: subdomain_tasks
+domain: web
+scope: web
+paths:
+  - client/
+tasks:
+  - id: web-task-001-page-change
+    title: 修改前端页面或组件
+    owner_scope: web
+    risk_level: medium
+    inputs:
+      - client/AGENTS.md
+      - client/ARCHITECTURE.md
+      - client/src/
+    outputs:
+      - client/src/
+    verify:
+      - "pnpm agent:scope:web"
+      - "pnpm --filter @project-manager/client build"
+      - "pnpm agent:gate"
+    rollback:
+      - "git checkout -- client/"
+    approval:
+      required: true
+      reason: "前端改动可能影响用户可见流程"
+  - id: web-task-002-trpc-consumption
+    title: 接入或调整 tRPC 消费
+    owner_scope: web
+    risk_level: high
+    inputs:
+      - client/src/lib/trpc.ts
+      - server/src/trpc/router.ts
+    outputs:
+      - client/src/
+    verify:
+      - "pnpm agent:scope:web"
+      - "pnpm agent:gate"
+    rollback:
+      - "git checkout -- client/"
+    approval:
+      required: true
+      reason: "tRPC 消费变更需确认后端契约稳定"

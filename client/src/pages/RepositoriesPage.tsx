@@ -75,10 +75,26 @@ function RepositoryBranchesPanel({
   onSyncBranch: (repository: Repository, branch: string) => void;
   syncingKey: string | null;
 }) {
+  const utils = trpc.useUtils();
   const branchesQuery = trpc.repositories.branches.useQuery(
     { id: repository.id },
-    { enabled },
+    { enabled, refetchOnWindowFocus: true },
   );
+
+  useEffect(() => {
+    if (!enabled || !branchesQuery.data) {
+      return;
+    }
+    if (branchesQuery.data.currentBranch !== repository.currentBranch) {
+      void utils.repositories.list.invalidate();
+    }
+  }, [
+    branchesQuery.data,
+    enabled,
+    repository.currentBranch,
+    repository.id,
+    utils.repositories.list,
+  ]);
 
   if (branchesQuery.isLoading) {
     return <Spin size="small" />;
@@ -188,7 +204,9 @@ export default function RepositoriesPage() {
   const [openingKey, setOpeningKey] = useState<string | null>(null);
   const [deletingBranchKey, setDeletingBranchKey] = useState<string | null>(null);
   const [syncingKey, setSyncingKey] = useState<string | null>(null);
-  const listQuery = trpc.repositories.list.useQuery();
+  const listQuery = trpc.repositories.list.useQuery(undefined, {
+    refetchOnWindowFocus: true,
+  });
 
   const openInCursorMutation = trpc.repositories.openInCursor.useMutation({
     onSuccess: async (result, variables) => {

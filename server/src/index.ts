@@ -4,6 +4,7 @@ import Fastify from 'fastify';
 import { getDb } from './db/index.js';
 import { loadServerEnv } from './load-env.js';
 import { registerChatRoutes } from './routes/chat.js';
+import { startRecurringTaskScheduler } from './services/recurring-task-scheduler.js';
 import { createContext } from './trpc/context.js';
 import { appRouter } from './trpc/router.js';
 
@@ -38,6 +39,7 @@ async function main() {
   server.get('/health', async () => ({ ok: true }));
 
   await server.listen({ port: PORT, host: '0.0.0.0' });
+  startRecurringTaskScheduler();
   console.log(`Project manager API running at http://localhost:${PORT}`);
 }
 
