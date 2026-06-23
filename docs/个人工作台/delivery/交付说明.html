@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>个人 AI 助手工作台 — 实现交付说明</title>
+  <link rel="stylesheet" href="_shared.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="doc-header">
+      <h1>个人 AI 助手工作台 · 实现交付说明</h1>
+      <p class="meta">向外交付物 · 实现摘要（考题范围 + 考题外增强）· 核对日期 2026-06-23</p>
+      <nav class="doc-nav">
+        <a class="is-current" href="交付说明.html">交付说明</a>
+        <a href="架构设计文档.html">架构设计</a>
+        <a href="测试用例文档.html">测试用例</a>
+        <a href="测试报告.html">测试报告</a>
+      </nav>
+    </header>
+
+    <section>
+      <h2>文档索引</h2>
+      <table>
+        <tr><th>文档</th><th>用途</th></tr>
+        <tr><td>个人工作台.md</td><td>考题产品需求原文</td></tr>
+        <tr><td>个人工作台-功能点.md</td><td>验收明细（L4 功能点）</td></tr>
+        <tr><td>个人工作台-技术功能点.md</td><td>技术对照（模块 / API / 文件）</td></tr>
+        <tr><td><a href="架构设计文档.html">架构设计文档.html</a></td><td>系统与五层助手架构说明</td></tr>
+        <tr><td><a href="测试用例文档.html">测试用例文档.html</a></td><td>108 条自动化用例清单</td></tr>
+        <tr><td><a href="测试报告.html">测试报告.html</a></td><td>执行结果与代码覆盖率报告</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>1. 产品概述</h2>
+      <p>个人 AI 助手工作台是本地 Web 应用的首页（<code>/</code>），在同一页面管理 <strong>待办</strong>、<strong>日程</strong>、<strong>定时任务</strong>，并通过右侧 <strong>个人助手</strong> 用自然语言创建内容、生成 AI 初步结果、多轮修改与历史回溯。</p>
+      <p><strong>能力分层</strong>：定时任务（调度）→ 物化待办（工作单元）→ 个人助手 AI（待办层）；定时任务 Tab <strong>不直接调用大模型</strong>。</p>
+    </section>
+
+    <section>
+      <h2>2. 访问与运行</h2>
+      <table>
+        <tr><th>项</th><th>说明</th></tr>
+        <tr><td>前端</td><td>http://localhost:5175（首页即个人工作台）</td></tr>
+        <tr><td>后端</td><td>http://localhost:3100</td></tr>
+        <tr><td>启动</td><td>仓库根目录 <code>pnpm install</code> → <code>pnpm dev</code></td></tr>
+        <tr><td>数据</td><td>SQLite 持久化（<code>server/data/project-manager.db</code>）</td></tr>
+        <tr><td>AI 生成</td><td>配置 <code>server/.env</code> 中 <code>LLM_API_KEY</code>；未配置时自动降级为规则模板</td></tr>
+        <tr><td>LLM 降本（可选）</td><td><code>LLM_MODEL_TITLE</code> / <code>LLM_MODEL_GENERATE</code> 分用途选模型；见 §4.2</td></tr>
+        <tr><td>MCP（可选）</td><td>配置飞书应用凭证后启用文档上下文；见 §9</td></tr>
+      </table>
+      <p>开发域（需求列表、仓库、扫描等）从工作台顶栏 <strong>开发域</strong> Tab 进入（<code>/dev-dashboard</code>）；开发域内顶栏 <strong>个人工作台</strong> 可返回首页。</p>
+    </section>
+
+    <section>
+      <h2>3. 考题范围交付（已全部实现）</h2>
+      <p>依据个人工作台.md §1.2–1.3 范围说明，以下能力均已上线：</p>
+      <table>
+        <tr><th>模块</th><th>交付要点</th></tr>
+        <tr><td><strong>页面框架</strong></td><td>三 Tab（日程与事项 / 定时任务 / 开发域）；待办 36% + 日程 64% + 助手 340px；统计胶囊实时联动；1100 / 900 / 640 响应式</td></tr>
+        <tr><td><strong>待办管理</strong></td><td>四态筛选、手动添加、完成归档、逾期标记、AI 入口条与面板、历史已完成区</td></tr>
+        <tr><td><strong>日程管理</strong></td><td>0–24h 时间轴、小月历、飞书/钉钉/Outlook/本地四渠道开关、15 分钟去重、多来源标签</td></tr>
+        <tr><td><strong>定时任务</strong></td><td>每天/每周/每月规则；到期物化待办（日滚动 5 条）；后台调度器</td></tr>
+        <tr><td><strong>个人助手</strong></td><td>自然语言三分流（待办 / 日程 / 定时任务）；7 类能力判定；11 条考核话术自动化回归</td></tr>
+        <tr><td><strong>AI 结果</strong></td><td>异步生成与轮询、全屏预览、多轮修改、历史对话、确认后自动完成待办</td></tr>
+        <tr><td><strong>交互与非功能</strong></td><td>弹窗 CRUD、Soul 设置、边界提示；数据落库（超出 Demo「内存即可」基线）</td></tr>
+      </table>
+      <p><strong>考题 Demo 约定</strong>：外部日历 OAuth <strong>允许模拟</strong>——当前以种子数据 + 渠道开关演示，满足产品文档要求。</p>
+    </section>
+
+    <section>
+      <h2>4. 考题范围外增强（已实现）</h2>
+      <p>在考题必交项之外，额外交付了以下能力：</p>
+      <table>
+        <tr><th>增强项</th><th>说明</th></tr>
+        <tr><td><strong>SQLite 持久化</strong></td><td>待办、日程、定时任务、助手会话、AI 版本均落库，重启不丢数据</td></tr>
+        <tr><td><strong>Soul 偏好持久化</strong></td><td>语气与自定义说明写入 settings，影响生成结果</td></tr>
+        <tr><td><strong>LLM 生成与修订</strong></td><td><code>retrieveForTodo</code> → LLM 生成/修订 HTML；失败或无 Key 时降级规则模板</td></tr>
+        <tr><td><strong>待办知识库 RAG（E1–E3）</strong></td><td>规则检索（日程窗、历史结果、同类型片段）注入生成与多轮修改上下文</td></tr>
+        <tr><td><strong>五层助手架构</strong></td><td>Intent 路由、Tool 注册、护栏、编排器、指标；SSE 对话与 refresh 契约</td></tr>
+        <tr><td><strong>四层护栏增强（F3+）</strong></td><td>输入归一化、扩展提示注入与敏感动作检测；拦截经 SSE <code>blocked</code> 下发；详见 §4.1</td></tr>
+        <tr><td><strong>飞书 MCP 外部片段（F4）</strong></td><td>可选：消息含飞书文档 URL 时经 HTTP 桥接注入 <code>externalSnippets</code>；见 §9</td></tr>
+        <tr><td><strong>开发域并存</strong></td><td>同一 Monorepo 内保留需求/仓库/扫描等开发驾驶舱（<code>/dev-dashboard</code> 起）</td></tr>
+        <tr><td><strong>性能与 LLM 成本优化</strong></td><td>分用途模型、RAG Token 控制、修订缓存、指标落库与观测弹窗；详见 §4.2</td></tr>
+      </table>
+      <p>RAG 在考题中标注为「后续迭代」，上述 E1–E3 为提前落地的内部闭环能力。</p>
+
+      <h3>4.1 个人助手四层护栏（安全增强）</h3>
+      <p><strong>定位</strong>：个人助手（<code>/api/chat?context=personal</code>）在规则编排链路上的<strong>确定性代码护栏</strong>，不依赖大模型或提示词判断；降低误触发、越权执行与提示注入风险。规则细则见 <code>TODO/guardrail-enhancement.md</code>。</p>
+      <p><strong>与考题关系</strong>：考题 TL1-08 要求边界提示与 <code>blocked</code> 交互；F3 基础护栏已满足考题。本节为 <strong>2026-06 增强</strong>：扩展注入模式表、输入归一化、高风险指令输入层直拦。</p>
+
+      <h3>四层检查与失败动作</h3>
+      <table>
+        <tr><th>层</th><th>检查项</th><th>失败动作</th></tr>
+        <tr><td><strong>输入</strong></td><td>空消息、超长（2000 字）、提示注入、高风险敏感动作</td><td>SSE <code>blocked</code>，不写库</td></tr>
+        <tr><td><strong>意图</strong></td><td>低置信度 + 敏感动作词</td><td>SSE <code>blocked</code>，不自动执行副作用工具</td></tr>
+        <tr><td><strong>工具</strong></td><td>工具白名单、Zod 参数、<code>modifyTodoId</code> 归属</td><td>SSE <code>blocked</code> 或拒绝调用</td></tr>
+        <tr><td><strong>输出</strong></td><td>回复含内部文件路径</td><td>脱敏为 <code>[路径已隐藏]</code> 后下发</td></tr>
+      </table>
+
+      <h3>2026-06 增强要点</h3>
+      <table>
+        <tr><th>项</th><th>说明</th></tr>
+        <tr><td><strong>输入归一化</strong></td><td><code>normalizeGuardrailText</code>：NFKC 折叠、零宽字符处理、空白折叠（参考 OWASP LLM01 Prompt Injection Prevention Cheat Sheet）</td></tr>
+        <tr><td><strong>注入模式扩展</strong></td><td>约 24 条正则，覆盖指令覆盖、系统提示词提取、角色劫持/越狱、模板分隔符（<code>[INST]</code>、<code>&lt;|im_start|&gt;</code> 等）、XSS 片段；<strong>中英双语</strong></td></tr>
+        <tr><td><strong>敏感动作扩展</strong></td><td>批量删除/清空待办·日程·定时任务、<code>DROP TABLE</code>、<code>delete all</code>、<code>rm -rf</code> 等；<strong>输入层直接拦截</strong>（<code>code: sensitive_action</code>），不依赖意图置信度</td></tr>
+        <tr><td><strong>可观测</strong></td><td>拦截写入 <code>MetricsLedger</code>：<code>pw.guardrail.blocked { layer, code }</code></td></tr>
+      </table>
+
+      <h3>前端可见 blocked 码（摘要）</h3>
+      <table>
+        <tr><th>code</th><th>典型场景</th></tr>
+        <tr><td><code>empty_message</code> / <code>input_too_long</code></td><td>空消息、超长输入</td></tr>
+        <tr><td><code>prompt_injection</code></td><td>忽略指令、越狱、泄露提示词等注入话术</td></tr>
+        <tr><td><code>sensitive_action</code></td><td>「删除所有待办」、SQL 破坏性语句等</td></tr>
+        <tr><td><code>sensitive_action_low_confidence</code></td><td>低置信度意图 + 敏感动作词</td></tr>
+        <tr><td><code>invalid_modify_todo_id</code></td><td>伪造或无效的 AI 修改待办 ID</td></tr>
+      </table>
+
+      <h3>自动化验收</h3>
+      <p><code>guardrail-engine.test.ts</code> 13 条 + <code>chat.integration.test.ts</code> 9 条护栏 HTTP 集成</p>
+      <table>
+        <tr><th>编号</th><th>场景</th><th>预期</th></tr>
+        <tr><td>G1</td><td>超长输入</td><td>输入层 <code>blocked</code></td></tr>
+        <tr><td>G2</td><td>英文/中文注入、分隔符、开发者模式、零宽字符绕过</td><td>输入层 <code>blocked</code></td></tr>
+        <tr><td>G3 / G3b</td><td>「删除所有待办」</td><td>意图层或输入层拒绝</td></tr>
+        <tr><td>G4</td><td>伪造 <code>modifyTodoId</code></td><td>工具层拒绝</td></tr>
+        <tr><td>G5</td><td>回复含 <code>server/data/</code></td><td>输出层脱敏</td></tr>
+      </table>
+      <p><strong>相关实现</strong>：<code>server/src/assistant/guardrail-engine.ts</code> · <code>personal-orchestrator.ts</code> · <code>routes/chat.ts</code> · 契约 ARCHITECTURE.md §3.3</p>
+      <p><strong>未纳入本次增强（规划项）</strong>：API Key / token 输出脱敏、拦截记录落 SQLite 复盘——见 <code>TODO/guardrail-enhancement.md</code> §6</p>
+
+      <h3>4.2 性能与 LLM 成本优化（2026-06 增强）</h3>
+      <p><strong>定位</strong>：在不影响考题功能的前提下，降低 LLM Token 消耗与调用次数、缩短多轮修订延迟，并提供运行时用量与链路时延观测。</p>
+      <p><strong>与考题关系</strong>：非考题必交；属于考题外工程增强。</p>
+
+      <h3>架构层降本（设计约束）</h3>
+      <table>
+        <tr><th>策略</th><th>说明</th></tr>
+        <tr><td><strong>规则意图路由</strong></td><td>待办 / 日程 / 定时任务 NL 三分流由 <code>IntentRouter</code> 规则判定，<strong>不调用大模型</strong></td></tr>
+        <tr><td><strong>定时任务 Tab</strong></td><td>调度与物化待办为确定性逻辑，<strong>不调用大模型</strong></td></tr>
+        <tr><td><strong>无 Key / 失败降级</strong></td><td>未配置 <code>LLM_API_KEY</code> 或 LLM 失败时，AI 生成与修订自动降级为规则模板</td></tr>
+      </table>
+
+      <h3>LLM 调用侧降本</h3>
+      <table>
+        <tr><th>策略</th><th>说明</th></tr>
+        <tr><td><strong>分用途模型</strong></td><td><code>LLM_MODEL_TITLE</code>（标题）与 <code>LLM_MODEL_GENERATE</code>（生成/修订）可分别配置；未设置时回退 <code>LLM_MODEL</code></td></tr>
+        <tr><td><strong>短句跳过标题 LLM</strong></td><td>用户输入 ≤20 字时直接截取为标题，记录 <code>pw.llm.skipped</code></td></tr>
+        <tr><td><strong>RAG 片段上限</strong></td><td><code>retrieveForTodo</code> 默认最多 5 条片段；单条 excerpt 硬上限 300 字符</td></tr>
+        <tr><td><strong>按类型 maxTokens</strong></td><td>生成/修订按 <code>AiResultType</code> 设 completion 上限（如 analysis/pick 512，audit/report 768，其余 1024）</td></tr>
+        <tr><td><strong>统一指标包装</strong></td><td><code>chatCompletionWithMetrics</code> 为 title / generate / revise 分桶记录 <code>pw.llm.latency_ms</code> 与 <code>pw.llm.tokens</code></td></tr>
+      </table>
+
+      <h3>修订会话缓存（跳过重复 LLM）</h3>
+      <table>
+        <tr><th>项</th><th>说明</th></tr>
+        <tr><td><strong>命中条件</strong></td><td>修改模式下：同一会话 + 同一待办 + 同一基线版本 + 归一化修订意见 + 相同 HTML 基线 + 稳定 RAG 片段集</td></tr>
+        <tr><td><strong>前端开关</strong></td><td>修改模式顶栏「使用缓存」Switch；偏好写入 <code>localStorage</code></td></tr>
+        <tr><td><strong>API 透传</strong></td><td><code>skipReviseCache: true</code> 经 SSE / tRPC 下发</td></tr>
+        <tr><td><strong>可识别</strong></td><td>provider 为 <code>llm-cache</code>；编排器回复附「命中修订缓存」</td></tr>
+      </table>
+
+      <h3>指标可观测</h3>
+      <table>
+        <tr><th>组件</th><th>说明</th></tr>
+        <tr><td><strong>MetricsLedger 双写</strong></td><td>内存环形缓冲 + SQLite <code>metric_events</code> 表；查询优先读库</td></tr>
+        <tr><td><strong>汇总 API</strong></td><td><code>assistant.metricsSummary</code> tRPC，聚合 LLM 调用、Token、跳过次数、时延</td></tr>
+        <tr><td><strong>观测弹窗</strong></td><td>个人助手「观测」按钮 → <code>AssistantMetricsModal</code>，按 caller 分桶展示</td></tr>
+        <tr><td><strong>关键指标</strong></td><td><code>pw.llm.*</code> · <code>pw.orchestrator.latency_ms</code> · <code>pw.ai.generate.latency_ms</code> · <code>pw.guardrail.blocked</code> · <code>pw.mcp.latency_ms</code></td></tr>
+      </table>
+      <p><strong>相关实现</strong>：<code>llm-config.ts</code> · <code>llm-metrics.ts</code> · <code>revise-session-cache.ts</code> · <code>metrics-summary.ts</code> · <code>AssistantMetricsModal.tsx</code></p>
+    </section>
+
+    <section>
+      <h2>5. 未实现 / 规划项（非考题必交）</h2>
+      <table>
+        <tr><th>项</th><th>状态</th><th>说明</th></tr>
+        <tr><td>飞书/钉钉/Outlook <strong>真实 OAuth</strong></td><td><span class="badge badge-warn">未做</span></td><td>考题允许模拟；真实同步待单独规划</td></tr>
+        <tr><td>RAG <strong>E4 本地 embedding</strong></td><td><span class="badge badge-warn">未做</span></td><td>可选增强；当前 R0 规则检索已可用</td></tr>
+        <tr><td>飞书 MCP <strong>运行时接入</strong>（F4）</td><td>可选</td><td>代码已落地，需配置 <code>FEISHU_MCP_HTTP_URL</code>；见 §9</td></tr>
+        <tr><td>Soul 向量库</td><td>不做</td><td>产品范围外</td></tr>
+        <tr><td>浏览器 E2E 全量自动化</td><td><span class="badge badge-warn">未做</span></td><td>核心链路已有服务端单测 + HTTP/SSE 集成（20 条）+ 黄金话术双层回归</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>6. 技术栈摘要</h2>
+      <table>
+        <tr><th>层</th><th>技术</th></tr>
+        <tr><td>前端</td><td>React · Vite · Ant Design · tRPC Client</td></tr>
+        <tr><td>后端</td><td>Fastify · tRPC · SQLite</td></tr>
+        <tr><td>助手</td><td>规则意图路由 + Tool 编排 · SSE <code>/api/chat?context=personal</code></td></tr>
+        <tr><td>AI</td><td>OpenAI 兼容 API（<code>LLM_API_KEY</code> / <code>LLM_API_BASE</code> / <code>LLM_MODEL</code> / 分用途模型）</td></tr>
+        <tr><td>观测</td><td>MetricsLedger 内存 + SQLite · <code>assistant.metricsSummary</code></td></tr>
+        <tr><td>共享契约</td><td><code>@project-manager/shared</code> 类型 · <code>assistant-contract.ts</code></td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>7. 验收与回归</h2>
+      <ul>
+        <li><strong>产品功能点</strong>：119 项 L4 中，考题相关模块 <strong>全部 ✅</strong>（详见个人工作台-功能点.md §实现状态总览）</li>
+        <li><strong>自动化</strong>：<code>pnpm test</code>（server，<strong>108</strong> 条）覆盖意图路由、护栏、编排、RAG、MCP、物化与调度、<strong>LLM 指标与修订缓存</strong>等；详见 <a href="测试用例文档.html">测试用例文档</a> · <a href="测试报告.html">测试报告</a></li>
+        <li><strong>构建</strong>：<code>pnpm build</code> 通过即可视为工程门禁合格</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>8. Cursor Skill 与 Rules（可共享）</h2>
+      <p>仓库内附带 <strong>Cursor Agent 辅助配置</strong>，随代码一并交付；接收方可直接在本仓库使用，或复制到其他项目。</p>
+
+      <h3>8.1 项目 Skill（<code>.cursor/skills/</code>）</h3>
+      <table>
+        <tr><th>Skill</th><th>路径</th><th>触发场景</th></tr>
+        <tr><td><strong>start-project</strong></td><td><code>.cursor/skills/start-project/SKILL.md</code></td><td>「启动项目」「跑起来」「开 dev」——安装依赖、执行 <code>pnpm dev</code>、校验 <code>/health</code></td></tr>
+        <tr><td><strong>workflow-driven-requirements</strong></td><td><code>.cursor/skills/workflow-driven-requirements/SKILL.md</code></td><td>「按工作流」「S0-S5」「走控制层」——按 <code>agents/workflow.md</code> 状态机推进需求</td></tr>
+      </table>
+      <p><strong>在 Cursor 中使用</strong></p>
+      <ol>
+        <li>用 Cursor 打开本仓库根目录（须含 <code>pnpm-workspace.yaml</code>）。</li>
+        <li>对话中说触发语（见上表），或输入 <code>@start-project</code> / <code>@workflow-driven-requirements</code> 引用 Skill。</li>
+        <li>Agent 会按 Skill 内步骤执行；细则以 Skill 引用的文档为准（如 <code>agents/commands-checklist.md</code>）。</li>
+      </ol>
+      <p><strong>共享到其他项目</strong></p>
+      <table>
+        <tr><th>方式</th><th>操作</th></tr>
+        <tr><td>整仓交付</td><td>直接 clone / 拷贝仓库，<code>.cursor/skills/</code> 随项目生效</td></tr>
+        <tr><td>仅复制 Skill</td><td>将 <code>start-project/</code> 或 <code>workflow-driven-requirements/</code> 目录复制到目标仓库的 <code>.cursor/skills/</code></td></tr>
+        <tr><td>全局 Skill</td><td>复制到用户目录 <code>~/.cursor/skills/&lt;skill-name&gt;/</code>，对所有 workspace 可用</td></tr>
+      </table>
+      <p>Skill 为 Markdown + YAML frontmatter（<code>name</code> / <code>description</code>）；不含密钥，可安全提交版本库。</p>
+
+      <h3>8.2 项目 Rules（<code>.cursor/rules/</code>）</h3>
+      <p>与 Skill 配套的硬性约束，Cursor 打开本仓库时自动加载：</p>
+      <table>
+        <tr><th>规则文件</th><th>作用</th></tr>
+        <tr><td><code>project-core.mdc</code></td><td>Monorepo 包依赖方向、数据流、tRPC 约定</td></tr>
+        <tr><td><code>client.mdc</code> / <code>server.mdc</code> / <code>shared.mdc</code></td><td>各包写入边界与编码约束</td></tr>
+        <tr><td><code>agent-autonomy-s2-s4.mdc</code></td><td>Agent 控制层 S3/S4 门禁与 scope 校验</td></tr>
+        <tr><td><code>worktree.mdc</code></td><td>多 worktree 并行开发时的路径写入权限</td></tr>
+      </table>
+      <p>复制 <code>.cursor/rules/</code> 到目标仓库即可复用同一套 Agent 约束。</p>
+    </section>
+
+    <section>
+      <h2>9. MCP 配置说明</h2>
+      <p>本项目的 MCP 分两层：<strong>应用运行时</strong>（个人助手拉取飞书文档上下文）与 <strong>Cursor IDE 开发侧</strong>（可选，便于调试文档 MCP）。二者独立配置，互不依赖。</p>
+
+      <h3>9.1 应用运行时：飞书 Document MCP（F4）</h3>
+      <p><strong>作用</strong>：用户在个人助手消息中粘贴飞书文档链接时，服务端经 HTTP 桥接拉取文档摘要，注入 <code>ContextRetriever.externalSnippets</code>，参与 AI 生成/修订上下文。</p>
+      <p><strong>与考题关系</strong>：考题 RAG（E1–E3）为 <strong>SQLite 内部检索</strong>，不依赖 MCP；F4 为考题外增强，<strong>未配置时不影响主链路</strong>（自动降级为纯 DB 上下文 + 规则/LLM 模板）。</p>
+
+      <p><strong>配置步骤</strong></p>
+      <ol>
+        <li>复制环境变量模板：<code>cp server/.env.example server/.env</code></li>
+        <li>在 <code>server/.env</code> 中设置（示例见 <code>.env.example</code>）：</li>
+      </ol>
+      <table>
+        <tr><th>变量</th><th>必填</th><th>说明</th></tr>
+        <tr><td><code>FEISHU_MCP_HTTP_URL</code></td><td>是</td><td>本地 MCP HTTP 桥接地址，如 <code>http://127.0.0.1:3333/mcp/feishu/get_doc_content</code></td></tr>
+        <tr><td><code>FEISHU_MCP_TIMEOUT_MS</code></td><td>否</td><td>单次请求超时，默认 15000</td></tr>
+        <tr><td><code>FEISHU_MCP_MAX_DOCS</code></td><td>否</td><td>每条消息最多拉取文档数，默认 3</td></tr>
+        <tr><td><code>FEISHU_MCP_EXCERPT_CHARS</code></td><td>否</td><td>单文档摘要最大字符，默认 1500</td></tr>
+      </table>
+      <p>3. 重启 <code>pnpm dev</code> 使配置生效。</p>
+
+      <p><strong>HTTP 桥接约定</strong>（服务端 <code>feishu-doc-client.ts</code> 实现）</p>
+      <pre>POST {FEISHU_MCP_HTTP_URL}
+Content-Type: application/json
+
+{ "doc": "&lt;飞书文档 URL 或 token&gt;", "use_user_token": true }</pre>
+      <p>响应 JSON 须含 <code>content</code> 或 <code>markdown</code> 字段（Markdown 正文）。飞书凭证与 OAuth 由桥接层自行管理，<strong>勿写入本仓库或交付文档</strong>。</p>
+      <p><strong>触发方式</strong>：个人助手输入含飞书文档 URL 的消息（支持 <code>feishu.cn</code> / <code>feishu.net</code> / <code>larksuite.com</code> 的 wiki/docx/docs 链接）；无 URL 或未配置 MCP 时不发起外部请求。</p>
+      <p><strong>相关代码</strong>：<code>server/src/assistant/mcp-context-retriever.ts</code> · <code>server/src/assistant/mcp/feishu-doc-client.ts</code></p>
+
+      <p><strong>验收清单</strong>（配置 <code>FEISHU_MCP_HTTP_URL</code> 后人工验收）：</p>
+      <table>
+        <tr><th>项</th><th>状态</th><th>说明</th></tr>
+        <tr><td>消息含飞书文档 URL 时可拉取摘要并注入上下文</td><td><span class="badge badge-warn">待验收</span></td><td>至少 3 个核心场景稳定</td></tr>
+        <tr><td>未配置或桥接失败时自动降级</td><td><span class="badge badge-ok">✅</span></td><td>单测覆盖；主链路不受影响</td></tr>
+        <tr><td><code>pw.mcp.latency_ms</code> / <code>pw.mcp.fail</code> 指标</td><td><span class="badge badge-ok">✅</span></td><td>记入 MetricsLedger</td></tr>
+        <tr><td>新 MCP 经 ToolRegistry 注册，不改 chat 路由</td><td><span class="badge badge-ok">✅</span></td><td>见 ARCHITECTURE.md §8</td></tr>
+      </table>
+
+      <h3>9.2 Cursor IDE：Feishu Document MCP（开发可选）</h3>
+      <p>在 Cursor <strong>Settings → MCP</strong> 中启用 <strong>Feishu Document MCP</strong> 插件后，Agent 可在 IDE 对话内直接调用 <code>get_doc_content</code> 等工具（读设计稿、飞书需求文档等），<strong>不经过</strong>本应用 <code>3100</code> 端口。</p>
+      <table>
+        <tr><th>场景</th><th>推荐配置</th></tr>
+        <tr><td>验收个人工作台 AI 生成/修订 + 飞书文档上下文</td><td>§9.1 运行时 HTTP 桥接 + <code>LLM_API_KEY</code></td></tr>
+        <tr><td>二次开发、读飞书 PRD/设计说明</td><td>Cursor IDE MCP（与本应用 F4 可并存）</td></tr>
+        <tr><td>仅演示考题基线（无外部文档）</td><td>无需任何 MCP；内部 RAG + 可选 LLM 即可</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>10. 相关文档索引</h2>
+      <table>
+        <tr><th>文档</th><th>用途</th></tr>
+        <tr><td>个人工作台.md</td><td>考题产品需求</td></tr>
+        <tr><td>个人工作台-功能点.md</td><td>L4 功能点与实现状态</td></tr>
+        <tr><td>个人工作台-技术功能点.md</td><td>模块 / API / 文件对照</td></tr>
+        <tr><td>待办知识库-RAG方案.md</td><td>RAG 方案与 Phase</td></tr>
+        <tr><td>server/src/assistant/ARCHITECTURE.md</td><td>五层助手架构契约</td></tr>
+        <tr><td>TODO/guardrail-enhancement.md</td><td>四层护栏规则细则与验收场景</td></tr>
+        <tr><td>TODO/test-coverage-validation-automation.md</td><td>单测、覆盖率与 gate 基线</td></tr>
+        <tr><td>server/.env.example</td><td>LLM / MCP 环境变量模板</td></tr>
+        <tr><td>IMPLEMENTATION_STATUS.md §13</td><td>全项目实现索引</td></tr>
+      </table>
+
+      <h3>10.1 向外交付物（HTML）</h3>
+      <table>
+        <tr><th>文件</th><th>用途</th></tr>
+        <tr><td><a href="交付说明.html">delivery/交付说明.html</a></td><td>实现交付摘要（本文 HTML 版）</td></tr>
+        <tr><td><a href="架构设计文档.html">delivery/架构设计文档.html</a></td><td>系统与五层助手架构说明</td></tr>
+        <tr><td><a href="测试用例文档.html">delivery/测试用例文档.html</a></td><td>97 条自动化用例清单（含 HTTP/SSE 集成 20 条）</td></tr>
+        <tr><td><a href="测试报告.html">delivery/测试报告.html</a></td><td>执行结果与代码覆盖率报告</td></tr>
+      </table>
+      <p>四份 HTML 可通过浏览器直接打开；样式共享 <code>delivery/_shared.css</code>。</p>
+    </section>
+
+    <footer>个人 AI 助手工作台 · 实现交付说明 · 产品需求以 Markdown 文档为准</footer>
+  </div>
+</body>
+</html>

@@ -1,6 +1,6 @@
 import type { PersonalIntentType } from '@project-manager/shared';
-import { createLlmClient } from './openai-client.js';
-import { isLlmConfigured } from './llm-config.js';
+import { getLlmModelForPurpose, isLlmConfigured } from './llm-config.js';
+import { chatCompletionWithMetrics, recordLlmSkipped } from './llm-metrics.js';
 
 /** 助手创建的待办/日程/定时任务标题最大字数 */
 export const MAX_ASSISTANT_TITLE_LENGTH = 20;
@@ -70,18 +70,21 @@ export async function extractTitleWithLlm(
     return fallbackTitleFromMessage(message, intentType);
   }
 
-  if (!isLlmConfigured()) {
+  const trimmed = message.trim();
+  // 降本：短句直接截取，避免额外 LLM 调用
+  if (trimmed.length <= MAX_ASSISTANT_TITLE_LENGTH) {
+    recordLlmSkipped('title', 'short_message');
     return fallbackTitleFromMessage(message, intentType);
   }
 
-  const client = createLlmClient();
-  if (!client) {
+  if (!isLlmConfigured()) {
     return fallbackTitleFromMessage(message, intentType);
   }
 
   const hint = TITLE_HINTS[intentType] ?? '提取简短标题';
   try {
-    const result = await client.chatCompletion({
+    const result = await chatCompletionWithMetrics('title', {
+      model: getLlmModelForPurpose('title'),
       messages: [
         {
           role: 'system',
@@ -92,7 +95,7 @@ export async function extractTitleWithLlm(
             `标题长度不超过 ${MAX_ASSISTANT_TITLE_LENGTH} 字，使用中文。`,
           ].join('\n'),
         },
-        { role: 'user', content: message.trim() },
+        { role: 'user', content: trimmed },
       ],
       temperature: 0.2,
       maxTokens: 120,

@@ -175,6 +175,20 @@ function buildToolParams(
  */
 export class PersonalAssistantOrchestrator implements PersonalOrchestrator {
   async handle(input: PersonalOrchestratorInput): Promise<PersonalOrchestratorOutput> {
+    const orchestratorStarted = Date.now();
+    const result = await this.handleInternal(input);
+    inMemoryMetricsLedger.record({
+      name: 'pw.orchestrator.latency_ms',
+      ts: new Date().toISOString(),
+      tags: {
+        blocked: String('blocked' in result && result.blocked),
+      },
+      value: Date.now() - orchestratorStarted,
+    });
+    return result;
+  }
+
+  private async handleInternal(input: PersonalOrchestratorInput): Promise<PersonalOrchestratorOutput> {
     const text = input.message.trim();
     const session = resolveAssistantSession(input.sessionId);
     const toolRegistry = getPersonalToolRegistry();

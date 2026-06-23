@@ -49,6 +49,7 @@ import {
   setPersonalAssistantSoulSettings,
 } from '../services/personal-assistant-soul-service.js';
 import { resolvePersonalAssistantIntent } from '../services/personal-assistant-service.js';
+import { summarizeLlmMetrics } from '../assistant/metrics-summary.js';
 import {
   createRecurringTask,
   deleteRecurringTask,
@@ -622,6 +623,7 @@ export const appRouter = t.router({
         }),
       )
       .mutation(async ({ input }) => resolvePersonalAssistantIntent(input.message, input)),
+    metricsSummary: t.procedure.query(() => summarizeLlmMetrics()),
   }),
 });
 

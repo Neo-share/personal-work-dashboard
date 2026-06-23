@@ -4,6 +4,7 @@ import { QuestionCircleOutlined } from '@ant-design/icons';
 import { Button, Form, Input, Modal, Select, Switch, Tooltip, message } from 'antd';
 import { useEffect, useState } from 'react';
 import { trpc } from '../../lib/trpc';
+import AssistantMetricsModal from './AssistantMetricsModal';
 
 const REVISE_CACHE_STORAGE_KEY = 'pw.reviseCacheEnabled';
 
@@ -52,12 +53,15 @@ export default function PersonalAssistantPanel({
   const [historyOpen, setHistoryOpen] = useState(false);
   const [selectedThreadId, setSelectedThreadId] = useState<number | null>(null);
   const [soulOpen, setSoulOpen] = useState(false);
+  const [metricsOpen, setMetricsOpen] = useState(false);
   const [soulForm] = Form.useForm();
   const [useReviseCache, setUseReviseCache] = useState(() => {
     if (typeof window === 'undefined') return true;
     const stored = window.localStorage.getItem(REVISE_CACHE_STORAGE_KEY);
     return stored !== 'false';
   });
+
+  const utils = trpc.useUtils();
 
   const sessionsQuery = trpc.assistant.sessions.useQuery();
   const soulQuery = trpc.personalWorkbench.getSoulSettings.useQuery(undefined, {
@@ -195,6 +199,7 @@ export default function PersonalAssistantPanel({
       if (refreshTargets) {
         onRefresh?.(refreshTargets);
       }
+      void utils.assistant.metricsSummary.invalidate();
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -258,6 +263,13 @@ export default function PersonalAssistantPanel({
             }}
           >
             历史
+          </Button>
+          <Button
+            type="text"
+            size="small"
+            onClick={() => setMetricsOpen(true)}
+          >
+            观测
           </Button>
           <Button
             type="text"
@@ -407,6 +419,8 @@ export default function PersonalAssistantPanel({
           </Form.Item>
         </Form>
       </Modal>
+
+      <AssistantMetricsModal open={metricsOpen} onClose={() => setMetricsOpen(false)} />
     </aside>
   );
 }

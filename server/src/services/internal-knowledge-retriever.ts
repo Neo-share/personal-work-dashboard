@@ -25,7 +25,7 @@ export interface RetrieveForTodoOptions {
   intent: KnowledgeRetrieveIntent;
   /** 修订场景的用户修改意见 */
   userDelta?: string;
-  /** 最大片段数，默认 10 */
+  /** 最大片段数，默认 5（降 prompt Token） */
   limit?: number;
 }
 
@@ -36,7 +36,9 @@ export interface RetrieveForTodoResult {
   snippets: KnowledgeSnippet[];
 }
 
-const DEFAULT_SNIPPET_LIMIT = 10;
+const DEFAULT_SNIPPET_LIMIT = 5;
+/** 单片段 excerpt 硬上限，控制 prompt Token */
+const SNIPPET_EXCERPT_MAX_CHARS = 300;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** 标题关键词停用词（R0 规则过滤） */
@@ -385,6 +387,13 @@ function retrieveForRevise(
   return snippets.slice(0, limit);
 }
 
+function trimSnippetExcerpts(snippets: KnowledgeSnippet[]): KnowledgeSnippet[] {
+  return snippets.map((item) => ({
+    ...item,
+    excerpt: item.excerpt.slice(0, SNIPPET_EXCERPT_MAX_CHARS),
+  }));
+}
+
 /**
  * R0 规则检索：从 SQLite 召回与待办相关的内部知识片段
  */
@@ -404,10 +413,11 @@ export function retrieveForTodo(
 
   const limit = options.limit ?? DEFAULT_SNIPPET_LIMIT;
   const resultType = resolveResultType(todo);
-  const snippets =
+  const rawSnippets =
     options.intent === 'revise'
       ? retrieveForRevise(todo, options, limit)
       : retrieveForGenerate(todo, resultType, limit);
+  const snippets = trimSnippetExcerpts(rawSnippets);
 
   return {
     todoId,

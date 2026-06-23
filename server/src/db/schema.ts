@@ -216,4 +216,15 @@ CREATE TABLE IF NOT EXISTS assistant_messages (
   FOREIGN KEY (session_id) REFERENCES assistant_sessions(id) ON DELETE CASCADE,
   FOREIGN KEY (ai_result_id) REFERENCES todo_ai_results(id) ON DELETE SET NULL
 );
+
+CREATE TABLE IF NOT EXISTS metric_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  ts TEXT NOT NULL,
+  tags TEXT NOT NULL DEFAULT '{}',
+  value REAL,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_metric_events_name_ts ON metric_events(name, ts);
 `;

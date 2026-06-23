@@ -2,7 +2,8 @@ import type { AiResultType, PersonalAssistantSoulSettings } from '@project-manag
 import { AI_RESULT_TYPE_LABELS } from '@project-manager/shared';
 import type { KnowledgeSnippet } from '../services/internal-knowledge-retriever.js';
 import { getPersonalAssistantSoulSettings } from '../services/personal-assistant-soul-service.js';
-import { createLlmClient } from './openai-client.js';
+import { getLlmModelForPurpose } from './llm-config.js';
+import { chatCompletionWithMetrics } from './llm-metrics.js';
 
 export interface LlmAiGenerateInput {
   resultType: AiResultType;
@@ -22,6 +23,17 @@ export interface LlmAiReviseInput {
 }
 
 /** 各结果类型的 HTML 结构要求（对齐个人工作台 §6.3） */
+/** 各结果类型 completion 上限（降 completion Token） */
+const MAX_TOKENS_BY_TYPE: Record<AiResultType, number> = {
+  minutes: 1024,
+  review: 1024,
+  audit: 768,
+  plan: 1024,
+  report: 768,
+  analysis: 512,
+  pick: 512,
+};
+
 const RESULT_TYPE_HINTS: Record<AiResultType, string> = {
   minutes: '包含：进度、要点列表、结论。使用 <h3>、<ul><li> 等标签。',
   review: '包含：统计卡片（可用 flex 布局的小块）+ 结论段落。',
@@ -118,19 +130,15 @@ function normalizeHtmlOutput(raw: string): string {
  * @throws 未配置 LLM 或请求失败时抛出
  */
 export async function generateAiResultWithLlm(input: LlmAiGenerateInput): Promise<string> {
-  const client = createLlmClient();
-  if (!client) {
-    throw new Error('LLM 未配置');
-  }
-
   const soul = input.soulSettings ?? getPersonalAssistantSoulSettings();
-  const result = await client.chatCompletion({
+  const result = await chatCompletionWithMetrics('generate', {
+    model: getLlmModelForPurpose('generate'),
     messages: [
       { role: 'system', content: buildSystemPrompt(input.resultType, soul, 'generate') },
       { role: 'user', content: buildUserPrompt(input) },
     ],
     temperature: 0.6,
-    maxTokens: 2048,
+    maxTokens: MAX_TOKENS_BY_TYPE[input.resultType],
   });
 
   const html = normalizeHtmlOutput(result.content);
@@ -145,19 +153,15 @@ export async function generateAiResultWithLlm(input: LlmAiGenerateInput): Promis
  * @throws 未配置 LLM 或请求失败时抛出
  */
 export async function reviseAiResultWithLlm(input: LlmAiReviseInput): Promise<string> {
-  const client = createLlmClient();
-  if (!client) {
-    throw new Error('LLM 未配置');
-  }
-
   const soul = input.soulSettings ?? getPersonalAssistantSoulSettings();
-  const result = await client.chatCompletion({
+  const result = await chatCompletionWithMetrics('revise', {
+    model: getLlmModelForPurpose('revise'),
     messages: [
       { role: 'system', content: buildSystemPrompt(input.resultType, soul, 'revise') },
       { role: 'user', content: buildReviseUserPrompt(input) },
     ],
     temperature: 0.5,
-    maxTokens: 2048,
+    maxTokens: MAX_TOKENS_BY_TYPE[input.resultType],
   });
 
   const html = normalizeHtmlOutput(result.content);

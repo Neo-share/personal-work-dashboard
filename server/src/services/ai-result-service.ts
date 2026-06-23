@@ -1,5 +1,6 @@
 import type { ExternalSnippet, AiResultType, PersonalAssistantSoulSettings } from '@project-manager/shared';
 import { getDb } from '../db/index.js';
+import { inMemoryMetricsLedger } from '../assistant/metrics-ledger.js';
 import { isLlmConfigured } from '../llm/llm-config.js';
 import {
   generateAiResultWithLlm,
@@ -239,12 +240,15 @@ async function resolveAiResultHtml(
   description?: string | null,
   externalSnippets?: ExternalSnippet[],
 ): Promise<{ htmlContent: string; provider: string; snippetIds: string[] }> {
+  const started = Date.now();
   const retrieved = retrieveForTodo(todoId, { intent: 'generate' });
   const mergedSnippets = mergeExternalSnippetsIntoKnowledge(
     retrieved.snippets,
     externalSnippets,
   );
   const snippetIds = mergedSnippets.map((item) => item.id);
+
+  let resolved: { htmlContent: string; provider: string; snippetIds: string[] };
 
   if (isLlmConfigured()) {
     try {
@@ -254,7 +258,7 @@ async function resolveAiResultHtml(
         description,
         snippets: mergedSnippets,
       });
-      return {
+      resolved = {
         htmlContent,
         provider: formatAiResultProvider('llm', snippetIds),
         snippetIds,
@@ -262,13 +266,28 @@ async function resolveAiResultHtml(
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       console.error(`[ai-result] LLM 生成失败，降级模板: ${detail}`);
+      resolved = {
+        htmlContent: generateAiHtml(resultType, title),
+        provider: formatAiResultProvider('rule-template', snippetIds),
+        snippetIds,
+      };
     }
+  } else {
+    resolved = {
+      htmlContent: generateAiHtml(resultType, title),
+      provider: formatAiResultProvider('rule-template', snippetIds),
+      snippetIds,
+    };
   }
-  return {
-    htmlContent: generateAiHtml(resultType, title),
-    provider: formatAiResultProvider('rule-template', snippetIds),
-    snippetIds,
-  };
+
+  inMemoryMetricsLedger.record({
+    name: 'pw.ai.generate.latency_ms',
+    ts: new Date().toISOString(),
+    tags: { intent: 'generate', resultType },
+    value: Date.now() - started,
+  });
+
+  return resolved;
 }
 
 async function resolveRevisedAiResultHtml(
@@ -290,6 +309,7 @@ async function resolveRevisedAiResultHtml(
   snippetIds: string[];
   fromReviseCache?: boolean;
 }> {
+  const started = Date.now();
   const mergedSnippets = mergeExternalSnippetsIntoKnowledge(snippets, externalSnippets);
   const snippetIds = mergedSnippets.map((item) => item.id);
   const { sessionId, todoId, baseVersion, skipReviseCache } = options ?? {};
@@ -309,6 +329,12 @@ async function resolveRevisedAiResultHtml(
       snippetIds,
     });
     if (cached) {
+      inMemoryMetricsLedger.record({
+        name: 'pw.ai.generate.latency_ms',
+        ts: new Date().toISOString(),
+        tags: { intent: 'revise', resultType, cache: 'hit' },
+        value: Date.now() - started,
+      });
       return {
         htmlContent: cached.htmlContent,
         provider: formatReviseCacheProvider(cached.snippetIds),
@@ -317,6 +343,8 @@ async function resolveRevisedAiResultHtml(
       };
     }
   }
+
+  let resolved: { htmlContent: string; provider: string; snippetIds: string[] };
 
   if (isLlmConfigured()) {
     try {
@@ -327,7 +355,7 @@ async function resolveRevisedAiResultHtml(
         revisionHint,
         snippets: mergedSnippets,
       });
-      const result = {
+      resolved = {
         htmlContent,
         provider: formatAiResultProvider('llm', snippetIds),
         snippetIds,
@@ -345,25 +373,34 @@ async function resolveRevisedAiResultHtml(
             currentHtml,
             snippetIds,
           },
-          result,
+          resolved,
         );
       }
-      return result;
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       console.error(`[ai-result] LLM 修订失败，降级规则: ${detail}`);
-      return {
+      resolved = {
         htmlContent: applyRevisionRules(currentHtml, revisionHint),
         provider: formatAiResultProvider('rule-template', snippetIds),
         snippetIds,
       };
     }
+  } else {
+    resolved = {
+      htmlContent: applyRevisionRules(currentHtml, revisionHint),
+      provider: formatAiResultProvider('rule-template', snippetIds),
+      snippetIds,
+    };
   }
-  return {
-    htmlContent: applyRevisionRules(currentHtml, revisionHint),
-    provider: formatAiResultProvider('rule-template', snippetIds),
-    snippetIds,
-  };
+
+  inMemoryMetricsLedger.record({
+    name: 'pw.ai.generate.latency_ms',
+    ts: new Date().toISOString(),
+    tags: { intent: 'revise', resultType },
+    value: Date.now() - started,
+  });
+
+  return resolved;
 }
 
 export async function createAiResultForTodo(
