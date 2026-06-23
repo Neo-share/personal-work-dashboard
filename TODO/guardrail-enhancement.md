@@ -89,5 +89,5 @@ SSE 扩展事件：`{ type: 'blocked', code, message }`（前端见 `PersonalAss
 ## 7. 不在本文件范围
 
 - 五层接口类型定义 → [architecture-foundation.md](./architecture-foundation.md)
-- 产品侧异常文案 → [personal-workbench-enhancement.md](./personal-workbench-enhancement.md) Phase C
+- 产品侧异常文案 → [个人工作台-技术功能点.md §TL1-08](../docs/个人工作台/个人工作台-技术功能点.md#tl1-08-交互规则与非功能)
 - 外部 MCP 内容安全 → [mcp-integration.md](./mcp-integration.md)

@@ -228,7 +228,7 @@ server/src/assistant/
 | **F3** | GuardrailEngine 四层 + SSE `blocked` | F2 | ✅ |
 | **F4** | ContextRetriever.externalSnippets + MCP | mcp-integration | ❌ |
 
-个人工作台 **不阻塞于 F4**；F1–F3 已完成，行为与 [personal-workbench-enhancement.md](./personal-workbench-enhancement.md) 回归表一致。
+个人工作台 **不阻塞于 F4**；F1–F3 已完成，行为见 [个人工作台-技术功能点.md §实现状态总览](../docs/个人工作台/个人工作台-技术功能点.md#实现状态总览)。
 
 ---
 
@@ -236,7 +236,7 @@ server/src/assistant/
 
 | 文档 | 关系 |
 |------|------|
-| [personal-workbench-enhancement.md](./personal-workbench-enhancement.md) | 体验闭环 Phase A–F；TL1 对照见该文件 §TL1 技术域 |
+| [personal-workbench-enhancement.md](./personal-workbench-enhancement.md) | 未完成 Phase E；完成状态见 [技术功能点 §实现状态总览](../docs/个人工作台/个人工作台-技术功能点.md#实现状态总览) |
 | [guardrail-enhancement.md](./guardrail-enhancement.md) | GuardrailEngine **规则细则** |
 | [mcp-integration.md](./mcp-integration.md) | ContextRetriever 外部片段 |
 | [test-coverage-validation-automation.md](./test-coverage-validation-automation.md) | F0 契约冻结后，以 §3 接口为准编写单测与 gate；T1 框架可与 F0 并行 |

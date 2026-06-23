@@ -11,12 +11,12 @@
 | 文件 | 职责（唯一定义） | 引用方（勿重复展开） |
 |------|------------------|----------------------|
 | **roadmap.md**（本文件） | 优先级、依赖图、执行顺序 | 各子待办文首 |
-| **docs/个人工作台/个人工作台-技术功能点.md** | TL1–TL4 **技术实现对照**（模块/API/状态） | `personal-workbench-enhancement` · `architecture-foundation` · `test-coverage-validation-automation` |
+| **docs/个人工作台/个人工作台-技术功能点.md** | TL1–TL4 **技术实现对照**与**完成状态** SSOT | `personal-workbench-enhancement` · `architecture-foundation` · `test-coverage-validation-automation` · `IMPLEMENTATION_STATUS` §13 |
 | **architecture-foundation.md** | 五层底座**接口契约**与目录规划（F0 冻结；**F1–F3 已落地**） | `mcp-integration`、`guardrail-enhancement`、`test-coverage-validation-automation`、技术功能点 §TL1-05 |
 | **guardrail-enhancement.md** | 四层护栏**规则细则**与验收场景 | `architecture-foundation` §3.3 仅保留接口 |
-| **test-coverage-validation-automation.md** | 测试框架、覆盖率与门禁接入计划（**以底座契约为准**） | `personal-workbench-enhancement` Phase D |
+| **test-coverage-validation-automation.md** | 测试框架、覆盖率与门禁接入计划（**以底座契约为准**） | 技术功能点 §已验收 |
 | **mcp-integration.md** | 外部 MCP（飞书文档等）接入计划 | `architecture-foundation` §3.4 |
-| **personal-workbench-enhancement.md** | 体验闭环 **Phase 清单**、**TL1↔Phase 对照**、**L4/TL4 缺口表**与**回归验收表** | 产品见 `个人工作台.md` · L4 见 `个人工作台-功能点.md` · TL4 见 `个人工作台-技术功能点.md` |
+| **personal-workbench-enhancement.md** | 个人工作台**未完成**功能点与 Phase E 待办 | 完成状态见 `个人工作台-技术功能点.md` §实现状态总览 |
 
 **产品需求**不在 `TODO/` 定义：`docs/个人工作台/个人工作台.md` 为个人工作台产品 SSOT；**技术 TL4 对照**见 `docs/个人工作台/个人工作台-技术功能点.md`。
 
@@ -32,7 +32,7 @@
 | P1 | [test-coverage-validation-automation.md](./test-coverage-validation-automation.md) T2–T3 | F0 | 五层单测 + gate（**已完成**） |
 | P2 | [mcp-integration.md](./mcp-integration.md) | F4 + guardrail | Feishu Document MCP → `externalSnippets` |
 | P2 | [personal-workbench-enhancement.md](./personal-workbench-enhancement.md) Phase E | F1–F3 | 待办知识库 RAG（**唯一未收口 Phase**） |
-| — | [personal-workbench-enhancement.md](./personal-workbench-enhancement.md) Phase A–D / B4 / F | — | **已收口**（见 TL1 对照表） |
+| — | [personal-workbench-enhancement.md](./personal-workbench-enhancement.md) Phase A–D / B4 / F | — | **已收口**（见 [技术功能点 §实现状态总览](../docs/个人工作台/个人工作台-技术功能点.md#实现状态总览)） |
 
 ---
 

@@ -143,7 +143,7 @@ reviseAiResult / 修改模式
 ### Phase E4 — 可选 embedding（R1）
 
 - [ ] **E4.1** 本地 embedding + 增量索引 job
-- [ ] **E4.2** 黄金场景回归：C1/C3/C4/C9（见 `TODO/personal-workbench-enhancement.md`）
+- [ ] **E4.2** 黄金场景回归：C1/C3/C4/C9（见 [待办知识库-RAG方案.md §8](./待办知识库-RAG方案.md#8-验收标准内部闭环)）
 
 ---
 
@@ -176,7 +176,7 @@ reviseAiResult / 修改模式
 
 ## 10. 与路线图关系
 
-- **前置**：`personal-workbench-enhancement.md` Phase A–D 已闭环  
+- **前置**：个人工作台 Phase A–D 已闭环；完成状态见 [个人工作台-技术功能点.md §实现状态总览](./个人工作台-技术功能点.md#实现状态总览)  
 - **并行**：不阻塞 `architecture-foundation.md`；检索器接口与其 ContextRetriever 契约对齐，便于后续替换  
 - **后置**：`mcp-integration.md` 可在 Internal 检索之上 **叠加** External 片段，不替代本方案  
 
