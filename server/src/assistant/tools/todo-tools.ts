@@ -14,6 +14,7 @@ export interface TodoReviseAiResult {
   refresh: PersonalAssistantRefresh[];
   modifyTodoId: number;
   modifyVersion: number;
+  modifyResultId: number;
   contextSummary?: string;
   fromReviseCache?: boolean;
 }
@@ -82,6 +83,7 @@ export const todoReviseAiTool: ToolDefinition<
       refresh: ['todos'],
       modifyTodoId: params.modifyTodoId,
       modifyVersion: revised.version,
+      modifyResultId: revised.id,
       contextSummary: revised.contextSummary,
       fromReviseCache: revised.fromReviseCache,
     };

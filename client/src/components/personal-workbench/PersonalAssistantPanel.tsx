@@ -18,6 +18,10 @@ const REVISE_CACHE_TOOLTIP = [
 const INITIAL_GREETING = '你好！我会先区分待办与日程，帮你创建内容或生成初步结果。';
 const NEW_SESSION_GREETING = '新对话已开始。我会先区分待办与日程，帮你创建内容或生成初步结果。';
 
+function buildModifyGreeting(title: string, version: number): string {
+  return `已载入待办「${title}」的 AI 结果（第 ${version} 版）。请告诉我需要怎么改，例如：「把联调进度改成 90%」「补充风险项」「结论写得更简洁」。`;
+}
+
 const QUICK_CHIPS = [
   '明天下午3点开项目评审会',
   '下周二上午10点面试产品经理',
@@ -95,6 +99,64 @@ export default function PersonalAssistantPanel({
     const first = sessionsQuery.data?.[0];
     if (first) setActiveSessionId(first.id);
   }, [sessionsQuery.data, activeSessionId]);
+
+  // 进入/切换修改模式时加载对应待办线程；退出时恢复默认会话
+  useEffect(() => {
+    let cancelled = false;
+
+    async function syncConversation() {
+      if (modifyTodoId) {
+        try {
+          const thread = await utils.assistant.todoThread.fetch({ todoId: modifyTodoId });
+          if (cancelled) return;
+          setActiveSessionId(thread.sessionId);
+          const version = modifyVersion ?? thread.latestVersion;
+          if (thread.messages.length === 0) {
+            setMessages([{ role: 'assistant', content: buildModifyGreeting(thread.title, version) }]);
+          } else {
+            setMessages(
+              thread.messages.map((m) => ({ role: m.role, content: m.content })),
+            );
+          }
+        } catch {
+          if (!cancelled) {
+            setMessages([
+              { role: 'assistant', content: '无法加载该待办的对话记录，请稍后再试。' },
+            ]);
+          }
+        }
+        return;
+      }
+
+      const defaultSession = sessionsQuery.data?.[0];
+      if (!defaultSession) {
+        if (!cancelled) {
+          setMessages([{ role: 'assistant', content: INITIAL_GREETING }]);
+        }
+        return;
+      }
+
+      setActiveSessionId(defaultSession.id);
+      try {
+        const msgs = await utils.assistant.messages.fetch({ sessionId: defaultSession.id });
+        if (cancelled) return;
+        if (msgs.length === 0) {
+          setMessages([{ role: 'assistant', content: INITIAL_GREETING }]);
+        } else {
+          setMessages(msgs.map((m) => ({ role: m.role, content: m.content })));
+        }
+      } catch {
+        if (!cancelled) {
+          setMessages([{ role: 'assistant', content: INITIAL_GREETING }]);
+        }
+      }
+    }
+
+    void syncConversation();
+    return () => {
+      cancelled = true;
+    };
+  }, [modifyTodoId, sessionsQuery.data, utils]);
 
   useEffect(() => {
     if (soulOpen && soulQuery.data) {

@@ -11,6 +11,7 @@ import type {
 } from '@project-manager/shared';
 import { PERSONAL_INTENT_TOOL_MAP } from '@project-manager/shared';
 import { extractTitleWithLlm, MAX_ASSISTANT_TITLE_LENGTH } from '../llm/llm-title-extractor.js';
+import { getTodoById } from '../services/todo-service.js';
 import { ruleBasedIntentRouter } from './intent-router.js';
 import { mcpContextRetriever } from './mcp-context-retriever.js';
 import {
@@ -23,6 +24,7 @@ import type { RecurringCreateResult } from './tools/recurring-tools.js';
 import type { TodoCreateResult, TodoReviseAiResult } from './tools/todo-tools.js';
 import {
   appendAssistantMessage,
+  getOrCreateTodoSession,
   resolveAssistantSession,
 } from '../services/assistant-session-service.js';
 
@@ -190,7 +192,10 @@ export class PersonalAssistantOrchestrator implements PersonalOrchestrator {
 
   private async handleInternal(input: PersonalOrchestratorInput): Promise<PersonalOrchestratorOutput> {
     const text = input.message.trim();
-    const session = resolveAssistantSession(input.sessionId);
+    const session =
+      input.modifyTodoId && getTodoById(input.modifyTodoId)
+        ? getOrCreateTodoSession(input.modifyTodoId)
+        : resolveAssistantSession(input.sessionId);
     const toolRegistry = getPersonalToolRegistry();
 
     const inputVerdict = personalGuardrailEngine.checkInput(text);
@@ -235,7 +240,7 @@ export class PersonalAssistantOrchestrator implements PersonalOrchestrator {
       if (!outputVerdict.allowed) {
         reply = sanitizeAssistantReply(reply);
       }
-      appendAssistantMessage(session.id, 'assistant', reply);
+      appendAssistantMessage(session.id, 'assistant', reply, payload.modifyResultId);
       return {
         reply,
         refresh: invokeResult.refresh,

@@ -40,6 +40,7 @@ import {
   appendAssistantMessage,
   createAssistantSession,
   getAssistantMessages,
+  getTodoAssistantThread,
   listAssistantSessions,
   listTodoAiThreads,
 } from '../services/assistant-session-service.js';
@@ -595,6 +596,9 @@ export const appRouter = t.router({
   assistant: t.router({
     sessions: t.procedure.query(() => listAssistantSessions()),
     todoThreads: t.procedure.query(() => listTodoAiThreads()),
+    todoThread: t.procedure
+      .input(z.object({ todoId: z.number() }))
+      .query(({ input }) => getTodoAssistantThread(input.todoId)),
     messages: t.procedure
       .input(z.object({ sessionId: z.number() }))
       .query(({ input }) => getAssistantMessages(input.sessionId)),
