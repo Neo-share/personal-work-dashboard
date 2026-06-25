@@ -141,6 +141,29 @@ export function listDaySchedule(dateStr: string): {
     .filter((s) => s.enabled)
     .map((s) => s.source);
 
+  const rawCount = (
+    db
+      .prepare(
+        `SELECT COUNT(*) as c FROM schedule_event_sources ses
+         JOIN schedule_events se ON se.id = ses.event_id
+         WHERE se.start_at >= ? AND se.start_at <= ?`,
+      )
+      .get(start, end) as { c: number }
+  ).c;
+
+  const dedupedCountAll = (
+    db
+      .prepare(
+        `SELECT COUNT(*) as c FROM schedule_events WHERE start_at >= ? AND start_at <= ?`,
+      )
+      .get(start, end) as { c: number }
+  ).c;
+
+  // L1-03 03.13：渠道全关时时间轴为空，统计仍展示原始/去重条数
+  if (enabledSources.length === 0) {
+    return { events: [], rawCount, dedupedCount: dedupedCountAll };
+  }
+
   const eventIds = db
     .prepare(
       `SELECT DISTINCT se.id FROM schedule_events se
@@ -155,19 +178,9 @@ export function listDaySchedule(dateStr: string): {
     const event = mapEventWithSources(id);
     if (!event) continue;
     const visibleSources = event.sources.filter((s) => enabledSources.includes(s.source));
-    if (visibleSources.length === 0 && enabledSources.length > 0) continue;
-    events.push({ ...event, sources: visibleSources.length > 0 ? visibleSources : event.sources });
+    if (visibleSources.length === 0) continue;
+    events.push({ ...event, sources: visibleSources });
   }
-
-  const rawCount = (
-    db
-      .prepare(
-        `SELECT COUNT(*) as c FROM schedule_event_sources ses
-         JOIN schedule_events se ON se.id = ses.event_id
-         WHERE se.start_at >= ? AND se.start_at <= ?`,
-      )
-      .get(start, end) as { c: number }
-  ).c;
 
   return { events, rawCount, dedupedCount: events.length };
 }

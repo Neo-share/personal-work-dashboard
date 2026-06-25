@@ -1,10 +1,72 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildReviseContextSummary,
+  detectCapability,
   formatAiResultProvider,
+  generateAiHtml,
   mergeExternalSnippetsIntoKnowledge,
 } from './ai-result-service.js';
 import type { KnowledgeSnippet } from './internal-knowledge-retriever.js';
+
+describe('detectCapability 能力判定（L1-05 / L1-06）', () => {
+  // L1-05 05.14：不可自动
+  it.each([
+    ['下周三电话回访客户', '需人工处理'],
+    ['线下见面签字', '需人工处理'],
+  ])('05.14 不可自动：%s', (title, reason) => {
+    const result = detectCapability(title);
+    expect(result.canAuto).toBe(false);
+    expect(result.resultType).toBeNull();
+    expect(result.reason).toBe(reason);
+  });
+
+  // L1-05 05.15–05.21：可自动能力类型
+  it.each([
+    ['做会议纪要', 'minutes'],
+    ['港股收盘复盘', 'review'],
+    ['协议合规审核', 'audit'],
+    ['完成 UI 改版方案', 'plan'],
+    ['撰写季度报告', 'report'],
+    ['成交量分析', 'analysis'],
+    ['基金选品对比', 'pick'],
+  ])('05.15–05.21 命中 %s → %s', (title, resultType) => {
+    const result = detectCapability(title);
+    expect(result.canAuto).toBe(true);
+    expect(result.resultType).toBe(resultType);
+  });
+
+  // L1-06 06.03：未命中能力词
+  it('06.03 未命中可自动能力词时 canAuto=false', () => {
+    const result = detectCapability('整理桌面');
+    expect(result.canAuto).toBe(false);
+    expect(result.resultType).toBeNull();
+  });
+
+  it('06.01 描述字段参与能力判定', () => {
+    const result = detectCapability('待办事项', '补充会议纪要要点');
+    expect(result.canAuto).toBe(true);
+    expect(result.resultType).toBe('minutes');
+  });
+});
+
+describe('generateAiHtml 规则模板', () => {
+  it('formal Soul 语气前缀写入 HTML', () => {
+    const html = generateAiHtml('minutes', '周会', {
+      tone: 'formal',
+      customInstructions: '',
+    });
+    expect(html).toContain('【正式表述】');
+  });
+
+  it('customInstructions 追加到模板末尾', () => {
+    const html = generateAiHtml('audit', '合规', {
+      tone: 'neutral',
+      customInstructions: '优先列风险项',
+    });
+    expect(html).toContain('Soul 偏好');
+    expect(html).toContain('优先列风险项');
+  });
+});
 
 describe('ai-result-service RAG 元数据', () => {
   it('formatAiResultProvider 记录 snippetIds', () => {

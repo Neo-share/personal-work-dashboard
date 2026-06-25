@@ -7,6 +7,7 @@ import {
   materializeRecurringTask,
   runDueRecurringTasks,
 } from './recurring-task-service.js';
+import { getTodoById } from './todo-service.js';
 
 describe('recurring-task-service', () => {
   it('formatCycleLabel 与 buildTodoDescription 格式化周期文案', () => {
@@ -96,6 +97,30 @@ describe('recurring-task-service', () => {
     const due = runDueRecurringTasks();
     expect(due.taskIds).toContain(daily.id);
     expect(due.taskIds).toContain(weekly.id);
+  });
+
+  // L1-04 04.09：物化待办属性
+  it('04.09 物化待办来源为 recurring_task、描述含定时任务、截止为触发时刻', () => {
+    const task = createRecurringTask({
+      title: '每日复盘',
+      frequency: 'daily',
+      timeOfDay: '17:00',
+    });
+
+    const db = getDb();
+    const run = db
+      .prepare(
+        `SELECT todo_id, trigger_at FROM recurring_task_runs WHERE recurring_task_id = ? ORDER BY trigger_at ASC LIMIT 1`,
+      )
+      .get(task.id) as { todo_id: number; trigger_at: string };
+
+    const todo = getTodoById(run.todo_id);
+
+    expect(todo).not.toBeNull();
+    expect(todo!.source).toBe('recurring_task');
+    expect(todo!.description).toContain('来源：定时任务');
+    expect(todo!.dueAt).toBe(run.trigger_at);
+    expect(todo!.recurringTaskId).toBe(task.id);
   });
 
   it('disabled 任务物化不产出待办', () => {
