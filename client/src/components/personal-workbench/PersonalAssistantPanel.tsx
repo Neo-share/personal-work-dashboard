@@ -2,7 +2,7 @@ import type { PersonalAssistantRefresh } from '@project-manager/shared';
 import { PERSONAL_ASSISTANT_SOUL_TONE_LABELS } from '@project-manager/shared';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import { Button, Form, Input, Modal, Select, Switch, Tooltip, message } from 'antd';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { trpc } from '../../lib/trpc';
 import AssistantMetricsModal from './AssistantMetricsModal';
 
@@ -66,6 +66,7 @@ export default function PersonalAssistantPanel({
   });
 
   const utils = trpc.useUtils();
+  const sendingRef = useRef(false);
 
   const sessionsQuery = trpc.assistant.sessions.useQuery();
   const soulQuery = trpc.personalWorkbench.getSoulSettings.useQuery(undefined, {
@@ -100,37 +101,49 @@ export default function PersonalAssistantPanel({
     if (first) setActiveSessionId(first.id);
   }, [sessionsQuery.data, activeSessionId]);
 
-  // 进入/切换修改模式时加载对应待办线程；退出时恢复默认会话
+  // 进入/切换修改模式时加载对应待办线程（不因 sessions 列表刷新而重载）
   useEffect(() => {
+    if (!modifyTodoId) return;
+    const todoId = modifyTodoId;
+
     let cancelled = false;
 
-    async function syncConversation() {
-      if (modifyTodoId) {
-        try {
-          const thread = await utils.assistant.todoThread.fetch({ todoId: modifyTodoId });
-          if (cancelled) return;
-          setActiveSessionId(thread.sessionId);
-          const version = modifyVersion ?? thread.latestVersion;
-          if (thread.messages.length === 0) {
-            setMessages([{ role: 'assistant', content: buildModifyGreeting(thread.title, version) }]);
-          } else {
-            setMessages(
-              thread.messages.map((m) => ({ role: m.role, content: m.content })),
-            );
-          }
-        } catch {
-          if (!cancelled) {
-            setMessages([
-              { role: 'assistant', content: '无法加载该待办的对话记录，请稍后再试。' },
-            ]);
-          }
+    async function loadTodoThread() {
+      if (sendingRef.current) return;
+      try {
+        const thread = await utils.assistant.todoThread.fetch({ todoId });
+        if (cancelled || sendingRef.current) return;
+        setActiveSessionId(thread.sessionId);
+        const version = modifyVersion ?? thread.latestVersion;
+        if (thread.messages.length === 0) {
+          setMessages([{ role: 'assistant', content: buildModifyGreeting(thread.title, version) }]);
+        } else {
+          setMessages(thread.messages.map((m) => ({ role: m.role, content: m.content })));
         }
-        return;
+      } catch {
+        if (!cancelled && !sendingRef.current) {
+          setMessages([{ role: 'assistant', content: '无法加载该待办的对话记录，请稍后再试。' }]);
+        }
       }
+    }
 
+    void loadTodoThread();
+    return () => {
+      cancelled = true;
+    };
+  }, [modifyTodoId, utils]);
+
+  // 退出修改模式后恢复默认会话
+  useEffect(() => {
+    if (modifyTodoId) return;
+
+    let cancelled = false;
+
+    async function loadDefaultSession() {
+      if (sendingRef.current) return;
       const defaultSession = sessionsQuery.data?.[0];
       if (!defaultSession) {
-        if (!cancelled) {
+        if (!cancelled && !sendingRef.current) {
           setMessages([{ role: 'assistant', content: INITIAL_GREETING }]);
         }
         return;
@@ -139,20 +152,20 @@ export default function PersonalAssistantPanel({
       setActiveSessionId(defaultSession.id);
       try {
         const msgs = await utils.assistant.messages.fetch({ sessionId: defaultSession.id });
-        if (cancelled) return;
+        if (cancelled || sendingRef.current) return;
         if (msgs.length === 0) {
           setMessages([{ role: 'assistant', content: INITIAL_GREETING }]);
         } else {
           setMessages(msgs.map((m) => ({ role: m.role, content: m.content })));
         }
       } catch {
-        if (!cancelled) {
+        if (!cancelled && !sendingRef.current) {
           setMessages([{ role: 'assistant', content: INITIAL_GREETING }]);
         }
       }
     }
 
-    void syncConversation();
+    void loadDefaultSession();
     return () => {
       cancelled = true;
     };
@@ -169,6 +182,7 @@ export default function PersonalAssistantPanel({
   async function sendMessage(text: string) {
     if (!text.trim() || loading) return;
 
+    sendingRef.current = true;
     setMessages((prev) => [...prev, { role: 'user', content: text }]);
     setInput('');
     setLoading(true);
@@ -260,6 +274,9 @@ export default function PersonalAssistantPanel({
 
       if (refreshTargets) {
         onRefresh?.(refreshTargets);
+        if (modifyTodoId) {
+          void utils.assistant.todoThread.invalidate({ todoId: modifyTodoId });
+        }
       }
       void utils.assistant.metricsSummary.invalidate();
     } catch {
@@ -268,6 +285,7 @@ export default function PersonalAssistantPanel({
         { role: 'assistant', content: '助手暂时不可用，请稍后再试。' },
       ]);
     } finally {
+      sendingRef.current = false;
       setLoading(false);
     }
   }

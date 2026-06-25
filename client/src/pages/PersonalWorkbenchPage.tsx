@@ -35,12 +35,16 @@ export default function PersonalWorkbenchPage() {
     if (!targets || targets.includes('all')) {
       void utils.personalWorkbench.summary.invalidate();
       void utils.todos.list.invalidate();
+      void utils.todos.aiResults.invalidate();
       void utils.schedule.listDay.invalidate();
       void utils.recurringTasks.list.invalidate();
       return;
     }
     if (targets.includes('summary')) void utils.personalWorkbench.summary.invalidate();
-    if (targets.includes('todos')) void utils.todos.list.invalidate();
+    if (targets.includes('todos')) {
+      void utils.todos.list.invalidate();
+      void utils.todos.aiResults.invalidate();
+    }
     if (targets.includes('schedule')) void utils.schedule.listDay.invalidate();
     if (targets.includes('recurringTasks')) void utils.recurringTasks.list.invalidate();
   }
