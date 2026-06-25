@@ -363,7 +363,15 @@ POST /api/chat (context=personal)
 
 **构建**：`tsc` → `dist/`；启动 `node dist/index.js`
 
-**测试**：Vitest（`pnpm test` / `pnpm test:coverage`）；单测 DB 用 `initTestDb` / `resetTestDb`
+**测试**：Vitest 3（`pnpm test` / `pnpm test:coverage`）。全栈分层见 **[../ARCHITECTURE.md §7](../ARCHITECTURE.md#7-测试与验证)**；模块映射见 **[TODO/test-coverage-validation-automation.md](../TODO/test-coverage-validation-automation.md)**。
+
+| 类别 | 模式 | 关键文件 |
+|------|------|----------|
+| 单测 | service / assistant / llm 纯逻辑 | `src/**/*.test.ts`（排除 `*.integration.test.ts`） |
+| 窄集成 | tRPC HTTP → router → service → SQLite | `src/trpc/*.integration.test.ts`、`trpc-test-server.ts` |
+| SSE 集成 | `POST /api/chat` 事件流 | `src/routes/chat.integration.test.ts`、`chat-test-server.ts` |
+| DB 隔离 | 每用例独立内存库 | `src/test/setup.ts` → `initTestDb` / `resetTestDb` |
+| 覆盖率 | v8；分母 `assistant/**` + 个人工作台 services | `vitest.config.ts` 中 `PERSONAL_WORKBENCH_SERVICES` |
 
 ---
 
@@ -415,6 +423,12 @@ src/services/personal-assistant-service.ts
 src/services/personal-assistant-soul-service.ts
 src/services/cursor-service.ts
 src/services/feishu-service.ts
+src/test/setup.ts
+src/test/trpc-test-server.ts
+src/test/trpc-http.ts
+src/test/chat-test-server.ts
+src/test/sse-parse.ts
+vitest.config.ts
 ```
 
 个人助手五层设计细则见 **`src/assistant/ARCHITECTURE.md`**。

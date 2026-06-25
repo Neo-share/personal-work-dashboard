@@ -253,13 +253,49 @@ react, react-dom, react-router-dom
 
 ---
 
-## 13. 实现状态
+## 13. 测试
+
+全栈测试分层见 **[../ARCHITECTURE.md §7](../ARCHITECTURE.md#7-测试与验证)**；命令见 **[agents/commands-checklist.md](../agents/commands-checklist.md)**。
+
+### 13.1 组件单测（Vitest + Testing Library）
+
+| 项 | 值 |
+|----|-----|
+| 配置 | `vitest.config.ts`（jsdom，`@/` 别名与 Vite 一致） |
+| 入口 | `src/test/setup.ts`（`jest-dom` + `matchMedia` mock） |
+| glob | `src/**/*.test.{ts,tsx}` |
+| 命令 | `pnpm --filter @project-manager/client test` |
+
+当前覆盖：`TodoPanel`、`AiResultPanel`、`PersonalAssistantPanel`、`personal-workbench-invalidate` 工具函数。
+
+### 13.2 E2E（Playwright）
+
+| 项 | 值 |
+|----|-----|
+| 配置 | `playwright.config.ts` |
+| 目录 | `e2e/*.spec.ts` |
+| 运行环境 | `baseURL` http://localhost:5175；`webServer` 自动执行根目录 `pnpm dev` |
+| 命令 | `pnpm test:e2e`（**不纳入** `agent:gate`） |
+| 辅助 | `e2e/helpers.ts` — tRPC HTTP 调用、`mockChatSse`、`gotoPersonalWorkbench` |
+
+| 用例文件 | 场景 |
+|----------|------|
+| `personal-workbench-smoke.spec.ts` | 首页统计、双面板、Tab、开发域跳转 |
+| `personal-workbench-todo.spec.ts` | UI 添加待办 |
+| `personal-workbench-modify.spec.ts` | 修改模式与 mock SSE |
+| `requirements.spec.ts` | URL 筛选、详情页、列表跳转 |
+| `dev-assistant-navigation.spec.ts` | 开发助手 `filterRequirements` / `openScanCenter` |
+| `scan-center.spec.ts` | 工作区路径保存 |
+
+---
+
+## 14. 实现状态
 
 **实现状态**：[../IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md)。
 
 ---
 
-## 14. 关键文件索引
+## 15. 关键文件索引
 
 ```
 src/main.tsx
@@ -289,5 +325,10 @@ src/utils/labels.ts
 src/utils/feishu.ts
 src/styles/global.css
 src/styles/personal-workbench.css
+src/test/setup.ts
+e2e/helpers.ts
+e2e/*.spec.ts
 vite.config.ts
+vitest.config.ts
+playwright.config.ts
 ```

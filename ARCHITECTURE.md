@@ -138,7 +138,96 @@ pnpm start   # 仅 server API
 
 ---
 
-## 7. 文档索引
+## 7. 测试与验证
+
+命令与门禁见 **[agents/commands-checklist.md](./agents/commands-checklist.md)**；模块级映射、覆盖率细则与历史落地见 **[TODO/test-coverage-validation-automation.md](./TODO/test-coverage-validation-automation.md)**。
+
+### 7.1 分层总览
+
+```mermaid
+flowchart TB
+  subgraph Gate["门禁"]
+    DevGate["agent:gate:dev"]
+    PrGate["agent:gate / gate:pr"]
+  end
+
+  subgraph Server["server"]
+    SUnit["Vitest 单测 / 窄集成"]
+    SMem["每用例内存 SQLite"]
+  end
+
+  subgraph Client["client"]
+    CUnit["Vitest + Testing Library"]
+    E2E["Playwright E2E"]
+  end
+
+  DevGate --> SUnit
+  DevGate --> CUnit
+  PrGate --> Build["pnpm build"] --> SUnit
+  PrGate --> CUnit
+  E2E -.->|"pnpm test:e2e（单独）"| Client
+```
+
+| 层级 | 框架 | 命令 | 纳入 gate |
+|------|------|------|-----------|
+| Server 单测 / 窄集成 | Vitest 3（Node） | `pnpm --filter @project-manager/server test` | dev / PR（PR 走 `test:coverage`） |
+| Client 组件单测 | Vitest 3 + jsdom + Testing Library | `pnpm --filter @project-manager/client test` | dev / PR |
+| E2E 浏览器 | Playwright 1 | `pnpm test:e2e` | 否（需 dev 栈，单独执行） |
+
+`shared` 无独立测试包；契约由 server 集成测与 client 单测间接覆盖。
+
+### 7.2 根脚本
+
+```bash
+pnpm test              # server + client 单元测试（不 build）
+pnpm test:coverage     # server 覆盖率（v8，输出 server/coverage/）
+pnpm test:e2e          # client Playwright（自动起 pnpm dev）
+pnpm agent:gate:dev    # test:coverage + client 单测（日常完成判定）
+pnpm agent:gate        # build + test:coverage + client 单测（PR / CI）
+```
+
+### 7.3 Server 测试基础设施
+
+| 项 | 位置 | 说明 |
+|----|------|------|
+| 配置 | `server/vitest.config.ts` | glob `src/**/*.test.ts`；覆盖率 provider v8 |
+| DB 隔离 | `src/test/setup.ts` | 每用例 `:memory:` SQLite + `initTestDb` / `resetTestDb` |
+| tRPC 窄集成 | `src/test/trpc-test-server.ts` · `trpc-http.ts` | HTTP → router(Zod) → service → SQLite |
+| SSE 集成 | `src/test/chat-test-server.ts` · `sse-parse.ts` | `/api/chat` 事件解析与断言 |
+| 覆盖率分母 | `vitest.config.ts` | `assistant/**` + 个人工作台 `services/`；**不含**开发域 `requirement-service` 等 |
+
+### 7.4 Client 测试基础设施
+
+| 项 | 位置 | 说明 |
+|----|------|------|
+| 单测配置 | `client/vitest.config.ts` | glob `src/**/*.test.{ts,tsx}`；jsdom；`src/test/setup.ts` mock `matchMedia` |
+| E2E 配置 | `client/playwright.config.ts` | `e2e/*.spec.ts`；`baseURL` 5175；`webServer` 根目录 `pnpm dev` |
+| E2E 辅助 | `client/e2e/helpers.ts` | `trpcQuery` / `trpcMutation` / `mockChatSse` / `gotoPersonalWorkbench` |
+
+### 7.5 E2E 用例分布
+
+| 文件 | 覆盖域 |
+|------|--------|
+| `personal-workbench-smoke.spec.ts` | 首页加载、Tab 切换、开发域入口 |
+| `personal-workbench-todo.spec.ts` | 待办 UI 创建 |
+| `personal-workbench-modify.spec.ts` | 修改模式进入 / SSE / 退出 |
+| `requirements.spec.ts` | 工作列表 URL 筛选、详情页 |
+| `dev-assistant-navigation.spec.ts` | 开发助手导航动作 |
+| `scan-center.spec.ts` | 扫描中心工作区路径保存 |
+
+### 7.6 规模快照
+
+以 `pnpm test` 为准（随用例增减波动）：
+
+| 包 | 测试文件 | 用例数 |
+|----|----------|--------|
+| server | 30 | 173 |
+| client 单测 | 4 | 26 |
+| client E2E | 6 | 13 |
+
+---
+
+## 8. 文档索引
 
 文档索引见 **[AGENTS.md §2.1](./AGENTS.md#21-文档对照表)**。
 
@@ -146,6 +235,7 @@ pnpm start   # 仅 server API
 IMPLEMENTATION_STATUS.md               实现状态（计划 vs 代码）
 AGENTS.md                              Agent 入口与文档索引
 ARCHITECTURE.md                        本文件（全栈集成）
+TODO/test-coverage-validation-automation.md  测试框架、覆盖率与 gate 细则
 client/ · server/ · shared/           包级 AGENTS + ARCHITECTURE
 PROJECT_MANAGER_*.md                   产品与技术方案（规划）
 docs/个人工作台/个人工作台.md          个人工作台产品需求
@@ -154,7 +244,7 @@ docs/个人工作台/个人工作台.md          个人工作台产品需求
 
 ---
 
-## 8. 实现状态
+## 9. 实现状态
 
 **实现状态**：[IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)。
 
