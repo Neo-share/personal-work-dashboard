@@ -14,9 +14,19 @@ let todoThreadFetchImpl: (args: { todoId: number }) => Promise<unknown> = async 
 });
 
 const mockOnRefresh = vi.fn();
+const mockOnEnterModify = vi.fn();
+const mockRefetchTodoThreads = vi.fn();
 
+const mockTodoThreads = vi.hoisted(() => [
+  {
+    todoId: 1,
+    title: '做会议纪要',
+    latestVersion: 2,
+    messageCount: 3,
+    latestHtmlPreview: '<h3>会议纪要 v2</h3><p>进度 85%</p>',
+  },
+]);
 const stableSessions = [{ id: 1, title: '默认会话' }];
-const stableTodoThreads: unknown[] = [];
 const stableSoulSettings = undefined;
 const stableMetricsSummary = undefined;
 
@@ -43,7 +53,7 @@ vi.mock('../../lib/trpc', () => ({
         useQuery: () => ({ data: stableSessions }),
       },
       todoThreads: {
-        useQuery: () => ({ data: stableTodoThreads, refetch: vi.fn() }),
+        useQuery: () => ({ data: mockTodoThreads, refetch: mockRefetchTodoThreads }),
       },
       createSession: {
         useMutation: () => ({ mutate: vi.fn(), isPending: false }),
@@ -81,6 +91,13 @@ describe('PersonalAssistantPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockMessagesFetch.mockResolvedValue([]);
+    mockTodoThreads.splice(0, mockTodoThreads.length, {
+      todoId: 1,
+      title: '做会议纪要',
+      latestVersion: 2,
+      messageCount: 3,
+      latestHtmlPreview: '<h3>会议纪要 v2</h3><p>进度 85%</p>',
+    });
     todoThreadFetchImpl = async () => ({
       sessionId: 1,
       title: '测试待办',
@@ -165,6 +182,59 @@ describe('PersonalAssistantPanel', () => {
     resolveChat();
     await waitFor(() => {
       expect(panel.getByText('修订完成')).toBeInTheDocument();
+    });
+  });
+
+  describe('历史对话 Modal（L1-06）', () => {
+    // L1-06 06.11：顶栏历史入口
+    it('06.11 点击「历史」打开历史对话弹窗', async () => {
+      const user = userEvent.setup();
+      render(<PersonalAssistantPanel onRefresh={mockOnRefresh} onEnterModify={mockOnEnterModify} />);
+
+      await user.click(screen.getByRole('button', { name: '历史' }));
+
+      expect(mockRefetchTodoThreads).toHaveBeenCalled();
+      expect(screen.getByRole('dialog', { name: /历史对话 · AI 结果/ })).toBeInTheDocument();
+    });
+
+    // L1-06 06.12：左栏列表
+    it('06.12 左栏展示待办标题、版本与对话条数', async () => {
+      const user = userEvent.setup();
+      render(<PersonalAssistantPanel onEnterModify={mockOnEnterModify} />);
+
+      await user.click(screen.getByRole('button', { name: '历史' }));
+
+      const dialog = screen.getByRole('dialog', { name: /历史对话 · AI 结果/ });
+      expect(within(dialog).getByText('做会议纪要')).toBeInTheDocument();
+      expect(within(dialog).getByText(/v2 · 3 条对话/)).toBeInTheDocument();
+    });
+
+    // L1-06 06.13：右栏预览
+    it('06.13 选中线程后右栏展示 AI 结果预览', async () => {
+      const user = userEvent.setup();
+      render(<PersonalAssistantPanel onEnterModify={mockOnEnterModify} />);
+
+      await user.click(screen.getByRole('button', { name: '历史' }));
+      const dialog = screen.getByRole('dialog', { name: /历史对话 · AI 结果/ });
+      await user.click(within(dialog).getByRole('button', { name: /做会议纪要/ }));
+
+      expect(within(dialog).getByText('进度 85%')).toBeInTheDocument();
+    });
+
+    // L1-06 06.14：继续修改
+    it('06.14 点击「继续修改」关闭弹窗并回调 onEnterModify', async () => {
+      const user = userEvent.setup();
+      render(<PersonalAssistantPanel onEnterModify={mockOnEnterModify} />);
+
+      await user.click(screen.getByRole('button', { name: '历史' }));
+      const dialog = screen.getByRole('dialog', { name: /历史对话 · AI 结果/ });
+      await user.click(within(dialog).getByRole('button', { name: /做会议纪要/ }));
+      await user.click(within(dialog).getByRole('button', { name: '继续修改' }));
+
+      expect(mockOnEnterModify).toHaveBeenCalledWith(1, 2);
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog', { name: /历史对话 · AI 结果/ })).not.toBeInTheDocument();
+      });
     });
   });
 });

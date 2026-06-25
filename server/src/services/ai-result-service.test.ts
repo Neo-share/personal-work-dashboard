@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest';
+import { getDb } from '../db/index.js';
+import { seedDatabase } from '../db/seed.js';
 import {
   buildReviseContextSummary,
   detectCapability,
   formatAiResultProvider,
   generateAiHtml,
   mergeExternalSnippetsIntoKnowledge,
+  reviseAiResult,
 } from './ai-result-service.js';
 import type { KnowledgeSnippet } from './internal-knowledge-retriever.js';
+import { getTodoAiResults } from './todo-service.js';
 
 describe('detectCapability 能力判定（L1-05 / L1-06）', () => {
   // L1-05 05.14：不可自动
@@ -65,6 +69,32 @@ describe('generateAiHtml 规则模板', () => {
     });
     expect(html).toContain('Soul 偏好');
     expect(html).toContain('优先列风险项');
+  });
+});
+
+describe('reviseAiResult 多轮修订（L1-06）', () => {
+  // L1-06 06.08：版本递增
+  it('06.08 修订后 version 在最新版本基础上 +1', async () => {
+    seedDatabase(getDb());
+    const before = getTodoAiResults(1);
+    const maxBefore = Math.max(...before.map((r) => r.version));
+
+    const revised = await reviseAiResult(1, 'minutes', '做会议纪要', '补充负责人');
+
+    expect(revised.version).toBe(maxBefore + 1);
+    const after = getTodoAiResults(1);
+    expect(after).toHaveLength(before.length + 1);
+    expect(after[after.length - 1]?.version).toBe(revised.version);
+    expect(revised.htmlContent.length).toBeGreaterThan(0);
+  });
+
+  it('06.08 连续修订版本号单调递增', async () => {
+    seedDatabase(getDb());
+
+    const first = await reviseAiResult(1, 'minutes', '做会议纪要', '补充行动项');
+    const second = await reviseAiResult(1, 'minutes', '做会议纪要', '精简结论');
+
+    expect(second.version).toBe(first.version + 1);
   });
 });
 

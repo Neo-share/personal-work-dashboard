@@ -6,6 +6,7 @@ import {
   getOrCreateTodoSession,
   getTodoAssistantThread,
   getTodoThreadMessages,
+  listTodoAiThreads,
 } from './assistant-session-service.js';
 
 /**
@@ -64,5 +65,44 @@ describe('assistant-session-service 待办修改线程', () => {
 
     expect(msgs1.every((m) => m.content !== '仅选品线程')).toBe(true);
     expect(msgs3.every((m) => m.content !== '仅纪要线程')).toBe(true);
+  });
+});
+
+describe('assistant-session-service 历史对话（L1-06）', () => {
+  // L1-06 06.12：左栏线程摘要
+  it('06.12 listTodoAiThreads 返回标题、最新版本与对话条数', () => {
+    seedDatabase(getDb());
+
+    const threads = listTodoAiThreads();
+    const minutes = threads.find((t) => t.title === '做会议纪要');
+
+    expect(minutes).toBeDefined();
+    expect(minutes!.latestVersion).toBe(2);
+    expect(minutes!.messageCount).toBeGreaterThanOrEqual(0);
+    expect(minutes!.latestHtmlPreview).toContain('会议纪要 v2');
+  });
+
+  // L1-06 06.09：修订消息写入线程并关联 ai_result_id
+  it('06.09 appendAssistantMessage 关联 ai_result_id 后可从线程读出', () => {
+    seedDatabase(getDb());
+
+    const session = getOrCreateTodoSession(1, '做会议纪要');
+    const db = getDb();
+    const resultRow = db
+      .prepare(
+        `SELECT id FROM todo_ai_results WHERE todo_id = 1 ORDER BY version DESC LIMIT 1`,
+      )
+      .get() as { id: number };
+
+    appendAssistantMessage(session.id, 'user', '请把进度改成 90%');
+    appendAssistantMessage(session.id, 'assistant', '已按意见更新结果', resultRow.id);
+
+    const msgs = getTodoThreadMessages(1);
+
+    expect(msgs.some((m) => m.content === '请把进度改成 90%')).toBe(true);
+    expect(msgs.some((m) => m.aiResultId === resultRow.id)).toBe(true);
+
+    const thread = getTodoAssistantThread(1);
+    expect(thread.latestVersion).toBe(2);
   });
 });
