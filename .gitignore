@@ -8,5 +8,14 @@ server/coverage
 .DS_Store
 *.log
 pnpm-debug.log*
-client/test-results
-client/playwright-report
+
+# TypeScript 增量编译缓存（tsc -b）
+*.tsbuildinfo
+
+# Cursor 本地调试日志
+.cursor/*.log
+
+# Playwright E2E 产物
+**/test-results/
+**/playwright-report/
+**/blob-report/
