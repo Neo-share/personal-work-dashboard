@@ -8,3 +8,5 @@ server/coverage
 .DS_Store
 *.log
 pnpm-debug.log*
+client/test-results
+client/playwright-report

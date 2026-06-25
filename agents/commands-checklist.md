@@ -8,10 +8,16 @@
 pnpm install
 pnpm dev
 pnpm build
-pnpm test
-pnpm test:coverage
+pnpm test              # server + client 单元测试（不 build）
+pnpm test:coverage     # server 覆盖率（agent:gate 使用）
+pnpm verify:dev        # 开发阶段验证：test:coverage + client 单测，不 build
+pnpm test:e2e          # client Playwright E2E（需 dev 栈，单独执行）
 pnpm start
 ```
+
+**测试分层**：`pnpm agent:gate` 跑 `build` + server `test:coverage` + client 单元测试，**不含 E2E**（Playwright 需启动全栈 dev，耗时较长，请本地或 CI 单独跑 `pnpm test:e2e`）。
+
+**开发阶段**：日常改代码用 `pnpm dev`；本地快速验改用 `pnpm verify:dev`（或 `pnpm test`）。二者均不执行 `pnpm build`；`shared/dist` 由 `pnpm dev` 里的 `tsc --watch` 保持即可。交付前仍须 `pnpm agent:gate`（含 build）。
 
 ## Agent 命令
 
@@ -22,6 +28,7 @@ pnpm agent:scope:api
 pnpm agent:scope:shared
 pnpm agent:scope:all
 pnpm agent:s4:mechanical-loop
+pnpm agent:gate:dev    # 开发阶段门禁（不 build，同 verify:dev）
 pnpm agent:gate
 pnpm gate:pr
 ```

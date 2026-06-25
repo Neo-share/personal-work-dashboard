@@ -7,6 +7,7 @@ import RecurringTaskPanel from '../components/personal-workbench/RecurringTaskPa
 import ScheduleTimeline from '../components/personal-workbench/ScheduleTimeline';
 import TodoPanel from '../components/personal-workbench/TodoPanel';
 import { trpc } from '../lib/trpc';
+import { applyPersonalWorkbenchInvalidations } from '../utils/personal-workbench-invalidate';
 import '../styles/personal-workbench.css';
 
 type TabKey = 'workspace' | 'recurring';
@@ -32,21 +33,7 @@ export default function PersonalWorkbenchPage() {
   });
 
   function handleRefresh(targets?: PersonalAssistantRefresh[]) {
-    if (!targets || targets.includes('all')) {
-      void utils.personalWorkbench.summary.invalidate();
-      void utils.todos.list.invalidate();
-      void utils.todos.aiResults.invalidate();
-      void utils.schedule.listDay.invalidate();
-      void utils.recurringTasks.list.invalidate();
-      return;
-    }
-    if (targets.includes('summary')) void utils.personalWorkbench.summary.invalidate();
-    if (targets.includes('todos')) {
-      void utils.todos.list.invalidate();
-      void utils.todos.aiResults.invalidate();
-    }
-    if (targets.includes('schedule')) void utils.schedule.listDay.invalidate();
-    if (targets.includes('recurringTasks')) void utils.recurringTasks.list.invalidate();
+    applyPersonalWorkbenchInvalidations(utils, targets);
   }
 
   function handleMaterialized(payload: { todoIds: number[]; taskTitle: string }) {

@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GOLDEN_PHRASES } from '../assistant/fixtures/golden-phrases.js';
 import { ruleBasedIntentRouter } from '../assistant/intent-router.js';
 import { getDb } from '../db/index.js';
+import { seedDatabase } from '../db/seed.js';
+import { getTodoAssistantThread } from '../services/assistant-session-service.js';
 import { createChatTestServer } from '../test/chat-test-server.js';
 import { parseSsePayloads } from '../test/sse-parse.js';
 
@@ -197,6 +199,85 @@ describe('POST /api/chat 个人助手集成', () => {
     expect(refreshEvent?.refresh).toContain('todos');
     expect(findEvent(payloads, 'done')).toBeDefined();
     expect(countTable('todos')).toBeGreaterThan(beforeTodos);
+  });
+});
+
+/**
+ * 回归：修改模式修订须落库（AI 新版本 + 待办线程对话）并通过 SSE 回流
+ */
+describe('POST /api/chat 修改模式修订', () => {
+  let server: FastifyInstance;
+
+  beforeEach(async () => {
+    server = await createChatTestServer();
+    seedDatabase(getDb());
+  });
+
+  afterEach(async () => {
+    await server.close();
+  });
+
+  it('修订成功 → SSE text + refresh todos + modifyMode，DB 新增 AI 版本与对话', async () => {
+    const db = getDb();
+    const beforeVersion = db
+      .prepare('SELECT MAX(version) as v FROM todo_ai_results WHERE todo_id = 1')
+      .get() as { v: number };
+
+    const { payloads } = await postPersonalChat(server, {
+      context: 'personal',
+      message: '把进度改成 90%，并补充行动项',
+      modifyTodoId: 1,
+      skipReviseCache: true,
+    });
+
+    expect(findEvent(payloads, 'blocked')).toBeUndefined();
+    expect(joinTextPayloads(payloads)).toMatch(/v\d+/);
+    expect(refreshTargets(payloads)).toContain('todos');
+    expect(findEvent(payloads, 'modifyMode')).toMatchObject({
+      type: 'modifyMode',
+      modifyTodoId: 1,
+    });
+    expect(findEvent(payloads, 'done')).toBeDefined();
+
+    const afterVersion = db
+      .prepare('SELECT MAX(version) as v FROM todo_ai_results WHERE todo_id = 1')
+      .get() as { v: number };
+    expect(afterVersion.v).toBeGreaterThan(beforeVersion.v);
+
+    const thread = getTodoAssistantThread(1);
+    expect(thread.messages.length).toBeGreaterThanOrEqual(2);
+    expect(thread.messages.some((m) => m.role === 'user' && m.content.includes('90%'))).toBe(true);
+    expect(thread.messages.some((m) => m.role === 'assistant')).toBe(true);
+    expect(thread.messages.some((m) => m.aiResultId !== null)).toBe(true);
+  });
+
+  it('连续修订不同待办时各待办对话独立（会话串线回归）', async () => {
+    await postPersonalChat(server, {
+      context: 'personal',
+      message: '纪要项：强调排期风险',
+      modifyTodoId: 1,
+      skipReviseCache: true,
+    });
+
+    await postPersonalChat(server, {
+      context: 'personal',
+      message: '选品项：增加货币基金对比',
+      modifyTodoId: 3,
+      skipReviseCache: true,
+    });
+
+    const threadMinutes = getTodoAssistantThread(1);
+    const threadPick = getTodoAssistantThread(3);
+
+    expect(threadMinutes.sessionId).not.toBe(threadPick.sessionId);
+
+    const minutesText = threadMinutes.messages.map((m) => m.content).join('\n');
+    const pickText = threadPick.messages.map((m) => m.content).join('\n');
+
+    expect(minutesText).toContain('排期风险');
+    expect(minutesText).not.toContain('货币基金');
+    expect(pickText).toContain('货币基金');
+    expect(pickText).not.toContain('排期风险');
   });
 });
 

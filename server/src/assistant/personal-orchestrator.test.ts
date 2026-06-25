@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { getDb } from '../db/index.js';
 import { seedDatabase } from '../db/seed.js';
+import {
+  getOrCreateTodoSession,
+  getTodoThreadMessages,
+} from '../services/assistant-session-service.js';
 import { inMemoryMetricsLedger } from './metrics-ledger.js';
 import { ruleBasedIntentRouter } from './intent-router.js';
 import { personalAssistantOrchestrator } from './personal-orchestrator.js';
@@ -90,6 +94,57 @@ describe('PersonalAssistantOrchestrator', () => {
       expect(result.modifyTodoId).toBe(1);
       expect(result.modifyVersion).toBeGreaterThan(2);
       expect(result.refresh).toContain('todos');
+    }
+  });
+
+  it('修改模式将对话写入待办专属会话，不污染默认会话', async () => {
+    seedDatabase(getDb());
+    const db = getDb();
+
+    const defaultSession = db
+      .prepare('SELECT id FROM assistant_sessions WHERE todo_id IS NULL ORDER BY id LIMIT 1')
+      .get() as { id: number };
+    const beforeDefaultCount = db
+      .prepare('SELECT COUNT(*) as c FROM assistant_messages WHERE session_id = ?')
+      .get(defaultSession.id) as { c: number };
+
+    const result = await personalAssistantOrchestrator.handle({
+      message: '补充行动项与负责人',
+      modifyTodoId: 1,
+      skipReviseCache: true,
+    });
+
+    expect(isGuardrailBlocked(result)).toBe(false);
+    if (!isGuardrailBlocked(result)) {
+      const todoSession = getOrCreateTodoSession(1);
+      const threadMessages = getTodoThreadMessages(1);
+
+      expect(threadMessages.length).toBeGreaterThanOrEqual(2);
+      expect(threadMessages.some((m) => m.role === 'user' && m.content.includes('补充行动项'))).toBe(
+        true,
+      );
+      expect(threadMessages.some((m) => m.role === 'assistant')).toBe(true);
+      expect(threadMessages.every((m) => m.sessionId === todoSession.id)).toBe(true);
+
+      const afterDefaultCount = db
+        .prepare('SELECT COUNT(*) as c FROM assistant_messages WHERE session_id = ?')
+        .get(defaultSession.id) as { c: number };
+      expect(afterDefaultCount.c).toBe(beforeDefaultCount.c);
+
+      const latestAiResult = db
+        .prepare(
+          'SELECT MAX(version) as v FROM todo_ai_results WHERE todo_id = 1',
+        )
+        .get() as { v: number };
+      expect(latestAiResult.v).toBeGreaterThan(2);
+
+      const assistantWithResult = db
+        .prepare(
+          `SELECT ai_result_id FROM assistant_messages
+           WHERE session_id = ? AND role = 'assistant' ORDER BY id DESC LIMIT 1`,
+        )
+        .get(todoSession.id) as { ai_result_id: number | null };
+      expect(assistantWithResult.ai_result_id).not.toBeNull();
     }
   });
 
