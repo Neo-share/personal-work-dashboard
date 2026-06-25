@@ -10,7 +10,7 @@
 2. S1/S2 默认须人类确认。
 3. S3 写入前必须完成 G.2 改动范围确认。
 4. 改代码后执行 `pnpm agent:scope:auto` → `pnpm agent:scope:<scope>`（见 [commands-checklist](./agents/commands-checklist.md)）。
-5. 完成前执行 `pnpm agent:gate`，exit 0 才能宣称完成。
+5. 完成前执行 `pnpm agent:gate:dev`（日常，不 build），exit 0 才能宣称完成；提 PR 前另跑 `pnpm agent:gate`。
 6. 不自动 commit，不回滚用户已有改动。
 
 ## 项目速查

@@ -19,7 +19,7 @@ tasks:
     verify:
       - "pnpm agent:scope:api"
       - "pnpm --filter @project-manager/server build"
-      - "pnpm agent:gate"
+      - "pnpm agent:gate:dev"
     rollback:
       - "git checkout -- server/"
     approval:
@@ -38,7 +38,7 @@ tasks:
       - server/src/services/
     verify:
       - "pnpm agent:scope:api"
-      - "pnpm agent:gate"
+      - "pnpm agent:gate:dev"
     rollback:
       - "git checkout -- server/"
     approval:

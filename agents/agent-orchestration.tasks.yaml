@@ -8,7 +8,7 @@ task_catalog:
 execution_policy:
   workflow: "S0 -> S1 -> S2 -> S3 -> S4 -> S5"
   scope_workflow: "pnpm agent:scope:auto -> pnpm agent:scope:<scope>"
-  quality_gate: "pnpm agent:gate"
+  quality_gate: "pnpm agent:gate:dev"
   s4_mechanical_loop: "pnpm agent:s4:mechanical-loop"
   human_confirmation:
     s1_s2_required_by_default: true

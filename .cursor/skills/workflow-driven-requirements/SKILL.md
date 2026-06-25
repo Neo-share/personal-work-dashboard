@@ -12,5 +12,5 @@ description: 强制按 agents/workflow.md 的 S0-S5 状态机执行需求。用�
 3. S1 输出 Spec，并按任务复杂度等待确认。
 4. S2 输出任务计划、预计改动文件和验证命令，并完成 G.2 范围确认。
 5. S3 在确认范围内实施。
-6. S4 执行 `pnpm agent:s4:mechanical-loop` 与 `pnpm agent:gate`（见 commands-checklist）。
+6. S4 执行 `pnpm agent:s4:mechanical-loop` 与 `pnpm agent:gate:dev`（见 commands-checklist；PR 前另跑 `pnpm agent:gate`）。
 7. S5 交付报告包含计划 vs 实际、验证结果和残余风险。

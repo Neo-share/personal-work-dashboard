@@ -28,7 +28,7 @@ S0 上下文确认 → S1 需求结构化 → S2 任务计划 → S3 实施 → 
 
 ## C. 全局禁止
 
-- 禁止 `pnpm agent:gate` 未通过就宣称完成。
+- 禁止 `pnpm agent:gate:dev` 未通过就宣称完成（PR/CI 另须 `pnpm agent:gate`）。
 - 禁止越过 G.2 直接写入未确认路径。
 - 禁止 CI 自动 commit、自动修改源码或写回分支。
 - 禁止回滚用户已有改动，除非用户明确要求。
@@ -70,7 +70,7 @@ S0 上下文确认 → S1 需求结构化 → S2 任务计划 → S3 实施 → 
 ### S4 验证门禁
 
 - 输入：实际改动。
-- 执行：I.0 scope 两步校验，再跑 `pnpm agent:gate`。
+- 执行：I.0 scope 两步校验，再跑 `pnpm agent:gate:dev`（不 build；PR 前另跑 `pnpm agent:gate`）。
 - 输出：命令结果和剩余风险。
 - 失败回退：先跑 `pnpm agent:s4:mechanical-loop`，仍失败则认知修验，上限 15 轮。
 

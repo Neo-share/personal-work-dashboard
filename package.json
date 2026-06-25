@@ -14,6 +14,7 @@
     "agent:gate:dev": "pnpm verify:dev",
     "agent:gate": "pnpm build && pnpm test:coverage && pnpm --filter @project-manager/client test",
     "agent:mechanical-fix": "pnpm build",
+    "agent:autoverify:dev": "pnpm verify:dev",
     "agent:autoverify": "pnpm agent:mechanical-fix && pnpm agent:gate",
     "agent:s4:mechanical-loop": "node ops/agent-s4-mechanical-loop.mjs",
     "agent:scope:auto": "node ops/agent-ci-scope.mjs --base=origin/main --head=HEAD",

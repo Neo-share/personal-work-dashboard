@@ -26,7 +26,7 @@
 ```bash
 pnpm agent:scope:auto
 pnpm agent:scope:<scope>
-pnpm agent:gate
+pnpm agent:gate:dev
 ```
 
 ## Follow-up

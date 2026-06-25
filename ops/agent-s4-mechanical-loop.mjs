@@ -13,22 +13,16 @@ function run(command, args) {
 }
 
 for (let round = 1; round <= MAX_ROUNDS; round += 1) {
-  console.log(`\n[S4] mechanical loop round ${round}/${MAX_ROUNDS}`)
+  console.log(`\n[S4] dev gate loop round ${round}/${MAX_ROUNDS}`)
 
-  const fixStatus = run('pnpm', ['agent:mechanical-fix'])
-  if (fixStatus !== 0) {
-    console.error(`[S4] mechanical fix failed in round ${round}`)
-    continue
-  }
-
-  const gateStatus = run('pnpm', ['agent:gate'])
+  const gateStatus = run('pnpm', ['agent:gate:dev'])
   if (gateStatus === 0) {
-    console.log('[S4] gate passed')
+    console.log('[S4] dev gate passed')
     process.exit(0)
   }
 
-  console.error(`[S4] gate failed in round ${round}`)
+  console.error(`[S4] dev gate failed in round ${round}`)
 }
 
-console.error(`[S4] mechanical loop failed after ${MAX_ROUNDS} rounds`)
+console.error(`[S4] dev gate loop failed after ${MAX_ROUNDS} rounds`)
 process.exit(1)

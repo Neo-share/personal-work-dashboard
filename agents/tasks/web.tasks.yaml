@@ -18,7 +18,7 @@ tasks:
     verify:
       - "pnpm agent:scope:web"
       - "pnpm --filter @project-manager/client build"
-      - "pnpm agent:gate"
+      - "pnpm agent:gate:dev"
     rollback:
       - "git checkout -- client/"
     approval:
@@ -35,7 +35,7 @@ tasks:
       - client/src/
     verify:
       - "pnpm agent:scope:web"
-      - "pnpm agent:gate"
+      - "pnpm agent:gate:dev"
     rollback:
       - "git checkout -- client/"
     approval:

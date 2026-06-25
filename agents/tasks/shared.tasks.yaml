@@ -17,7 +17,7 @@ tasks:
     verify:
       - "pnpm agent:scope:shared"
       - "pnpm --filter @project-manager/shared build"
-      - "pnpm agent:gate"
+      - "pnpm agent:gate:dev"
     rollback:
       - "git checkout -- shared/"
     approval:
@@ -37,7 +37,7 @@ tasks:
       - client/src/hooks/useNavigationAction.ts
     verify:
       - "pnpm agent:scope:all"
-      - "pnpm agent:gate"
+      - "pnpm agent:gate:dev"
     rollback:
       - "git checkout -- shared/ server/src/services/assistant-service.ts client/src/hooks/useNavigationAction.ts"
     approval:

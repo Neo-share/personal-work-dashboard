@@ -13,11 +13,12 @@
 ```bash
 pnpm agent:scope:auto
 pnpm agent:scope:<scope>
-pnpm agent:gate
+pnpm agent:gate:dev
 ```
 
+- CI / 提 PR 前另跑 `pnpm agent:gate`（`pnpm gate:pr` 已包含）。
 - CI 只验证，不自动修代码、不 commit、不写回分支。
-- gate 未绿不得宣称完成。
+- 日常 gate 未绿不得宣称完成。
 
 ## Scope
 

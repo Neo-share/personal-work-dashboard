@@ -15,9 +15,16 @@ pnpm test:e2e          # client Playwright E2E（需 dev 栈，单独执行）
 pnpm start
 ```
 
-**测试分层**：`pnpm agent:gate` 跑 `build` + server `test:coverage` + client 单元测试，**不含 E2E**（Playwright 需启动全栈 dev，耗时较长，请本地或 CI 单独跑 `pnpm test:e2e`）。
+**测试分层**：
 
-**开发阶段**：日常改代码用 `pnpm dev`；本地快速验改用 `pnpm verify:dev`（或 `pnpm test`）。二者均不执行 `pnpm build`；`shared/dist` 由 `pnpm dev` 里的 `tsc --watch` 保持即可。交付前仍须 `pnpm agent:gate`（含 build）。
+| 命令 | 何时用 | 含 build |
+|------|--------|----------|
+| `pnpm agent:gate:dev` | **日常改动 / Agent S4 完成判定** | 否 |
+| `pnpm agent:gate` | PR / CI（`pnpm gate:pr`） | 是 |
+
+二者均跑 server `test:coverage` + client 单元测试，**不含 E2E**（Playwright 需 dev 栈，单独跑 `pnpm test:e2e`）。
+
+**开发阶段**：改代码用 `pnpm dev`；`shared/dist` 由其中的 `tsc --watch` 保持即可。快速验改可用 `pnpm test`（无覆盖率）。
 
 ## Agent 命令
 
@@ -39,7 +46,8 @@ pnpm gate:pr
 - 实际改动没有越出确认范围；若新增路径，已补充说明。
 - `pnpm agent:scope:auto` 已输出 scope。
 - `pnpm agent:scope:<scope>` 已通过。
-- `pnpm agent:gate` 至少一次 exit 0。
+- 日常改动：`pnpm agent:gate:dev` 至少一次 exit 0。
+- 提 PR / CI：`pnpm agent:gate` 至少一次 exit 0（`pnpm gate:pr` 已包含）。
 - S5 已说明验证结果、未执行项和残余风险。
 
 ## 本项目额外检查

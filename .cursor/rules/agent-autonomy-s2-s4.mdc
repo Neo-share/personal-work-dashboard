@@ -11,4 +11,4 @@ alwaysApply: true
 - S3/S4：范围确认后自主实施、执行 I.0 scope 校验和门禁。
 - 改代码后：`pnpm agent:scope:auto` → `pnpm agent:scope:<scope>`。
 - S4：优先 `pnpm agent:s4:mechanical-loop`；仍失败则认知修验，上限 15 轮。
-- 完成判定：`pnpm agent:gate` 至少一次 exit 0。
+- 完成判定：`pnpm agent:gate:dev` 至少一次 exit 0（PR/CI 另须 `pnpm agent:gate`）。

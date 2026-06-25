@@ -40,4 +40,4 @@
 
 ## 默认验证
 
-见 **[commands-checklist.md](./commands-checklist.md)**。当前 `pnpm agent:gate` 绑定 `pnpm build`，构建顺序为 shared → server → client。
+见 **[commands-checklist.md](./commands-checklist.md)**。日常门禁 `pnpm agent:gate:dev` 不 build；PR/CI 门禁 `pnpm agent:gate` = `pnpm build`（shared → server → client）+ 测试。

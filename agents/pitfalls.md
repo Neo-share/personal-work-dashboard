@@ -4,7 +4,7 @@
 
 ## 误把计划当完成
 
-只写完代码不等于完成。必须执行 scope 校验和 `pnpm agent:gate`，失败时不能宣称完成。
+只写完代码不等于完成。必须执行 scope 校验和 `pnpm agent:gate:dev`（日常）；提 PR 前另须 `pnpm agent:gate`。失败时不能宣称完成。
 
 ## 忽略已有脏工作区
 
