@@ -6,6 +6,9 @@ import { useEffect, useState } from 'react';
 import { trpc } from '../../lib/trpc';
 import AiResultPanel from './AiResultPanel';
 
+/** pending 待办等待 AI 生成完成时的列表轮询间隔 */
+const PENDING_AI_REFETCH_MS = 3 * 60 * 1000;
+
 const FILTERS: Array<{ key: TodoFilter; label: string }> = [
   { key: 'active', label: '进行中' },
   { key: 'all', label: '全部待办' },
@@ -150,7 +153,7 @@ export default function TodoPanel({ onRefresh, onEnterModify, highlightTodoIds =
       // pending 态轮询，等待异步 AI 生成完成
       refetchInterval: (query) => {
         const data = query.state.data;
-        return data?.some((todo) => todo.aiStatus === 'pending') ? 800 : false;
+        return data?.some((todo) => todo.aiStatus === 'pending') ? PENDING_AI_REFETCH_MS : false;
       },
     },
   );

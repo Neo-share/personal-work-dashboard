@@ -17,11 +17,23 @@ if (envFile) {
 
 const PORT = Number(process.env.PORT ?? 3100);
 
+/** tRPC 待办列表轮询，屏蔽访问日志避免刷屏 */
+function isSilentTrpcPollRequest(url: string): boolean {
+  return url.startsWith('/trpc/todos.list');
+}
+
 async function main() {
   getDb();
 
   const server = Fastify({
     logger: true,
+  });
+
+  server.addHook('onRequest', (request, _reply, done) => {
+    if (isSilentTrpcPollRequest(request.url)) {
+      request.log = request.log.child({}, { level: 'silent' });
+    }
+    done();
   });
 
   await server.register(cors, {
