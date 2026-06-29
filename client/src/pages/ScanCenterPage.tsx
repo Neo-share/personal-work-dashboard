@@ -2,9 +2,16 @@ import { Button, Input, Spin, Table, message } from 'antd';
 import { useEffect, useState } from 'react';
 import { trpc } from '../lib/trpc';
 
+/** 与 server getWorkspacePath 默认值一致 */
+const DEFAULT_WORKSPACE_PATH = '/Users/ningliu/Documents/CodeLab';
+
+/** 与 server getIgnoreDirs 默认值一致 */
+const DEFAULT_IGNORE_DIRS = ['node_modules', '.cursor', '.Trash'] as const;
+const DEFAULT_IGNORE_DIRS_TEXT = DEFAULT_IGNORE_DIRS.join('\n');
+
 export default function ScanCenterPage() {
-  const [workspacePath, setWorkspacePath] = useState('');
-  const [ignoreDirsText, setIgnoreDirsText] = useState('');
+  const [workspacePath, setWorkspacePath] = useState(DEFAULT_WORKSPACE_PATH);
+  const [ignoreDirsText, setIgnoreDirsText] = useState(DEFAULT_IGNORE_DIRS_TEXT);
   const utils = trpc.useUtils();
   const settingsQuery = trpc.settings.getWorkspacePath.useQuery();
   const ignoreDirsQuery = trpc.settings.getIgnoreDirs.useQuery();
@@ -12,13 +19,14 @@ export default function ScanCenterPage() {
 
   useEffect(() => {
     if (settingsQuery.data) {
-      setWorkspacePath(settingsQuery.data);
+      setWorkspacePath(settingsQuery.data.trim() || DEFAULT_WORKSPACE_PATH);
     }
   }, [settingsQuery.data]);
 
   useEffect(() => {
     if (ignoreDirsQuery.data) {
-      setIgnoreDirsText(ignoreDirsQuery.data.join('\n'));
+      const dirs = ignoreDirsQuery.data.filter((item) => item.trim());
+      setIgnoreDirsText(dirs.length > 0 ? dirs.join('\n') : DEFAULT_IGNORE_DIRS_TEXT);
     }
   }, [ignoreDirsQuery.data]);
 
@@ -67,11 +75,7 @@ export default function ScanCenterPage() {
   };
 
   const runScan = () => {
-    const path = workspacePath.trim();
-    if (!path) {
-      message.warning('请先填写工作区路径');
-      return;
-    }
+    const path = workspacePath.trim() || DEFAULT_WORKSPACE_PATH;
     scanMutation.mutate({ workspacePath: path });
   };
 
@@ -100,7 +104,7 @@ export default function ScanCenterPage() {
             <Input
               value={workspacePath}
               onChange={(event) => setWorkspacePath(event.target.value)}
-              placeholder="/Users/ningliu/Documents/CodeLab"
+              placeholder={DEFAULT_WORKSPACE_PATH}
             />
           </div>
           <Button
@@ -120,7 +124,7 @@ export default function ScanCenterPage() {
             rows={4}
             value={ignoreDirsText}
             onChange={(event) => setIgnoreDirsText(event.target.value)}
-            placeholder={'node_modules\n.cursor\n.Trash'}
+            placeholder={DEFAULT_IGNORE_DIRS_TEXT}
           />
           <div style={{ marginTop: 12 }}>
             <Button
@@ -137,7 +141,7 @@ export default function ScanCenterPage() {
         <h3 className="section-title">执行扫描</h3>
         <div className="list-row">
           <div className="empty-hint" style={{ flex: 1, marginRight: 16, padding: 0 }}>
-            将扫描路径：<span className="mono">{workspacePath.trim() || '（未配置）'}</span>
+            将扫描路径：<span className="mono">{workspacePath.trim() || DEFAULT_WORKSPACE_PATH}</span>
           </div>
           <Button type="primary" loading={scanMutation.isPending} onClick={runScan}>
             扫描工作区
