@@ -84,4 +84,13 @@ describe('RuleBasedIntentRouter 星期解析', () => {
 
     expect(route.slots.dueAt).toBe('2026-07-07T02:00:00.000Z');
   });
+
+  it('每周五定时任务应解析为周五而非默认周四', () => {
+    const route = ruleBasedIntentRouter.route('每周五下午五点完成周报', GOLDEN_ROUTE_CONTEXT);
+
+    expect(route.type).toBe('recurring');
+    expect(route.slots.frequency).toBe('weekly');
+    expect(route.slots.dayOfWeek).toBe(5);
+    expect(route.slots.timeOfDay).toBe('17:00');
+  });
 });

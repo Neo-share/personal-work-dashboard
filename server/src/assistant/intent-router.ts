@@ -176,7 +176,57 @@ function parseTimeFromText(text: string): { startAt: string; endAt: string } | n
   return { startAt, endAt: endDate.toISOString() };
 }
 
+function parseRecurringDayOfWeek(text: string): number | null {
+  const match = text.match(/每(?:个)?(?:星期|周)([一二三四五六日天])/);
+  if (!match) return null;
+  const day = WEEKDAY_MAP[match[1]!];
+  return day === undefined ? null : day;
+}
+
+function parseRecurringDayOfMonth(text: string): number | null {
+  const match = text.match(/每月(\d{1,2})[号日]/);
+  if (!match) return null;
+  const day = Number(match[1]);
+  return day >= 1 && day <= 31 ? day : null;
+}
+
+/** 中文小写数字 → 整数（支持一～十二，供「下午五点」等解析） */
+const CN_HOUR_MAP: Record<string, number> = {
+  一: 1,
+  二: 2,
+  三: 3,
+  四: 4,
+  五: 5,
+  六: 6,
+  七: 7,
+  八: 8,
+  九: 9,
+  十: 10,
+  十一: 11,
+  十二: 12,
+};
+
+function parseHourToken(token: string): number | null {
+  if (/^\d+$/.test(token)) return Number(token);
+  return CN_HOUR_MAP[token] ?? null;
+}
+
 function parseRecurringTime(text: string): string {
+  const pmCnMatch = text.match(/下午([一二三四五六七八九十]+|\d+)点/);
+  if (pmCnMatch) {
+    const h = parseHourToken(pmCnMatch[1]!);
+    if (h !== null) {
+      const hour = h < 12 ? h + 12 : h;
+      return `${String(hour).padStart(2, '0')}:00`;
+    }
+  }
+
+  const amCnMatch = text.match(/上午([一二三四五六七八九十]+|\d+)点/);
+  if (amCnMatch) {
+    const h = parseHourToken(amCnMatch[1]!);
+    if (h !== null) return `${String(h).padStart(2, '0')}:00`;
+  }
+
   const match = text.match(/(\d+)点/);
   if (match) {
     const h = Number(match[1]);
@@ -215,8 +265,12 @@ function buildSlots(
     const freq = hasRecurringIntent(text)!;
     slots.frequency = freq;
     slots.timeOfDay = parseRecurringTime(text);
-    if (freq === 'weekly') slots.dayOfWeek = 4;
-    if (freq === 'monthly') slots.dayOfMonth = 15;
+    if (freq === 'weekly') {
+      slots.dayOfWeek = parseRecurringDayOfWeek(text) ?? 4;
+    }
+    if (freq === 'monthly') {
+      slots.dayOfMonth = parseRecurringDayOfMonth(text) ?? 15;
+    }
     return slots;
   }
 
