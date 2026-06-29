@@ -35,6 +35,19 @@ export type PersonCollaborationStatus =
 /** 里程碑状态 */
 export type MilestoneStatus = 'pending' | 'in_progress' | 'completed' | 'blocked';
 
+/** 外部关联链接类型（Figma/YApi/文档等） */
+export const LINK_TYPES = [
+  'figma',
+  'yapi',
+  'doc',
+  'feishu',
+  'test',
+  'release',
+  'other',
+] as const;
+
+export type LinkType = (typeof LINK_TYPES)[number];
+
 export interface Repository {
   id: number;
   name: string;
@@ -129,7 +142,7 @@ export interface Milestone {
 export interface Link {
   id: number;
   requirementId: number;
-  type: string;
+  type: LinkType;
   title: string;
   url: string;
 }
@@ -225,6 +238,16 @@ export const WORK_DOMAIN_LABELS: Record<WorkDomain, string> = {
   life: '生活',
   learning: '学习',
   admin: '事务',
+  other: '其他',
+};
+
+export const LINK_TYPE_LABELS: Record<LinkType, string> = {
+  figma: 'Figma 设计稿',
+  yapi: 'YApi 接口',
+  doc: '需求文档',
+  feishu: '飞书文档',
+  test: '提测单',
+  release: '发布单',
   other: '其他',
 };
 

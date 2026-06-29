@@ -96,6 +96,8 @@ const requirementStatusSchema = z.enum([
 
 const workDomainSchema = z.enum(['dev', 'life', 'learning', 'admin', 'other']);
 
+const linkTypeSchema = z.enum(['figma', 'yapi', 'doc', 'feishu', 'test', 'release', 'other']);
+
 const requirementListFilterSchema = z
   .object({
     status: requirementStatusSchema.optional(),
@@ -305,7 +307,7 @@ export const appRouter = t.router({
       .input(
         z.object({
           requirementId: z.number(),
-          type: z.string().min(1),
+          type: linkTypeSchema,
           title: z.string().min(1),
           url: z.string().url(),
         }),

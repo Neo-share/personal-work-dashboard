@@ -12,12 +12,13 @@ import {
   message,
 } from 'antd';
 import type { Milestone, Priority, RequirementDetail, RequirementStatus } from '@project-manager/shared';
-import { isDevWorkDomain, WORK_DOMAIN_MODULES } from '@project-manager/shared';
+import { isDevWorkDomain, LINK_TYPE_LABELS, LINK_TYPES, WORK_DOMAIN_MODULES } from '@project-manager/shared';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { PersonFeishuLink } from '../components/PersonFeishuLink';
 import {
   getDirectionLabel,
+  getLinkTypeLabel,
   getPriorityLabel,
   getRequirementStatusLabel,
   getWorkDomainLabel,
@@ -52,6 +53,11 @@ const priorityOptions: Array<{ value: Priority; label: string }> = [
 const domainOptions = WORK_DOMAIN_MODULES.map((item) => ({
   value: item.id,
   label: item.label,
+}));
+
+const linkTypeOptions = LINK_TYPES.map((value) => ({
+  value,
+  label: LINK_TYPE_LABELS[value],
 }));
 
 export default function RequirementDetailPage() {
@@ -345,7 +351,14 @@ export default function RequirementDetailPage() {
             <h3 className="section-title">关联链接</h3>
             <p className="page-desc">Figma、YApi、文档等外部资源快捷入口</p>
           </div>
-          <Button type="primary" size="small" onClick={() => setModalType('link')}>
+          <Button
+            type="primary"
+            size="small"
+            onClick={() => {
+              form.setFieldsValue({ type: 'doc' });
+              setModalType('link');
+            }}
+          >
             添加链接
           </Button>
         </div>
@@ -356,7 +369,7 @@ export default function RequirementDetailPage() {
             {detail.links.map((item) => (
               <div className="link-card" key={item.id}>
                 <div className="link-card-header">
-                  <Tag color="orange">{item.type}</Tag>
+                  <Tag color="orange">{getLinkTypeLabel(item.type)}</Tag>
                   <Popconfirm
                     title="确认删除该链接？"
                     onConfirm={() =>
@@ -765,8 +778,8 @@ export default function RequirementDetailPage() {
 
           {modalType === 'link' ? (
             <>
-              <Form.Item name="type" label="类型" rules={[{ required: true }]}>
-                <Input placeholder="figma / yapi / doc" />
+              <Form.Item name="type" label="链接类型" rules={[{ required: true }]}>
+                <Select options={linkTypeOptions} />
               </Form.Item>
               <Form.Item name="title" label="标题" rules={[{ required: true }]}>
                 <Input />

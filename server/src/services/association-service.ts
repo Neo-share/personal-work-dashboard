@@ -1,6 +1,7 @@
 import type {
   CollaborationDirection,
   Link,
+  LinkType,
   ManagementRole,
   Milestone,
   MilestoneStatus,
@@ -189,7 +190,7 @@ export function updateMilestone(
 
 export function addLink(input: {
   requirementId: number;
-  type: string;
+  type: LinkType;
   title: string;
   url: string;
 }): Link {
@@ -205,7 +206,7 @@ export function addLink(input: {
   return {
     id: row.id as number,
     requirementId: row.requirement_id as number,
-    type: row.type as string,
+    type: row.type as LinkType,
     title: row.title as string,
     url: row.url as string,
   };

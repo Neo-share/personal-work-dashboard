@@ -1,4 +1,5 @@
 import type {
+  LinkType,
   Milestone,
   Person,
   Priority,
@@ -266,7 +267,7 @@ export function getRequirementDetail(id: number): RequirementDetail | null {
   ).map((item) => ({
     id: item.id as number,
     requirementId: item.requirement_id as number,
-    type: item.type as string,
+    type: item.type as LinkType,
     title: item.title as string,
     url: item.url as string,
   }));
