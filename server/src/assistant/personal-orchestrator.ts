@@ -11,6 +11,9 @@ import type {
 } from '@project-manager/shared';
 import { PERSONAL_INTENT_TOOL_MAP } from '@project-manager/shared';
 import { extractTitleWithLlm, MAX_ASSISTANT_TITLE_LENGTH } from '../llm/llm-title-extractor.js';
+import { extractIntentSlotsWithLlm } from '../llm/llm-intent-slots-extractor.js';
+import { LlmExtractionError } from '../llm/llm-extraction-error.js';
+import { isGoldenPhrase } from './fixtures/golden-phrases.js';
 import { getTodoById } from '../services/todo-service.js';
 import { ruleBasedIntentRouter } from './intent-router.js';
 import { mcpContextRetriever } from './mcp-context-retriever.js';
@@ -68,12 +71,21 @@ function buildBlocked(verdict: {
   };
 }
 
+function needsLlmSlots(type: PersonalIntentType, message: string): boolean {
+  if (isGoldenPhrase(message)) return false;
+  return type === 'todo' || type === 'schedule' || type === 'recurring' || type === 'recurring_schedule';
+}
+
 function needsScheduleTime(type: PersonalIntentType): boolean {
   return type === 'schedule' || type === 'recurring_schedule';
 }
 
 function buildUnknownReply(): string {
   return '我可以帮你创建待办、安排日程或设置定时任务。例如："明天下午3点开项目评审会" 或 "本周五提醒我完成UI改版方案"。';
+}
+
+function buildLlmExtractionFailureReply(): string {
+  return '未能通过大模型解析输入内容，请补充更明确的时间或任务描述后重试；若持续失败请检查 LLM 配置。';
 }
 
 function buildTimeParseFailureReply(type: PersonalIntentType): string {
@@ -256,73 +268,100 @@ export class PersonalAssistantOrchestrator implements PersonalOrchestrator {
       return { reply };
     }
 
-    // 时间解析失败：结构化提示，不写库
-    if (needsScheduleTime(route.type) && (!route.slots.startAt || !route.slots.endAt)) {
-      const reply = buildTimeParseFailureReply(route.type);
-      appendAssistantMessage(session.id, 'assistant', reply);
-      return { reply };
-    }
-
     if (route.type === 'recurring' && !route.slots.frequency) {
       const reply = buildTimeParseFailureReply(route.type);
       appendAssistantMessage(session.id, 'assistant', reply);
       return { reply };
     }
 
-    const resolvedTitle = await extractTitleWithLlm(text, route.type);
-    const routeWithTitle: IntentRouteResult = {
-      ...route,
-      slots: { ...route.slots, title: resolvedTitle },
-    };
+    let resolvedRoute = route;
+    const llmOnly = !isGoldenPhrase(text);
 
-    const intentTools =
-      routeWithTitle.type === 'revise_ai'
-        ? (['todo.revise_ai'] as PersonalToolName[])
-        : PERSONAL_INTENT_TOOL_MAP[routeWithTitle.type as keyof typeof PERSONAL_INTENT_TOOL_MAP];
-
-    let refresh: PersonalAssistantRefresh[] | undefined;
-    let lastPayload: unknown;
-    let createdTaskId: number | undefined;
-
-    for (const toolName of intentTools) {
-      const params = buildToolParams(toolName, routeWithTitle, text, input.modifyTodoId, createdTaskId);
-      const toolVerdict = personalGuardrailEngine.checkToolCall(toolName, params);
-      if (!toolVerdict.allowed) {
-        return buildBlocked(toolVerdict);
+    try {
+      if (needsLlmSlots(route.type, text)) {
+        const llmSlots = await extractIntentSlotsWithLlm(text, route.type);
+        resolvedRoute = {
+          ...route,
+          slots: { ...route.slots, ...llmSlots },
+        };
       }
 
-      const invokeResult = await toolRegistry.invoke(toolName, params, toolCtx);
-      refresh = mergeRefresh(refresh, invokeResult.refresh);
-      lastPayload = invokeResult.payload;
-
-      if (toolName === 'recurring.create') {
-        createdTaskId = (invokeResult.payload as RecurringCreateResult).taskId;
+      // 时间解析失败：结构化提示，不写库
+      if (needsScheduleTime(resolvedRoute.type) && (!resolvedRoute.slots.startAt || !resolvedRoute.slots.endAt)) {
+        const reply = buildTimeParseFailureReply(resolvedRoute.type);
+        appendAssistantMessage(session.id, 'assistant', reply);
+        return { reply };
       }
+
+      if (resolvedRoute.type === 'recurring' && !resolvedRoute.slots.timeOfDay) {
+        const reply = buildTimeParseFailureReply(resolvedRoute.type);
+        appendAssistantMessage(session.id, 'assistant', reply);
+        return { reply };
+      }
+
+      const resolvedTitle = await extractTitleWithLlm(text, resolvedRoute.type, { llmOnly });
+      const routeWithTitle: IntentRouteResult = {
+        ...resolvedRoute,
+        slots: { ...resolvedRoute.slots, title: resolvedTitle },
+      };
+
+      const intentTools =
+        routeWithTitle.type === 'revise_ai'
+          ? (['todo.revise_ai'] as PersonalToolName[])
+          : PERSONAL_INTENT_TOOL_MAP[routeWithTitle.type as keyof typeof PERSONAL_INTENT_TOOL_MAP];
+
+      let refresh: PersonalAssistantRefresh[] | undefined;
+      let lastPayload: unknown;
+      let createdTaskId: number | undefined;
+
+      for (const toolName of intentTools) {
+        const params = buildToolParams(toolName, routeWithTitle, text, input.modifyTodoId, createdTaskId);
+        const toolVerdict = personalGuardrailEngine.checkToolCall(toolName, params);
+        if (!toolVerdict.allowed) {
+          return buildBlocked(toolVerdict);
+        }
+
+        const invokeResult = await toolRegistry.invoke(toolName, params, toolCtx);
+        refresh = mergeRefresh(refresh, invokeResult.refresh);
+        lastPayload = invokeResult.payload;
+
+        if (toolName === 'recurring.create') {
+          createdTaskId = (invokeResult.payload as RecurringCreateResult).taskId;
+        }
+      }
+
+      let reply = buildReplyForIntent(routeWithTitle, lastPayload);
+      const outputVerdict = personalGuardrailEngine.checkOutput(reply);
+      if (!outputVerdict.allowed) {
+        reply = sanitizeAssistantReply(reply);
+      }
+
+      appendAssistantMessage(session.id, 'assistant', reply);
+
+      inMemoryMetricsLedger.record({
+        name: 'pw.orchestrator.completed',
+        ts: new Date().toISOString(),
+        tags: { type: routeWithTitle.type },
+      });
+
+      const result: PersonalAssistantResult = { reply, refresh };
+
+      if (route.type === 'revise_ai' && lastPayload) {
+        const payload = lastPayload as TodoReviseAiResult;
+        result.modifyTodoId = payload.modifyTodoId;
+        result.modifyVersion = payload.modifyVersion;
+      }
+
+      return result;
+    } catch (error) {
+      if (error instanceof LlmExtractionError) {
+        console.error(`[personal-orchestrator] LLM 提取失败: ${error.message}`);
+        const reply = buildLlmExtractionFailureReply();
+        appendAssistantMessage(session.id, 'assistant', reply);
+        return { reply };
+      }
+      throw error;
     }
-
-    let reply = buildReplyForIntent(routeWithTitle, lastPayload);
-    const outputVerdict = personalGuardrailEngine.checkOutput(reply);
-    if (!outputVerdict.allowed) {
-      reply = sanitizeAssistantReply(reply);
-    }
-
-    appendAssistantMessage(session.id, 'assistant', reply);
-
-    inMemoryMetricsLedger.record({
-      name: 'pw.orchestrator.completed',
-      ts: new Date().toISOString(),
-      tags: { type: routeWithTitle.type },
-    });
-
-    const result: PersonalAssistantResult = { reply, refresh };
-
-    if (route.type === 'revise_ai' && lastPayload) {
-      const payload = lastPayload as TodoReviseAiResult;
-      result.modifyTodoId = payload.modifyTodoId;
-      result.modifyVersion = payload.modifyVersion;
-    }
-
-    return result;
   }
 }
 

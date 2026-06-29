@@ -6,6 +6,8 @@ import type {
   IntentSlot,
   PersonalIntentType,
 } from '@project-manager/shared';
+import { isGoldenPhrase } from './fixtures/golden-phrases.js';
+import { parseTimeOfDayFromChinese } from './chinese-time-of-day.js';
 
 /** 日历占用类关键词 */
 const SCHEDULE_KEYWORDS = [
@@ -190,54 +192,12 @@ function parseRecurringDayOfMonth(text: string): number | null {
   return day >= 1 && day <= 31 ? day : null;
 }
 
-/** 中文小写数字 → 整数（支持一～十二，供「下午五点」等解析） */
-const CN_HOUR_MAP: Record<string, number> = {
-  一: 1,
-  二: 2,
-  三: 3,
-  四: 4,
-  五: 5,
-  六: 6,
-  七: 7,
-  八: 8,
-  九: 9,
-  十: 10,
-  十一: 11,
-  十二: 12,
-};
-
-function parseHourToken(token: string): number | null {
-  if (/^\d+$/.test(token)) return Number(token);
-  return CN_HOUR_MAP[token] ?? null;
-}
-
 function parseRecurringTime(text: string): string {
-  const pmCnMatch = text.match(/下午([一二三四五六七八九十]+|\d+)点/);
-  if (pmCnMatch) {
-    const h = parseHourToken(pmCnMatch[1]!);
-    if (h !== null) {
-      const hour = h < 12 ? h + 12 : h;
-      return `${String(hour).padStart(2, '0')}:00`;
-    }
-  }
-
-  const amCnMatch = text.match(/上午([一二三四五六七八九十]+|\d+)点/);
-  if (amCnMatch) {
-    const h = parseHourToken(amCnMatch[1]!);
-    if (h !== null) return `${String(h).padStart(2, '0')}:00`;
-  }
-
-  const match = text.match(/(\d+)点/);
-  if (match) {
-    const h = Number(match[1]);
-    const hour = /下午/.test(text) && h < 12 ? h + 12 : h;
-    return `${String(hour).padStart(2, '0')}:00`;
-  }
-  if (/下午5点|17点/.test(text)) return '17:00';
-  return '17:00';
+  return parseTimeOfDayFromChinese(text) ?? '17:00';
 }
 
-function buildSlots(
+/** 黄金话术专用：规则解析时间/周期等 slot */
+export function buildRegexSlots(
   type: PersonalIntentType,
   text: string,
   context: IntentRouteContext,
@@ -283,6 +243,34 @@ function buildSlots(
   return slots;
 }
 
+/** 非黄金话术：仅保留意图分类所需的最小 slot，时间等交给 LLM */
+function buildMinimalSlots(type: PersonalIntentType, text: string, context: IntentRouteContext): IntentSlot {
+  const slots: IntentSlot = {};
+
+  if (context.modifyTodoId) {
+    slots.modifyTodoId = context.modifyTodoId;
+    return slots;
+  }
+
+  if (type === 'recurring' || type === 'recurring_schedule') {
+    slots.frequency = hasRecurringIntent(text) ?? undefined;
+  }
+
+  return slots;
+}
+
+function buildSlots(
+  type: PersonalIntentType,
+  text: string,
+  context: IntentRouteContext,
+  useRegexSlots: boolean,
+): IntentSlot {
+  if (useRegexSlots) {
+    return buildRegexSlots(type, text, context);
+  }
+  return buildMinimalSlots(type, text, context);
+}
+
 function buildReason(type: PersonalIntentType): string {
   switch (type) {
     case 'revise_ai':
@@ -308,12 +296,13 @@ function buildReason(type: PersonalIntentType): string {
 export class RuleBasedIntentRouter implements IntentRouter {
   route(message: string, context: IntentRouteContext): IntentRouteResult {
     const text = message.trim();
+    const useRegexSlots = isGoldenPhrase(text);
 
     if (context.modifyTodoId) {
       return {
         type: 'revise_ai',
         confidence: 'high',
-        slots: buildSlots('revise_ai', text, context),
+        slots: buildSlots('revise_ai', text, context, useRegexSlots),
         reason: buildReason('revise_ai'),
       };
     }
@@ -325,14 +314,14 @@ export class RuleBasedIntentRouter implements IntentRouter {
         return {
           type: 'recurring_schedule',
           confidence: 'high',
-          slots: buildSlots('recurring_schedule', text, context),
+          slots: buildSlots('recurring_schedule', text, context, useRegexSlots),
           reason: buildReason('recurring_schedule'),
         };
       }
       return {
         type: 'recurring',
         confidence: 'high',
-        slots: buildSlots('recurring', text, context),
+        slots: buildSlots('recurring', text, context, useRegexSlots),
         reason: buildReason('recurring'),
       };
     }
@@ -342,7 +331,7 @@ export class RuleBasedIntentRouter implements IntentRouter {
       return {
         type: 'todo',
         confidence: 'high',
-        slots: buildSlots('todo', text, context),
+        slots: buildSlots('todo', text, context, useRegexSlots),
         reason: buildReason('todo'),
       };
     }
@@ -351,7 +340,7 @@ export class RuleBasedIntentRouter implements IntentRouter {
       return {
         type: 'schedule',
         confidence: 'high',
-        slots: buildSlots('schedule', text, context),
+        slots: buildSlots('schedule', text, context, useRegexSlots),
         reason: buildReason('schedule'),
       };
     }
@@ -360,7 +349,7 @@ export class RuleBasedIntentRouter implements IntentRouter {
       return {
         type: 'todo',
         confidence: 'medium',
-        slots: buildSlots('todo', text, context),
+        slots: buildSlots('todo', text, context, useRegexSlots),
         reason: '兜底待办关键词',
       };
     }

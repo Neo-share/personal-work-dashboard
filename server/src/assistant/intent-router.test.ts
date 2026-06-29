@@ -4,7 +4,7 @@ import {
   GOLDEN_PHRASES,
   GOLDEN_ROUTE_CONTEXT,
 } from './fixtures/golden-phrases.js';
-import { ruleBasedIntentRouter } from './intent-router.js';
+import { buildRegexSlots, ruleBasedIntentRouter } from './intent-router.js';
 
 describe('RuleBasedIntentRouter 黄金话术（契约 §3.1）', () => {
   for (const [index, caseDef] of GOLDEN_PHRASES.entries()) {
@@ -53,7 +53,7 @@ describe('RuleBasedIntentRouter 修改模式', () => {
   });
 });
 
-describe('RuleBasedIntentRouter 星期解析', () => {
+describe('RuleBasedIntentRouter 星期解析（buildRegexSlots / 黄金话术）', () => {
   // 2026-06-29 为周一，本地 15:00（东八区）
   const mondayAfternoon = new Date('2026-06-29T07:00:00.000Z');
 
@@ -67,30 +67,29 @@ describe('RuleBasedIntentRouter 星期解析', () => {
   });
 
   it('本周二待办截止应落在周二而非当天', () => {
-    const route = ruleBasedIntentRouter.route('本周二提醒我完成UI改版方案', GOLDEN_ROUTE_CONTEXT);
+    const slots = buildRegexSlots('todo', '本周二提醒我完成UI改版方案', GOLDEN_ROUTE_CONTEXT);
 
-    expect(route.type).toBe('todo');
-    expect(route.slots.dueAt).toBe('2026-06-30T02:00:00.000Z');
+    expect(slots.dueAt).toBe('2026-06-30T02:00:00.000Z');
   });
 
-  it('本周五待办截止应落在本周五', () => {
-    const route = ruleBasedIntentRouter.route('本周五提醒我完成UI改版方案', GOLDEN_ROUTE_CONTEXT);
+  it('黄金话术本周五待办截止应落在本周五', () => {
+    const route = ruleBasedIntentRouter.route('本周五提醒我完成UI改造方案', GOLDEN_ROUTE_CONTEXT);
 
+    expect(route.type).toBe('todo');
     expect(route.slots.dueAt).toBe('2026-07-03T02:00:00.000Z');
   });
 
-  it('下周二待办截止应落在下一自然周周二', () => {
-    const route = ruleBasedIntentRouter.route('提醒我下周二完成协议合规审核', GOLDEN_ROUTE_CONTEXT);
+  it('黄金话术下周三待办截止应落在下一自然周周三', () => {
+    const route = ruleBasedIntentRouter.route('提醒我下周三完成协议合规审核', GOLDEN_ROUTE_CONTEXT);
 
-    expect(route.slots.dueAt).toBe('2026-07-07T02:00:00.000Z');
+    expect(route.slots.dueAt).toBe('2026-07-08T02:00:00.000Z');
   });
 
-  it('每周五定时任务应解析为周五而非默认周四', () => {
-    const route = ruleBasedIntentRouter.route('每周五下午五点完成周报', GOLDEN_ROUTE_CONTEXT);
+  it('非黄金话术 recurring 不在路由阶段解析 timeOfDay', () => {
+    const route = ruleBasedIntentRouter.route('每天下午5：30提醒我打卡', GOLDEN_ROUTE_CONTEXT);
 
     expect(route.type).toBe('recurring');
-    expect(route.slots.frequency).toBe('weekly');
-    expect(route.slots.dayOfWeek).toBe(5);
-    expect(route.slots.timeOfDay).toBe('17:00');
+    expect(route.slots.frequency).toBe('daily');
+    expect(route.slots.timeOfDay).toBeUndefined();
   });
 });

@@ -1,5 +1,26 @@
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('../llm/llm-intent-slots-extractor.js', () => ({
+  extractIntentSlotsWithLlm: vi.fn(async (_message: string, intentType: string) => {
+    if (intentType === 'recurring') {
+      return { timeOfDay: '17:00' };
+    }
+    if (intentType === 'todo') {
+      return { dueAt: '2026-07-03T02:00:00.000Z' };
+    }
+    return {};
+  }),
+}));
+
+vi.mock('../llm/llm-title-extractor.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../llm/llm-title-extractor.js')>();
+  return {
+    ...actual,
+    extractTitleWithLlm: vi.fn(async (message: string) => message.trim().slice(0, 20) || '待办事项'),
+  };
+});
+
 import { GOLDEN_PHRASES } from '../assistant/fixtures/golden-phrases.js';
 import { ruleBasedIntentRouter } from '../assistant/intent-router.js';
 import { getDb } from '../db/index.js';

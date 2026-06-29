@@ -3,7 +3,7 @@ import { createLlmClient } from './openai-client.js';
 import { inMemoryMetricsLedger } from '../assistant/metrics-ledger.js';
 
 /** LLM 调用场景，用于指标分桶 */
-export type LlmCaller = 'title' | 'generate' | 'revise';
+export type LlmCaller = 'title' | 'slots' | 'generate' | 'revise';
 
 export function recordLlmMetrics(
   caller: LlmCaller,

@@ -339,7 +339,7 @@ POST /api/chat (context=personal)
 
 | 模块 | 职责 |
 |------|------|
-| `llm-config` | 读取 `LLM_API_KEY`、`LLM_API_BASE`、`LLM_MODEL`、`LLM_TIMEOUT_MS` |
+| `llm-config` | 读取 `LLM_API_KEY`、`LLM_API_BASE`、`LLM_MODEL_SIMPLE/COMPLEX/DIFFICULT`、`LLM_TIMEOUT_MS` |
 | `openai-client` | OpenAI 兼容 `chatCompletion` HTTP 客户端 |
 | `llm-health` | `/health/llm` 极简 ping 探测 |
 | `llm-ai-result-generator` | 待办 AI HTML 生成与多轮修订 prompt |

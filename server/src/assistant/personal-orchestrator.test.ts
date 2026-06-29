@@ -10,6 +10,18 @@ import { ruleBasedIntentRouter } from './intent-router.js';
 import { personalAssistantOrchestrator } from './personal-orchestrator.js';
 import { isGuardrailBlocked } from '../services/personal-assistant-service.js';
 
+vi.mock('../llm/llm-intent-slots-extractor.js', () => ({
+  extractIntentSlotsWithLlm: vi.fn(async () => ({})),
+}));
+
+vi.mock('../llm/llm-title-extractor.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../llm/llm-title-extractor.js')>();
+  return {
+    ...actual,
+    extractTitleWithLlm: vi.fn(async (message: string) => message.trim().slice(0, 20) || '待办事项'),
+  };
+});
+
 describe('PersonalAssistantOrchestrator', () => {
   it('输入层护栏拦截返回 blocked 并记录指标', async () => {
     const before = inMemoryMetricsLedger.queryRecent({ name: 'pw.guardrail.blocked', limit: 10 }).length;

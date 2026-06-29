@@ -39,3 +39,10 @@ export const GOLDEN_PHRASES: GoldenPhraseCase[] = [
 
 /** IntentRouter 单测默认上下文 */
 export const GOLDEN_ROUTE_CONTEXT = { sessionId: 1 };
+
+const GOLDEN_PHRASE_INPUTS = new Set(GOLDEN_PHRASES.map((item) => item.input.trim()));
+
+/** 是否为产品 §6.4 黄金话术（仅黄金话术走规则 slot 解析） */
+export function isGoldenPhrase(message: string): boolean {
+  return GOLDEN_PHRASE_INPUTS.has(message.trim());
+}

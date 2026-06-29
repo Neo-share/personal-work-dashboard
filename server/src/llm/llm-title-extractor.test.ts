@@ -15,10 +15,11 @@ vi.mock('./llm-metrics.js', async (importOriginal) => {
 });
 
 import { chatCompletionWithMetrics } from './llm-metrics.js';
+import { LlmExtractionError } from './llm-extraction-error.js';
 import { extractTitleWithLlm, MAX_ASSISTANT_TITLE_LENGTH } from './llm-title-extractor.js';
 
 describe('llm-title-extractor', () => {
-  it('短句跳过 LLM 并记录 skipped', async () => {
+  it('黄金话术短句可跳过 LLM', async () => {
     const beforeSkipped = inMemoryMetricsLedger.queryRecent({
       name: 'pw.llm.skipped',
       limit: 200,
@@ -36,6 +37,30 @@ describe('llm-title-extractor', () => {
       limit: 200,
     });
     expect(afterSkipped.length).toBe(beforeSkipped + 1);
-    expect(afterSkipped[afterSkipped.length - 1]?.tags?.reason).toBe('short_message');
+  });
+
+  it('非黄金话术 llmOnly 时短句也走 LLM', async () => {
+    vi.mocked(chatCompletionWithMetrics).mockResolvedValue({
+      content: '{"title":"打卡提醒"}',
+      model: 'gpt-4o-mini',
+    });
+
+    const title = await extractTitleWithLlm('每天早上8点15提醒我打卡', 'recurring', {
+      llmOnly: true,
+    });
+
+    expect(title).toBe('打卡提醒');
+    expect(chatCompletionWithMetrics).toHaveBeenCalledOnce();
+  });
+
+  it('llmOnly 且 LLM 无效响应时抛出错误', async () => {
+    vi.mocked(chatCompletionWithMetrics).mockResolvedValue({
+      content: '无效',
+      model: 'gpt-4o-mini',
+    });
+
+    await expect(
+      extractTitleWithLlm('每天早上8点15提醒我打卡', 'recurring', { llmOnly: true }),
+    ).rejects.toBeInstanceOf(LlmExtractionError);
   });
 });

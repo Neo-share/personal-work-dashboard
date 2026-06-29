@@ -261,7 +261,9 @@ assistant.sessions | todoThreads | messages | createSession | appendMessage | re
 ```
 LLM_API_KEY=...
 LLM_API_BASE=https://api.openai.com/v1   # 可选
-LLM_MODEL=gpt-4o-mini                    # 可选
+LLM_MODEL_SIMPLE=...                     # 简单档（标题/slot）
+LLM_MODEL_COMPLEX=...                    # 复杂档（AI 初步生成）
+LLM_MODEL_DIFFICULT=...                  # 困难档（AI 修订）
 ```
 
 启动后访问 `GET /health/llm` 验证连通性。
