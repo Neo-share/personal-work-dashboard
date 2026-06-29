@@ -68,19 +68,81 @@ function isPureMeeting(text: string): boolean {
   return hasMeeting && !hasAction;
 }
 
+/** 中文星期 → JS getDay()（0=周日 … 6=周六） */
+const WEEKDAY_MAP: Record<string, number> = {
+  日: 0,
+  天: 0,
+  一: 1,
+  二: 2,
+  三: 3,
+  四: 4,
+  五: 5,
+  六: 6,
+};
+
+/**
+ * 解析「本周二 / 下周三 / 周五」等表达，返回相对 today 的天数偏移。
+ * weeksAhead=0 表示本自然周，1 表示下一自然周（周一为周首）。
+ */
+function resolveWeekdayOffset(text: string, now: Date): number | null {
+  const nextWeekMatch = text.match(/下(?:个)?(?:星期|周)([一二三四五六日天])/);
+  if (nextWeekMatch) {
+    const targetDay = WEEKDAY_MAP[nextWeekMatch[1]!];
+    if (targetDay === undefined) return null;
+    return daysToWeekday(now, targetDay, 1);
+  }
+
+  const thisWeekMatch = text.match(/本(?:星期|周)([一二三四五六日天])/);
+  if (thisWeekMatch) {
+    const targetDay = WEEKDAY_MAP[thisWeekMatch[1]!];
+    if (targetDay === undefined) return null;
+    const offset = daysToWeekday(now, targetDay, 0);
+    // 本自然周该日已过则落到下一周同一天（与交付原型一致）
+    if (offset < 0) return offset + 7;
+    return offset;
+  }
+
+  // 周X / 星期X（排除「每周」「下周」「本周」前缀）
+  const bareMatch = text.match(/(?<![每下本])(?:星期|周)([一二三四五六日天])/);
+  if (bareMatch) {
+    const targetDay = WEEKDAY_MAP[bareMatch[1]!];
+    if (targetDay === undefined) return null;
+    const offset = daysToWeekday(now, targetDay, 0);
+    return offset <= 0 ? offset + 7 : offset;
+  }
+
+  return null;
+}
+
+/** 距本自然周（周一为周首）内目标星期几的天数；weeksAhead 追加整周 */
+function daysToWeekday(now: Date, targetDay: number, weeksAhead: number): number {
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const dayOfWeek = now.getDay();
+  // 距本周一的天数（周一=0 … 周日=6）
+  const daysSinceMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - daysSinceMonday);
+  const mondayOffset = targetDay === 0 ? 6 : targetDay - 1;
+  const target = new Date(monday);
+  target.setDate(monday.getDate() + mondayOffset + weeksAhead * 7);
+  return Math.round((target.getTime() - today.getTime()) / 86_400_000);
+}
+
 function parseTimeFromText(text: string): { startAt: string; endAt: string } | null {
   const now = new Date();
   let targetDate = new Date(now);
 
   if (/明天/.test(text)) targetDate.setDate(targetDate.getDate() + 1);
   else if (/后天/.test(text)) targetDate.setDate(targetDate.getDate() + 2);
-  else if (/下周/.test(text)) targetDate.setDate(targetDate.getDate() + 7);
-  else if (/周三/.test(text)) {
-    const diff = (3 - now.getDay() + 7) % 7 || 7;
-    targetDate.setDate(targetDate.getDate() + diff);
-  } else if (/下周二/.test(text)) {
-    const diff = (2 - now.getDay() + 7) % 7 || 7;
-    targetDate.setDate(targetDate.getDate() + diff);
+  else {
+    const weekdayOffset = resolveWeekdayOffset(text, now);
+    if (weekdayOffset !== null) {
+      targetDate.setDate(targetDate.getDate() + weekdayOffset);
+    } else if (/下(?:个)?(?:星期|周)(?![一二三四五六日天])/.test(text)) {
+      // 「下周」无具体星期：默认 +7 天
+      targetDate.setDate(targetDate.getDate() + 7);
+    }
   }
 
   let hour = 10;
