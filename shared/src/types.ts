@@ -11,8 +11,17 @@ export type RequirementStatus =
 /** 优先级 */
 export type Priority = 'high' | 'medium' | 'low';
 
-/** 个人工作域：区分开发、生活、学习等，同一套工作项模型下分域管理 */
-export type WorkDomain = 'dev' | 'life' | 'learning' | 'admin' | 'other';
+/** 个人工作域：按业务职能划分工作项归属 */
+export const WORK_DOMAINS = [
+  'dev',
+  'qa',
+  'product',
+  'sales',
+  'support',
+  'operations',
+] as const;
+
+export type WorkDomain = (typeof WORK_DOMAINS)[number];
 
 /** 协作方向 */
 export type CollaborationDirection = 'upstream' | 'downstream';
@@ -235,10 +244,11 @@ export const PRIORITY_LABELS: Record<Priority, string> = {
 
 export const WORK_DOMAIN_LABELS: Record<WorkDomain, string> = {
   dev: '开发',
-  life: '生活',
-  learning: '学习',
-  admin: '事务',
-  other: '其他',
+  qa: '测试',
+  product: '产品',
+  sales: '销售',
+  support: '客服',
+  operations: '运营',
 };
 
 export const LINK_TYPE_LABELS: Record<LinkType, string> = {

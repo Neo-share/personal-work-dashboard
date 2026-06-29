@@ -52,6 +52,17 @@ function migrateSchema(database: Database.Database): void {
   if (!requirementColumnNames.has('domain')) {
     database.exec("ALTER TABLE requirements ADD COLUMN domain TEXT NOT NULL DEFAULT 'dev'");
   }
+
+  // 工作域枚举调整：将旧生活/学习等域映射到新业务域
+  const legacyDomainMap: Record<string, string> = {
+    life: 'operations',
+    learning: 'product',
+    admin: 'operations',
+    other: 'operations',
+  };
+  for (const [legacy, target] of Object.entries(legacyDomainMap)) {
+    database.prepare('UPDATE requirements SET domain = ? WHERE domain = ?').run(target, legacy);
+  }
 }
 
 export function getDb(): Database.Database {

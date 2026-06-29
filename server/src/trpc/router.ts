@@ -1,5 +1,6 @@
 import { initTRPC } from '@trpc/server';
 import { z } from 'zod';
+import { WORK_DOMAINS } from '@project-manager/shared';
 import { getWorkspacePath, getIgnoreDirs, setIgnoreDirs, setWorkspacePath } from '../db/index.js';
 import {
   addLink,
@@ -94,7 +95,7 @@ const requirementStatusSchema = z.enum([
   'paused',
 ]);
 
-const workDomainSchema = z.enum(['dev', 'life', 'learning', 'admin', 'other']);
+const workDomainSchema = z.enum(WORK_DOMAINS);
 
 const linkTypeSchema = z.enum(['figma', 'yapi', 'doc', 'feishu', 'test', 'release', 'other']);
 

@@ -4,6 +4,7 @@
  * 持久化仍使用 requirements 等历史表名，通过类型别名与模块边界平滑演进。
  */
 import type { Requirement, WorkbenchSummary, WorkDomain } from './types.js';
+import { WORK_DOMAIN_LABELS } from './types.js';
 
 /** 工作项：个人范围内的一条可跟踪工作（当前映射 requirements 表） */
 export type WorkItem = Requirement;
@@ -26,11 +27,12 @@ export interface WorkDomainModule {
 }
 
 export const WORK_DOMAIN_MODULES: WorkDomainModule[] = [
-  { id: 'dev', label: '开发', devCapabilities: true },
-  { id: 'life', label: '生活', devCapabilities: false },
-  { id: 'learning', label: '学习', devCapabilities: false },
-  { id: 'admin', label: '事务', devCapabilities: false },
-  { id: 'other', label: '其他', devCapabilities: false },
+  { id: 'dev', label: WORK_DOMAIN_LABELS.dev, devCapabilities: true },
+  { id: 'qa', label: WORK_DOMAIN_LABELS.qa, devCapabilities: false },
+  { id: 'product', label: WORK_DOMAIN_LABELS.product, devCapabilities: false },
+  { id: 'sales', label: WORK_DOMAIN_LABELS.sales, devCapabilities: false },
+  { id: 'support', label: WORK_DOMAIN_LABELS.support, devCapabilities: false },
+  { id: 'operations', label: WORK_DOMAIN_LABELS.operations, devCapabilities: false },
 ];
 
 export function isDevWorkDomain(domain: WorkDomain): boolean {
@@ -38,5 +40,8 @@ export function isDevWorkDomain(domain: WorkDomain): boolean {
 }
 
 export function getWorkDomainModule(domain: WorkDomain): WorkDomainModule {
-  return WORK_DOMAIN_MODULES.find((item) => item.id === domain) ?? WORK_DOMAIN_MODULES[4]!;
+  return (
+    WORK_DOMAIN_MODULES.find((item) => item.id === domain) ??
+    WORK_DOMAIN_MODULES.find((item) => item.id === 'operations')!
+  );
 }
