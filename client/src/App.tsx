@@ -9,6 +9,10 @@ import RequirementDetailPage from './pages/RequirementDetailPage';
 import RequirementsPage from './pages/RequirementsPage';
 import ScanCenterPage from './pages/ScanCenterPage';
 import WeeklyReportPage from './pages/WeeklyReportPage';
+import SalesPipelinePage from './pages/sales/SalesPipelinePage';
+import SalesCustomersPage from './pages/sales/SalesCustomersPage';
+import SalesCustomerDetailPage from './pages/sales/SalesCustomerDetailPage';
+import SalesOpportunityDetailPage from './pages/sales/SalesOpportunityDetailPage';
 
 const devNavItems = [
   { to: '/dev-dashboard', label: '驾驶舱' },
@@ -18,6 +22,11 @@ const devNavItems = [
   { to: '/scan', label: '扫描' },
   { to: '/graph', label: '关系图谱' },
   { to: '/people', label: '协作联系人' },
+];
+
+const salesNavItems = [
+  { to: '/sales', label: '销售管线', end: true },
+  { to: '/sales/customers', label: '客户管理' },
 ];
 
 function DevShell({ children }: { children: React.ReactNode }) {
@@ -39,11 +48,40 @@ function DevShell({ children }: { children: React.ReactNode }) {
               {item.label}
             </NavLink>
           ))}
+          <NavLink to="/sales">销售驾驶舱</NavLink>
           <NavLink to="/">个人工作台</NavLink>
         </nav>
       </header>
       <main className="app-main">{children}</main>
       <ChatPanel />
+    </div>
+  );
+}
+
+function SalesShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="app-shell">
+      <header className="app-header">
+        <div>
+          <h1 className="brand-title">销售驾驶舱</h1>
+          <p className="brand-subtitle">金融 B2C 销售管线 · 客户 · 合规 · 跟进</p>
+        </div>
+        <nav className="app-nav">
+          {salesNavItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) => (isActive ? 'active' : undefined)}
+            >
+              {item.label}
+            </NavLink>
+          ))}
+          <NavLink to="/">个人工作台</NavLink>
+          <NavLink to="/dev-dashboard">开发驾驶舱</NavLink>
+        </nav>
+      </header>
+      <main className="app-main">{children}</main>
     </div>
   );
 }
@@ -114,6 +152,38 @@ export default function App() {
           <DevShell>
             <ScanCenterPage />
           </DevShell>
+        }
+      />
+      <Route
+        path="/sales"
+        element={
+          <SalesShell>
+            <SalesPipelinePage />
+          </SalesShell>
+        }
+      />
+      <Route
+        path="/sales/customers"
+        element={
+          <SalesShell>
+            <SalesCustomersPage />
+          </SalesShell>
+        }
+      />
+      <Route
+        path="/sales/customers/:id"
+        element={
+          <SalesShell>
+            <SalesCustomerDetailPage />
+          </SalesShell>
+        }
+      />
+      <Route
+        path="/sales/opportunities/:id"
+        element={
+          <SalesShell>
+            <SalesOpportunityDetailPage />
+          </SalesShell>
         }
       />
       <Route path="/settings" element={<Navigate to="/scan" replace />} />

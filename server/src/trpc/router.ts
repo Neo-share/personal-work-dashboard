@@ -81,6 +81,33 @@ import {
   restoreTodo,
   updateTodo,
 } from '../services/todo-service.js';
+import {
+  SALES_ACTIVITY_TYPES,
+  SALES_KYC_STATUSES,
+  SALES_PIPELINE_STAGES,
+  SALES_RISK_LEVELS,
+} from '@project-manager/shared';
+import {
+  createSalesCustomer,
+  deleteSalesCustomer,
+  getSalesCustomerDetail,
+  listSalesCustomers,
+  updateSalesCustomer,
+} from '../services/sales-customer-service.js';
+import {
+  advanceSalesOpportunityStage,
+  checkAdvanceStage,
+  createSalesOpportunity,
+  deleteSalesOpportunity,
+  getSalesOpportunityDetail,
+  listSalesOpportunities,
+  updateSalesOpportunity,
+  upsertComplianceItem,
+} from '../services/sales-opportunity-service.js';
+import {
+  createSalesActivity,
+  deleteSalesActivity,
+} from '../services/sales-activity-service.js';
 import type { TrpcContext } from './context.js';
 
 const t = initTRPC.context<TrpcContext>().create();
@@ -631,6 +658,155 @@ export const appRouter = t.router({
       )
       .mutation(async ({ input }) => resolvePersonalAssistantIntent(input.message, input)),
     metricsSummary: t.procedure.query(() => summarizeLlmMetrics()),
+  }),
+
+  sales: t.router({
+    customers: t.router({
+      list: t.procedure
+        .input(z.object({ keyword: z.string().optional() }).optional())
+        .query(({ input }) => listSalesCustomers(input?.keyword)),
+      detail: t.procedure
+        .input(z.object({ id: z.number() }))
+        .query(({ input }) => getSalesCustomerDetail(input.id)),
+      create: t.procedure
+        .input(
+          z.object({
+            name: z.string().min(1),
+            phone: z.string().min(1),
+            source: z.string().optional(),
+            riskLevel: z.enum(SALES_RISK_LEVELS).optional(),
+            kycStatus: z.enum(SALES_KYC_STATUSES).optional(),
+            notes: z.string().optional(),
+          }),
+        )
+        .mutation(({ input }) => createSalesCustomer(input)),
+      update: t.procedure
+        .input(
+          z.object({
+            id: z.number(),
+            name: z.string().optional(),
+            phone: z.string().optional(),
+            source: z.string().nullable().optional(),
+            riskLevel: z.enum(SALES_RISK_LEVELS).optional(),
+            kycStatus: z.enum(SALES_KYC_STATUSES).optional(),
+            notes: z.string().nullable().optional(),
+          }),
+        )
+        .mutation(({ input }) => {
+          const { id, ...fields } = input;
+          return updateSalesCustomer(id, fields);
+        }),
+      delete: t.procedure
+        .input(z.object({ id: z.number() }))
+        .mutation(({ input }) => {
+          const ok = deleteSalesCustomer(input.id);
+          return { ok };
+        }),
+    }),
+    opportunities: t.router({
+      list: t.procedure
+        .input(
+          z
+            .object({
+              stage: z.enum(SALES_PIPELINE_STAGES).optional(),
+              customerId: z.number().optional(),
+              keyword: z.string().optional(),
+            })
+            .optional(),
+        )
+        .query(({ input }) => listSalesOpportunities(input)),
+      detail: t.procedure
+        .input(z.object({ id: z.number() }))
+        .query(({ input }) => getSalesOpportunityDetail(input.id)),
+      create: t.procedure
+        .input(
+          z.object({
+            customerId: z.number(),
+            title: z.string().min(1),
+            productType: z.string().optional(),
+            stage: z.enum(SALES_PIPELINE_STAGES).optional(),
+            expectedAmount: z.number().optional(),
+            expectedCloseAt: z.string().optional(),
+            notes: z.string().optional(),
+          }),
+        )
+        .mutation(({ input }) => createSalesOpportunity(input)),
+      update: t.procedure
+        .input(
+          z.object({
+            id: z.number(),
+            title: z.string().optional(),
+            productType: z.string().nullable().optional(),
+            expectedAmount: z.number().nullable().optional(),
+            expectedCloseAt: z.string().nullable().optional(),
+            lostReason: z.string().nullable().optional(),
+            notes: z.string().nullable().optional(),
+          }),
+        )
+        .mutation(({ input }) => {
+          const { id, ...fields } = input;
+          return updateSalesOpportunity(id, fields);
+        }),
+      advanceStage: t.procedure
+        .input(
+          z.object({
+            id: z.number(),
+            targetStage: z.enum(SALES_PIPELINE_STAGES),
+            force: z.boolean().optional(),
+            forceNote: z.string().optional(),
+          }),
+        )
+        .mutation(({ input }) => {
+          const { id, targetStage, force, forceNote } = input;
+          return advanceSalesOpportunityStage(id, targetStage, { force, forceNote });
+        }),
+      checkAdvanceStage: t.procedure
+        .input(
+          z.object({
+            id: z.number(),
+            targetStage: z.enum(SALES_PIPELINE_STAGES),
+          }),
+        )
+        .query(({ input }) => checkAdvanceStage(input.id, input.targetStage)),
+      delete: t.procedure
+        .input(z.object({ id: z.number() }))
+        .mutation(({ input }) => {
+          const ok = deleteSalesOpportunity(input.id);
+          return { ok };
+        }),
+      setComplianceItem: t.procedure
+        .input(
+          z.object({
+            opportunityId: z.number(),
+            stage: z.enum(SALES_PIPELINE_STAGES),
+            itemKey: z.string().min(1),
+            completed: z.boolean(),
+            note: z.string().nullable().optional(),
+          }),
+        )
+        .mutation(({ input }) => {
+          const { opportunityId, stage, itemKey, completed, note } = input;
+          return upsertComplianceItem(opportunityId, stage, itemKey, { completed, note });
+        }),
+    }),
+    activities: t.router({
+      create: t.procedure
+        .input(
+          z.object({
+            opportunityId: z.number(),
+            type: z.enum(SALES_ACTIVITY_TYPES),
+            content: z.string().min(1),
+            activityAt: z.string().optional(),
+          }),
+        )
+        .mutation(({ input }) => createSalesActivity(input)),
+      delete: t.procedure
+        .input(z.object({ id: z.number() }))
+        .mutation(({ input }) => {
+          const ok = deleteSalesActivity(input.id);
+          return { ok };
+        }),
+    }),
   }),
 });
 

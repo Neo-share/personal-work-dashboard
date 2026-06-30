@@ -227,4 +227,56 @@ CREATE TABLE IF NOT EXISTS metric_events (
 );
 
 CREATE INDEX IF NOT EXISTS idx_metric_events_name_ts ON metric_events(name, ts);
+
+CREATE TABLE IF NOT EXISTS sales_customers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  source TEXT,
+  risk_level TEXT NOT NULL DEFAULT 'unknown',
+  kyc_status TEXT NOT NULL DEFAULT 'pending',
+  notes TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS sales_opportunities (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  customer_id INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  product_type TEXT,
+  stage TEXT NOT NULL DEFAULT 'lead',
+  expected_amount REAL,
+  expected_close_at TEXT,
+  lost_reason TEXT,
+  notes TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (customer_id) REFERENCES sales_customers(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS sales_activities (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  opportunity_id INTEGER NOT NULL,
+  type TEXT NOT NULL,
+  content TEXT NOT NULL,
+  activity_at TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (opportunity_id) REFERENCES sales_opportunities(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS sales_compliance_records (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  opportunity_id INTEGER NOT NULL,
+  stage TEXT NOT NULL,
+  item_key TEXT NOT NULL,
+  completed_at TEXT,
+  note TEXT,
+  FOREIGN KEY (opportunity_id) REFERENCES sales_opportunities(id) ON DELETE CASCADE,
+  UNIQUE(opportunity_id, stage, item_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sales_opportunities_stage ON sales_opportunities(stage);
+CREATE INDEX IF NOT EXISTS idx_sales_opportunities_customer ON sales_opportunities(customer_id);
+CREATE INDEX IF NOT EXISTS idx_sales_activities_opportunity ON sales_activities(opportunity_id);
 `;

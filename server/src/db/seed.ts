@@ -11,6 +11,7 @@ export function seedDatabase(db: Database.Database): void {
   }
 
   seedPersonalWorkbench(db);
+  seedSalesWorkbench(db);
 }
 
 function seedDevRequirements(db: Database.Database): void {
@@ -317,4 +318,52 @@ function seedPersonalWorkbench(db: Database.Database): void {
     `INSERT INTO assistant_messages (session_id, role, content, ai_result_id, created_at)
      VALUES (?, 'assistant', '你好！我会先区分待办与日程，帮你创建内容或生成初步结果。', NULL, ?)`,
   ).run(sessionId, now);
+}
+
+/** 金融销售驾驶舱示例数据 */
+function seedSalesWorkbench(db: Database.Database): void {
+  const count = db.prepare('SELECT COUNT(*) as count FROM sales_customers').get() as {
+    count: number;
+  };
+  if (count.count > 0) return;
+
+  const now = new Date().toISOString();
+  const customerResult = db
+    .prepare(
+      `INSERT INTO sales_customers (name, phone, source, risk_level, kyc_status, notes, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run('王女士', '13800001234', '网点转介', 'c3', 'verified', '关注稳健型理财', now, now);
+  const customerId = Number(customerResult.lastInsertRowid);
+
+  const oppResult = db
+    .prepare(
+      `INSERT INTO sales_opportunities
+        (customer_id, title, product_type, stage, expected_amount, expected_close_at, notes, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      customerId,
+      '季度理财配置',
+      '混合型基金',
+      'suitability',
+      100000,
+      new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10),
+      '已完成风评，待确认方案',
+      now,
+      now,
+    );
+  const opportunityId = Number(oppResult.lastInsertRowid);
+
+  db.prepare(
+    `INSERT INTO sales_compliance_records (opportunity_id, stage, item_key, completed_at, note)
+     VALUES (?, 'lead', 'source_recorded', ?, NULL),
+            (?, 'lead', 'contact_valid', ?, NULL),
+            (?, 'qualifying', 'need_identified', ?, NULL)`,
+  ).run(opportunityId, now, opportunityId, now, opportunityId, now);
+
+  db.prepare(
+    `INSERT INTO sales_activities (opportunity_id, type, content, activity_at, created_at)
+     VALUES (?, 'call', '电话沟通理财需求，客户偏好中低风险产品', ?, ?)`,
+  ).run(opportunityId, now, now);
 }
