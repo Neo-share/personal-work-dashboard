@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>个人 AI 助手工作台 — AI 协作复盘</title>
+  <link rel="stylesheet" href="_shared.css" />
+  <style>
+    .summary-box {
+      background: var(--accent-bg);
+      border: 1px solid #ddd6fe;
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin: 16px 0;
+      font-size: 14px;
+      line-height: 1.75;
+    }
+    .role-human { border-left: 4px solid var(--ok); padding-left: 16px; margin: 16px 0; }
+    .role-ai { border-left: 4px solid var(--accent); padding-left: 16px; margin: 16px 0; }
+    .role-label {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+    .role-human .role-label { background: var(--ok); }
+    .role-ai .role-label { background: var(--accent); }
+    .evidence-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin: 16px 0;
+    }
+    .evidence-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fafafa;
+    }
+    .evidence-card img {
+      width: 100%;
+      display: block;
+      border-bottom: 1px solid var(--border);
+    }
+    .evidence-card figcaption {
+      padding: 10px 12px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .lesson-ok { background: var(--ok-bg); }
+    .lesson-warn { background: #fffbeb; }
+    .lesson-risk { background: #fef2f2; }
+    .timeline-item { margin-bottom: 14px; padding-left: 18px; border-left: 2px solid var(--border); }
+    .timeline-item strong { display: block; margin-bottom: 4px; }
+    .timeline-item .phase { font-size: 12px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="doc-header">
+      <h1>个人 AI 助手工作台 — AI 协作复盘</h1>
+      <p class="meta">人机协作过程回顾 · 经验沉淀 · 核对日期 2026-07-09 · 项目 project-manager</p>
+      <nav class="doc-nav">
+        <a href="交付说明.html">交付说明</a>
+        <a href="架构设计文档.html">架构设计</a>
+        <a href="测试用例文档.html">测试用例</a>
+        <a href="测试报告.html">测试报告</a>
+        <a href="AI原生-技术实现.html">AI原生·技术</a>
+        <a href="AI原生-产品功能.html">AI原生·产品</a>
+        <a class="is-current" href="AI协作复盘.html">AI协作复盘</a>
+        <a href="Skill使用说明.html">Skill使用说明</a>
+        <a href="演示产物文档.html">演示产物</a>
+      </nav>
+    </header>
+
+    <section>
+      <h2>1. 复盘目的与范围</h2>
+      <p>本文记录「个人 AI 助手工作台」从考题需求到可验收交付的<strong>人机协作全过程</strong>，总结哪些做法有效、哪些环节需要人工把关，供后续项目复用。</p>
+      <table>
+        <tr><th>项</th><th>说明</th></tr>
+        <tr><td>协作工具</td><td>Cursor Agent · Claude · 项目内 Agent 控制层（S0–S5）</td></tr>
+        <tr><td>协作周期</td><td>2026-06 需求落地 → 2026-07-09 交付文档与 AI 原生说明收尾</td></tr>
+        <tr><td>复盘范围</td><td>工程实现、文档链、测试门禁、提示词与 Skill 使用</td></tr>
+        <tr><td>不在范围</td><td>终端用户如何使用产品内 AI 功能（见 <a href="AI原生-产品功能.html">AI原生·产品功能篇</a>）</td></tr>
+      </table>
+      <div class="summary-box">
+        <strong>一句话结论</strong>：人负责冻结架构边界（T0）与验收口径；AI 负责按文档链批量实现代码与测试；Agent 控制层用 scope 校验 + 门禁把「能跑」变成「可交付」。三者串联后，119 条 L4 功能点全部落地，97 条自动化用例 100% 通过。
+      </div>
+    </section>
+
+    <section>
+      <h2>2. 协作分工模型</h2>
+      <div class="role-human">
+        <span class="role-label">人 · 定界与验收</span>
+        <ul>
+          <li>编写/审定产品需求原文（<code>个人工作台.md</code>）</li>
+          <li>冻结 T0 架构：三层能力分层、Monorepo 包边界、五层助手、数据流</li>
+          <li>S1/S2 确认需求与改动范围（G.2 路径集合）</li>
+          <li>审阅 AI 生成的 L4 / TL4 文档与测试用例</li>
+          <li>验收黄金话术、护栏拦截、降级路径等关键行为</li>
+        </ul>
+      </div>
+      <div class="role-ai">
+        <span class="role-label">AI Agent · 吞吐与一致性</span>
+        <ul>
+          <li>需求 → L4 产品功能点分解（119 条，可判定 ✅/❌）</li>
+          <li>L4 → TL4 技术映射（组件 / service / router / DB 表）</li>
+          <li>按 TL4 批量实现 client / server / shared 代码</li>
+          <li>生成 Vitest 单测、集成测、黄金话术回归（97 条）</li>
+          <li>门禁失败时机械修复或认知修验（上限 15 轮）</li>
+        </ul>
+      </div>
+      <pre>人定 T0 边界
+    ↓
+AI 生成文档链（L4 → TL4 → 测试清单）
+    ↓
+AI 按 TL4 写代码 + 测例
+    ↓
+Agent 控制层：scope 校验 → agent:gate:dev → 完成判定
+    ↓
+人验收关键路径 + 交付文档</pre>
+    </section>
+
+    <section>
+      <h2>3. 协作流程时间线</h2>
+      <div class="timeline-item">
+        <strong>阶段 A · 架构定界（T0）</strong>
+        <span class="phase">人主导 · 2026-06 上旬</span>
+        <p>确定 pnpm monorepo 三件套、router→service→DB 分层、助手五层编排、SQLite 持久化策略；产出架构设计文档与 <code>AGENTS.md</code> 入口。</p>
+      </div>
+      <div class="timeline-item">
+        <strong>阶段 B · 文档链生成（T1–T2）</strong>
+        <span class="phase">AI 生成 + 人审 · 2026-06 中旬</span>
+        <p>从产品需求反向生成 L4 功能点（9 个 L1 模块）与技术功能点对照表；建立编号可追溯的验收体系。</p>
+      </div>
+      <div class="timeline-item">
+        <strong>阶段 C · 核心实现（T2→S3）</strong>
+        <span class="phase">AI 批量实现 · 2026-06 中下旬</span>
+        <p>个人工作台 UI、待办/日程/定时 CRUD、个人助手 SSE 对话、AI 结果生成与修订、内部 RAG、四层护栏陆续落地。</p>
+      </div>
+      <div class="timeline-item">
+        <strong>阶段 D · 测试与门禁（T3–T4）</strong>
+        <span class="phase">AI 生成用例 + 循环修复 · 2026-06 下旬</span>
+        <p>补齐 97 条自动化用例（含 HTTP/SSE 集成 20 条）；<code>pnpm agent:gate</code> 全绿；行覆盖率 76.53%。</p>
+      </div>
+      <div class="timeline-item">
+        <strong>阶段 E · 交付沉淀（S5）</strong>
+        <span class="phase">人 + AI · 2026-07-09</span>
+        <p>HTML 交付包、AI 原生说明（技术/产品双篇）、本协作复盘文档；截图与录屏归档。</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>4. 关键协作资产</h2>
+      <h3>4.1 规则与入口（Agent 每次任务必读）</h3>
+      <table>
+        <tr><th>资产</th><th>路径</th><th>作用</th></tr>
+        <tr><td>Monorepo 入口</td><td><code>AGENTS.md</code></td><td>文档索引、跨包定位、数据流约定</td></tr>
+        <tr><td>工作流状态机</td><td><code>agents/workflow.md</code></td><td>S0–S5 分阶段执行；G.2 范围确认不可豁免</td></tr>
+        <tr><td>工程硬约束</td><td><code>agents/engineering-rules.md</code></td><td>最小改动、包依赖方向、验证命令</td></tr>
+        <tr><td>Cursor 规则</td><td><code>.cursor/rules/*.mdc</code></td><td>包边界、门禁策略、编码底线</td></tr>
+        <tr><td>门禁命令</td><td><code>agents/commands-checklist.md</code></td><td><code>agent:scope:*</code> · <code>agent:gate:dev</code> · <code>agent:gate</code></td></tr>
+      </table>
+      <h3>4.2 项目 Skill（按需加载）</h3>
+      <table>
+        <tr><th>Skill</th><th>触发场景</th><th>协作价值</th></tr>
+        <tr><td><code>project-manager-architecture</code></td><td>新增页面/API、排查包边界</td><td>统一 monorepo 分层与数据流，减少 AI 越界写入</td></tr>
+        <tr><td><code>start-project</code></td><td>本地 dev 启动</td><td>标准化安装与验证步骤，避免环境类返工</td></tr>
+        <tr><td><code>todo-knowledge-rag</code></td><td>待办 AI 生成/修订、RAG 检索</td><td>约束检索策略与降级路径，防止幻觉式上下文</td></tr>
+        <tr><td><code>workflow-driven-requirements</code></td><td>用户要求走 S0–S5</td><td>强制暂停确认点，避免 AI 跳过范围确认</td></tr>
+      </table>
+      <h3>4.3 提示词策略（有效模式）</h3>
+      <table>
+        <tr><th>模式</th><th>示例</th><th>效果</th></tr>
+        <tr><td>引用权威文档</td><td>「按 <code>个人工作台.md</code> §五实现个人助手意图分流」</td><td>减少 AI 自行发明需求</td></tr>
+        <tr><td>指定编号追溯</td><td>「补齐 L1-05 的 05.22–05.28 黄金话术测试」</td><td>测试与验收一一对应</td></tr>
+        <tr><td>冻结边界</td><td>「定时任务 Tab 不调 LLM，只物化待办」</td><td>防止职责与成本失控</td></tr>
+        <tr><td>限定改动范围</td><td>「只改 <code>server/src/assistant/</code>，不动 client」</td><td>配合 G.2 scope 校验</td></tr>
+        <tr><td>验收命令</td><td>「改完后跑 <code>pnpm agent:gate:dev</code>，exit 0 才算完成」</td><td>客观完成判定</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>5. 交付成果数据</h2>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="label">L4 功能点</div><div class="value">119</div></div>
+        <div class="stat-card"><div class="label">已实现</div><div class="value" style="color:var(--ok)">117</div></div>
+        <div class="stat-card"><div class="label">自动化用例</div><div class="value">97</div></div>
+        <div class="stat-card"><div class="label">通过率</div><div class="value">100%</div></div>
+        <div class="stat-card"><div class="label">行覆盖率</div><div class="value">76.5%</div></div>
+        <div class="stat-card"><div class="label">HTML 交付文档</div><div class="value">7</div></div>
+      </div>
+      <table>
+        <tr><th>维度</th><th>成果</th><th>协作贡献</th></tr>
+        <tr><td>产品验收</td><td>9 个 L1 模块核心功能全部 ✅</td><td>AI 生成 L4 清单 + 人审编号与状态</td></tr>
+        <tr><td>助手安全</td><td>四层护栏 + 20 条 HTTP/SSE 集成测</td><td>人定规则；AI 实现与补测</td></tr>
+        <tr><td>AI 生成链路</td><td>RAG + LLM + 规则模板降级</td><td>Skill 约束检索边界；无 Key 仍可验收</td></tr>
+        <tr><td>工程门禁</td><td><code>agent:gate</code> PASS</td><td>Agent 控制层强制 scope + 测试</td></tr>
+        <tr><td>文档链</td><td>需求 → L4 → TL4 → 测试 → HTML 交付包</td><td>AI 生成主体；人审定结构与索引</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>6. 协作过程实录</h2>
+      <p>以下为实际协作中的提示词与 Skill 使用截图，展示「人给边界 → AI 按规范执行」的典型交互。</p>
+      <div class="evidence-grid">
+        <figure class="evidence-card">
+          <img src="提示词截图.png" alt="提示词截图：需求分解与实现指令" />
+          <figcaption>提示词示例：引用产品文档章节，指定实现范围与验收标准</figcaption>
+        </figure>
+        <figure class="evidence-card">
+          <img src="提示词截图1.png" alt="提示词截图：测试与门禁指令" />
+          <figcaption>提示词示例：要求补齐测试并跑门禁，明确 exit 0 完成判定</figcaption>
+        </figure>
+        <figure class="evidence-card">
+          <img src="提示词截图2.png" alt="提示词截图：架构与分层约束" />
+          <figcaption>提示词示例：强调能力三层与包边界，防止 AI 越界改动</figcaption>
+        </figure>
+        <figure class="evidence-card">
+          <img src="skill使用截图.png" alt="Skill 使用截图：加载项目架构 Skill" />
+          <figcaption>Skill 调用：加载 <code>project-manager-architecture</code> 后再改代码</figcaption>
+        </figure>
+      </div>
+      <p>演示录屏：<code>录屏2026-07-09 18.28.38.mp4</code>（本地交付包内，展示端到端验收操作）。</p>
+    </section>
+
+    <section>
+      <h2>7. 做得好的地方</h2>
+      <table>
+        <tr><th>实践</th><th>说明</th><th>可复制性</th></tr>
+        <tr class="lesson-ok"><td><strong>T0 人定边界</strong></td><td>三层能力分层、包依赖、五层助手在编码前冻结，后续 AI 补丁不破坏骨架</td><td>高 — 任何 AI 辅助项目应先写「不可动」清单</td></tr>
+        <tr class="lesson-ok"><td><strong>编号可追溯文档链</strong></td><td>L4 编号贯穿产品、技术、测试三层，改一处可定位全部关联</td><td>高 — 适合考题/外包验收场景</td></tr>
+        <tr class="lesson-ok"><td><strong>规则路径优先于 LLM</strong></td><td>分流、护栏、调度、降级均确定性实现；LLM 仅用于高价值 HTML 生成</td><td>中 — 需产品层明确「哪些不能交给模型」</td></tr>
+        <tr class="lesson-ok"><td><strong>门禁客观化完成</strong></td><td><code>agent:gate:dev</code> exit 0 才能宣称完成，避免「看起来好了」</td><td>高 — 接入任意 monorepo CI 即可</td></tr>
+        <tr class="lesson-ok"><td><strong>无 Key 可验收</strong></td><td>规则模板降级保证主链路在无 LLM 环境下仍可全量演示</td><td>中 — 依赖产品设计预留 P0 基线</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>8. 踩坑与改进</h2>
+      <table>
+        <tr><th>问题</th><th>表现</th><th>应对</th><th>后续改进</th></tr>
+        <tr class="lesson-warn"><td>AI 越界写入</td><td>一次改动同时改 client + server</td><td>启用 worktree scope 规则 + <code>agent:scope:*</code></td><td>大任务拆为多窗口并行 Agent</td></tr>
+        <tr class="lesson-warn"><td>文档与代码脱节</td><td>功能已实现但 L4 状态未同步</td><td>反向对照代码批量更新状态表</td><td>门禁增加「L4 状态漂移」检查（规划）</td></tr>
+        <tr class="lesson-warn"><td>日期/周期解析边界</td><td>「本周三」「每周五」偶发误解析</td><td>补单测 + 黄金话术回归</td><td>NL 时间解析独立模块 + 更多话术</td></tr>
+        <tr class="lesson-risk"><td>LLM 依赖外部 API</td><td>CI 不能调真实模型</td><td>mock HTTP + 规则模板 fallback 测例</td><td>契约测试与录制 fixture</td></tr>
+        <tr class="lesson-risk"><td>可选能力验收缺口</td><td>飞书 MCP 需运行时配置才验</td><td>代码落地 + 文档标注 ⚠️</td><td>Testcontainers 或 mock MCP 服务</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>9. 经验总结：可复制的协作公式</h2>
+      <pre>成功交付 ≈ 人定边界 × AI 吞吐 × 客观门禁 × 编号追溯
+
+1. 人先写「不能错」：架构、安全、验收口径（T0）
+2. AI 再写「可以批量」：CRUD、组件、测例、文档映射（T1–T3）
+3. 门禁兜底「不能宣称完成」：scope + test + build（T4）
+4. 人最后验「不能自动化」：UX 细节、黄金话术、降级体感（S5）</pre>
+      <h3>9.1 推荐协作节奏（单需求）</h3>
+      <ol>
+        <li>S0：确认影响域（client / server / shared / docs）</li>
+        <li>S1/S2：列 L4 编号 + G.2 文件清单，等人确认</li>
+        <li>S3：加载对应 Skill，最小改动实现</li>
+        <li>S4：<code>pnpm agent:scope:auto</code> → <code>pnpm agent:gate:dev</code></li>
+        <li>S5：更新功能点状态 + 交付说明（若对外）</li>
+      </ol>
+      <h3>9.2 不推荐的做法</h3>
+      <ul>
+        <li>无 T0 边界直接让 AI 「从零搭全栈」——后期重构成本极高</li>
+        <li>跳过 G.2 范围确认——易产生跨包改动与 merge 冲突</li>
+        <li>只靠人工点测、不跑门禁——回归不可复现</li>
+        <li>把分流/护栏/调度交给 LLM——安全与成本不可控</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>10. 后续优化建议</h2>
+      <table>
+        <tr><th>方向</th><th>项</th><th>优先级</th></tr>
+        <tr><td>协作效率</td><td>机读任务 <code>agents/agent-orchestration.tasks.yaml</code> 与 L4 编号自动关联</td><td>P1</td></tr>
+        <tr><td>测试</td><td>补齐 E2E 黄金路径 Playwright（已有部分 commit 基础）</td><td>P1</td></tr>
+        <tr><td>安全</td><td>护栏拦截记录落库复盘（见 <code>TODO/guardrail-enhancement.md</code> §6）</td><td>P2</td></tr>
+        <tr><td>RAG</td><td>E4 本地 embedding 向量索引（当前 R0 规则检索已够用）</td><td>P3 可选</td></tr>
+        <tr><td>文档</td><td>交付 HTML 与 Markdown 主本自动同步检查</td><td>P2</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>11. 相关文档</h2>
+      <table>
+        <tr><th>文档</th><th>说明</th></tr>
+        <tr><td><a href="AI原生-技术实现.html">AI原生-技术实现.html</a></td><td>T0–T4 工程侧五档工作流详解</td></tr>
+        <tr><td><a href="AI原生-产品功能.html">AI原生-产品功能.html</a></td><td>P0–P3 产品能力分档与重构说明</td></tr>
+        <tr><td><a href="交付说明.html">交付说明.html</a></td><td>实现摘要与运行验收指引</td></tr>
+        <tr><td><a href="架构设计文档.html">架构设计文档.html</a></td><td>系统架构与五层助手</td></tr>
+        <tr><td><a href="测试报告.html">测试报告.html</a></td><td>97 条用例执行结果与覆盖率</td></tr>
+        <tr><td><a href="演示产物文档.html">演示产物文档.html</a></td><td>截图与录屏索引</td></tr>
+        <tr><td><code>../个人工作台-功能点.md</code></td><td>L4 功能点与实现状态总览</td></tr>
+        <tr><td><code>../../../agents/workflow.md</code></td><td>Agent S0–S5 工作流定义</td></tr>
+      </table>
+    </section>
+
+    <footer>个人 AI 助手工作台 · AI 协作复盘 · 2026-07-09</footer>
+  </div>
+</body>
+</html>

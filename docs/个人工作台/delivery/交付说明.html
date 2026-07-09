@@ -18,6 +18,9 @@
         <a href="测试报告.html">测试报告</a>
         <a href="AI原生-技术实现.html">AI原生·技术</a>
         <a href="AI原生-产品功能.html">AI原生·产品</a>
+        <a href="AI协作复盘.html">AI协作复盘</a>
+        <a href="Skill使用说明.html">Skill使用说明</a>
+        <a href="演示产物文档.html">演示产物</a>
       </nav>
     </header>
 
@@ -33,6 +36,9 @@
         <tr><td><a href="测试报告.html">测试报告.html</a></td><td>执行结果与代码覆盖率报告</td></tr>
         <tr><td><a href="AI原生-技术实现.html">AI原生-技术实现.html</a></td><td>AI 如何用代码落地产品（T0–T4）</td></tr>
         <tr><td><a href="AI原生-产品功能.html">AI原生-产品功能.html</a></td><td>无 AI 基线 vs 引入 AI 后重构（P0–P3）</td></tr>
+        <tr><td><a href="AI协作复盘.html">AI协作复盘.html</a></td><td>人机协作过程回顾与经验沉淀</td></tr>
+        <tr><td><a href="Skill使用说明.html">Skill使用说明.html</a></td><td>Cursor Agent Skill 配置与调用指南</td></tr>
+        <tr><td><a href="演示产物文档.html">演示产物文档.html</a></td><td>截图与录屏索引（5 项演示产物）</td></tr>
       </table>
     </section>
 
@@ -215,15 +221,18 @@
       <p>仓库内附带 <strong>Cursor Agent 辅助配置</strong>，随代码一并交付；接收方可直接在本仓库使用，或复制到其他项目。</p>
 
       <h3>8.1 项目 Skill（<code>.cursor/skills/</code>）</h3>
+      <p>完整调用指南见 <a href="Skill使用说明.html">Skill使用说明.html</a>。摘要如下：</p>
       <table>
         <tr><th>Skill</th><th>路径</th><th>触发场景</th></tr>
         <tr><td><strong>start-project</strong></td><td><code>.cursor/skills/start-project/SKILL.md</code></td><td>「启动项目」「跑起来」「开 dev」——安装依赖、执行 <code>pnpm dev</code>、校验 <code>/health</code></td></tr>
         <tr><td><strong>workflow-driven-requirements</strong></td><td><code>.cursor/skills/workflow-driven-requirements/SKILL.md</code></td><td>「按工作流」「S0-S5」「走控制层」——按 <code>agents/workflow.md</code> 状态机推进需求</td></tr>
+        <tr><td><strong>project-manager-architecture</strong></td><td><code>.cursor/skills/project-manager-architecture/SKILL.md</code></td><td>新增页面/API/字段、排查包边界——monorepo 分层与数据流</td></tr>
+        <tr><td><strong>todo-knowledge-rag</strong></td><td><code>.cursor/skills/todo-knowledge-rag/SKILL.md</code></td><td>RAG、知识库、AI 结果生成/修订——内部检索与降级策略</td></tr>
       </table>
       <p><strong>在 Cursor 中使用</strong></p>
       <ol>
         <li>用 Cursor 打开本仓库根目录（须含 <code>pnpm-workspace.yaml</code>）。</li>
-        <li>对话中说触发语（见上表），或输入 <code>@start-project</code> / <code>@workflow-driven-requirements</code> 引用 Skill。</li>
+        <li>对话中说触发语（见上表），或输入 <code>@start-project</code>、<code>@workflow-driven-requirements</code>、<code>@project-manager-architecture</code>、<code>@todo-knowledge-rag</code> 引用 Skill。</li>
         <li>Agent 会按 Skill 内步骤执行；细则以 Skill 引用的文档为准（如 <code>agents/commands-checklist.md</code>）。</li>
       </ol>
       <p><strong>共享到其他项目</strong></p>

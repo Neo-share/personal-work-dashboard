@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>个人 AI 助手工作台 — 演示产物文档</title>
+  <link rel="stylesheet" href="_shared.css" />
+  <style>
+    .summary-box {
+      background: var(--accent-bg);
+      border: 1px solid #ddd6fe;
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin: 16px 0;
+      font-size: 14px;
+      line-height: 1.75;
+    }
+    .thumb-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin: 14px 0;
+    }
+    .thumb-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fafafa;
+    }
+    .thumb-card img { width: 100%; display: block; }
+    .thumb-card .cap {
+      padding: 8px 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="doc-header">
+      <h1>个人 AI 助手工作台 — 演示产物文档</h1>
+      <p class="meta">截图与录屏索引 · 核对日期 2026-07-09 · 路径 docs/个人工作台/delivery/</p>
+      <nav class="doc-nav">
+        <a href="交付说明.html">交付说明</a>
+        <a href="架构设计文档.html">架构设计</a>
+        <a href="测试用例文档.html">测试用例</a>
+        <a href="测试报告.html">测试报告</a>
+        <a href="AI原生-技术实现.html">AI原生·技术</a>
+        <a href="AI原生-产品功能.html">AI原生·产品</a>
+        <a href="AI协作复盘.html">AI协作复盘</a>
+        <a href="Skill使用说明.html">Skill使用说明</a>
+        <a class="is-current" href="演示产物文档.html">演示产物</a>
+      </nav>
+    </header>
+
+    <section>
+      <h2>1. 说明</h2>
+      <p>本文仅索引本目录下的<strong>演示产物</strong>，即截图与录屏，共 <strong>5</strong> 项。HTML 交付文档、样式表等同目录其他文件不在此列；详见各 HTML 文档或 <a href="交付说明.html">交付说明</a> 文档索引。</p>
+      <div class="summary-box">
+        截图可在本文中直接预览；录屏为 <code>.mp4</code> 文件，请在文件管理器中打开同目录下的视频文件，使用系统播放器观看。
+      </div>
+    </section>
+
+    <section>
+      <h2>2. 截图（4 张）</h2>
+      <table>
+        <tr><th>文件名</th><th>说明</th></tr>
+        <tr><td><code>提示词截图.png</code></td><td>AI 协作提示词示例：需求分解与实现指令</td></tr>
+        <tr><td><code>提示词截图1.png</code></td><td>AI 协作提示词示例：测试与门禁指令</td></tr>
+        <tr><td><code>提示词截图2.png</code></td><td>AI 协作提示词示例：架构与分层约束</td></tr>
+        <tr><td><code>skill使用截图.png</code></td><td>Cursor 中 <code>@project-manager-architecture</code> Skill 引用实操</td></tr>
+      </table>
+      <div class="thumb-grid">
+        <figure class="thumb-card">
+          <img src="提示词截图.png" alt="提示词截图" />
+          <div class="cap">提示词截图.png</div>
+        </figure>
+        <figure class="thumb-card">
+          <img src="提示词截图1.png" alt="提示词截图1" />
+          <div class="cap">提示词截图1.png</div>
+        </figure>
+        <figure class="thumb-card">
+          <img src="提示词截图2.png" alt="提示词截图2" />
+          <div class="cap">提示词截图2.png</div>
+        </figure>
+        <figure class="thumb-card">
+          <img src="skill使用截图.png" alt="skill使用截图" />
+          <div class="cap">skill使用截图.png</div>
+        </figure>
+      </div>
+    </section>
+
+    <section>
+      <h2>3. 录屏（1 个）</h2>
+      <table>
+        <tr><th>文件名</th><th>说明</th><th>打开方式</th></tr>
+        <tr>
+          <td><code>录屏2026-07-09 18.28.38.mp4</code></td>
+          <td>个人工作台端到端操作演示（约 2 分 11 秒，H.264）</td>
+          <td>在文件管理器中定位至 <code>docs/个人工作台/delivery/</code>，双击用系统播放器打开</td>
+        </tr>
+      </table>
+      <p>录屏无法在本 HTML 页面内直接播放，请按上表路径在本地查找文件。</p>
+    </section>
+
+    <section>
+      <h2>4. 产物清单</h2>
+      <table>
+        <tr><th>类型</th><th>文件名</th><th>说明</th></tr>
+        <tr><td>截图</td><td>提示词截图.png</td><td>协作提示词</td></tr>
+        <tr><td>截图</td><td>提示词截图1.png</td><td>协作提示词</td></tr>
+        <tr><td>截图</td><td>提示词截图2.png</td><td>协作提示词</td></tr>
+        <tr><td>截图</td><td>skill使用截图.png</td><td>Skill 引用</td></tr>
+        <tr><td>录屏</td><td>录屏2026-07-09 18.28.38.mp4</td><td>操作演示</td></tr>
+      </table>
+    </section>
+
+    <footer>个人 AI 助手工作台 · 演示产物文档 · 截图与录屏索引 · 2026-07-09</footer>
+  </div>
+</body>
+</html>

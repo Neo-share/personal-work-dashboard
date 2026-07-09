@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>个人 AI 助手工作台 — Skill 使用说明</title>
+  <link rel="stylesheet" href="_shared.css" />
+  <style>
+    .summary-box {
+      background: var(--accent-bg);
+      border: 1px solid #ddd6fe;
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin: 16px 0;
+      font-size: 14px;
+      line-height: 1.75;
+    }
+    .skill-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin: 16px 0;
+      background: #fafafa;
+    }
+    .skill-card h3 {
+      margin-top: 0;
+      color: var(--accent);
+      font-size: 16px;
+    }
+    .skill-tag {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 999px;
+      margin-right: 8px;
+    }
+    .skill-path { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+    .invoke-box {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      margin: 10px 0;
+    }
+    .evidence-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 16px 0;
+      max-width: 720px;
+    }
+    .evidence-card img { width: 100%; display: block; }
+    .evidence-card figcaption {
+      padding: 10px 12px;
+      font-size: 12px;
+      color: var(--muted);
+      background: #fafafa;
+    }
+    .matrix-ok { background: var(--ok-bg); }
+    .matrix-warn { background: #fffbeb; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="doc-header">
+      <h1>个人 AI 助手工作台 — Skill 使用说明</h1>
+      <p class="meta">Cursor Agent Skill 配置与调用指南 · 核对日期 2026-07-09 · 项目 project-manager</p>
+      <nav class="doc-nav">
+        <a href="交付说明.html">交付说明</a>
+        <a href="架构设计文档.html">架构设计</a>
+        <a href="测试用例文档.html">测试用例</a>
+        <a href="测试报告.html">测试报告</a>
+        <a href="AI原生-技术实现.html">AI原生·技术</a>
+        <a href="AI原生-产品功能.html">AI原生·产品</a>
+        <a href="AI协作复盘.html">AI协作复盘</a>
+        <a class="is-current" href="Skill使用说明.html">Skill使用说明</a>
+        <a href="演示产物文档.html">演示产物</a>
+      </nav>
+    </header>
+
+    <section>
+      <h2>1. 什么是 Skill</h2>
+      <p>Skill 是存放在 <code>.cursor/skills/</code> 下的 Markdown 指令包，带 YAML frontmatter（<code>name</code> / <code>description</code>）。Cursor Agent 在对话中识别触发语或 <code>@</code> 引用后，会<strong>优先按 Skill 内步骤执行</strong>，而不是自由发挥。</p>
+      <div class="summary-box">
+        <strong>与 Rules 的区别</strong>：Rules（<code>.cursor/rules/*.mdc</code>）是<strong>始终加载</strong>的硬性约束；Skill 是<strong>按需加载</strong>的操作手册，适合启动环境、走工作流、改特定模块等场景。二者配合：Rules 定底线，Skill 定步骤。
+      </div>
+      <table>
+        <tr><th>特性</th><th>说明</th></tr>
+        <tr><td>格式</td><td>Markdown + YAML frontmatter，可安全提交版本库</td></tr>
+        <tr><td>存放位置</td><td>项目级 <code>.cursor/skills/&lt;name&gt;/SKILL.md</code></td></tr>
+        <tr><td>扩展文件</td><td>同目录下可有 <code>reference.md</code>、<code>examples.md</code> 等深读材料</td></tr>
+        <tr><td>不含密钥</td><td>环境变量、API Key 等须在 <code>server/.env</code> 配置，Skill 只引用变量名</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>2. 如何调用 Skill</h2>
+      <h3>2.1 前置条件</h3>
+      <ol>
+        <li>用 <strong>Cursor</strong> 打开本仓库根目录（须含 <code>pnpm-workspace.yaml</code>）</li>
+        <li>使用 <strong>Agent 模式</strong>（会改代码/跑命令的对话）</li>
+        <li>确保 <code>.cursor/skills/</code> 目录存在且未被忽略</li>
+      </ol>
+      <h3>2.2 三种调用方式</h3>
+      <table>
+        <tr><th>方式</th><th>操作</th><th>适用场景</th></tr>
+        <tr class="matrix-ok"><td><strong>自然语言触发</strong></td><td>对话中说 Skill 描述中的触发语（见下表）</td><td>日常开发，Agent 自动匹配</td></tr>
+        <tr class="matrix-ok"><td><strong>@ 显式引用</strong></td><td>输入 <code>@start-project</code>、<code>@project-manager-architecture</code> 等</td><td>明确指定步骤，避免误匹配</td></tr>
+        <tr class="matrix-ok"><td><strong>组合指令</strong></td><td>「按工作流实现 L1-05 黄金话术，加载架构 Skill」</td><td>复杂任务，多 Skill 串联</td></tr>
+      </table>
+      <h3>2.3 调用示例</h3>
+      <div class="invoke-box">启动项目，跑起来本地 dev</div>
+      <div class="invoke-box">@project-manager-architecture 新增待办列表筛选 API，只改 server 和 shared</div>
+      <div class="invoke-box">按工作流 S0-S5 补齐 internal-knowledge-retriever 单测</div>
+      <div class="invoke-box">@todo-knowledge-rag 调整 audit 类型的 RAG 召回策略</div>
+      <figure class="evidence-card">
+        <img src="skill使用截图.png" alt="Skill 使用截图：@ 引用 project-manager-architecture" />
+        <figcaption>实操示例：在对话中 <code>@project-manager-architecture</code> 引用 Skill 后再下达改动指令</figcaption>
+      </figure>
+    </section>
+
+    <section>
+      <h2>3. 项目 Skill 一览</h2>
+      <table>
+        <tr><th>Skill</th><th>路径</th><th>一句话</th><th>典型触发语</th></tr>
+        <tr><td><strong>start-project</strong></td><td><code>.cursor/skills/start-project/</code></td><td>安装依赖并启动 dev</td><td>启动项目、跑起来、开 dev</td></tr>
+        <tr><td><strong>workflow-driven-requirements</strong></td><td><code>.cursor/skills/workflow-driven-requirements/</code></td><td>按 S0–S5 状态机推进需求</td><td>按工作流、S0-S5、走控制层</td></tr>
+        <tr><td><strong>project-manager-architecture</strong></td><td><code>.cursor/skills/project-manager-architecture/</code></td><td>全栈分层与数据流模式</td><td>新增 API/页面、排查包边界</td></tr>
+        <tr><td><strong>todo-knowledge-rag</strong></td><td><code>.cursor/skills/todo-knowledge-rag/</code></td><td>待办 AI 检索与生成链路</td><td>RAG、知识库、retrieveForTodo、AI 结果修订</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>4. 各 Skill 详细说明</h2>
+
+      <div class="skill-card">
+        <h3><span class="skill-tag">start-project</span>启动本地开发环境</h3>
+        <p class="skill-path">路径：<code>.cursor/skills/start-project/SKILL.md</code></p>
+        <p><strong>用途</strong>：在 monorepo 根目录安装依赖、并行启动 shared watch + server :3100 + client :5175，并验证 <code>/health</code>。</p>
+        <table>
+          <tr><th>步骤</th><th>命令 / 动作</th></tr>
+          <tr><td>1. 确认目录</td><td>cwd 为含 <code>pnpm-workspace.yaml</code> 的根目录</td></tr>
+          <tr><td>2. 安装依赖</td><td><code>pnpm install</code>（首次或 lockfile 变更后）</td></tr>
+          <tr><td>3. 启动</td><td><code>pnpm dev</code>（Agent 终端建议后台运行）</td></tr>
+          <tr><td>4. 验证</td><td><code>curl -s http://localhost:3100/health</code> → <code>{"ok":true}</code></td></tr>
+          <tr><td>5. 告知用户</td><td>前端 http://localhost:5175 · 停止方式 Ctrl+C</td></tr>
+        </table>
+        <p><strong>前置要求</strong>：Node.js 18+ · pnpm 9.x</p>
+        <p><strong>常见问题</strong>：端口占用 → 结束进程或改 PORT；改 schema 后 → 删 <code>server/data/project-manager.db</code> 重启；shared 类型报错 → <code>pnpm --filter @project-manager/shared build</code></p>
+        <p><strong>延伸阅读</strong>：<code>agents/commands-checklist.md</code> · <code>agents/project-baseline.md</code></p>
+      </div>
+
+      <div class="skill-card">
+        <h3><span class="skill-tag">workflow-driven-requirements</span>按 Agent 工作流执行需求</h3>
+        <p class="skill-path">路径：<code>.cursor/skills/workflow-driven-requirements/SKILL.md</code></p>
+        <p><strong>用途</strong>：强制按 <code>agents/workflow.md</code> 的 S0–S5 状态机推进，避免 Agent 跳过范围确认或直接宣称完成。</p>
+        <pre>S0 上下文确认
+  → S1 需求结构化（Spec，复杂任务等人确认）
+  → S2 任务计划 + G.2 改动范围确认
+  → S3 在确认范围内实施
+  → S4 scope 校验 + agent:gate:dev（PR 前另跑 agent:gate）
+  → S5 交付报告（计划 vs 实际、验证结果、残余风险）</pre>
+        <table>
+          <tr><th>阶段</th><th>人须确认</th><th>Agent 产出</th></tr>
+          <tr><td>S1/S2</td><td>是（默认）</td><td>Spec、文件清单、验证命令</td></tr>
+          <tr><td>G.2</td><td>不可豁免</td><td>具体改动路径集合</td></tr>
+          <tr><td>S4</td><td>—</td><td><code>pnpm agent:scope:auto</code> → <code>pnpm agent:gate:dev</code> exit 0</td></tr>
+        </table>
+        <p><strong>何时使用</strong>：端到端新功能、跨包改动、需要可追溯交付报告时；简单单文件修复可只说范围，但仍建议走 S4 门禁。</p>
+        <p><strong>延伸阅读</strong>：<code>agents/workflow.md</code> · <code>agents/commands-checklist.md</code></p>
+      </div>
+
+      <div class="skill-card">
+        <h3><span class="skill-tag">project-manager-architecture</span>全栈技术架构模式</h3>
+        <p class="skill-path">路径：<code>.cursor/skills/project-manager-architecture/SKILL.md</code> · 附 <code>reference.md</code> · <code>examples.md</code></p>
+        <p><strong>用途</strong>：新增页面/API/字段、排查包边界与数据流时，统一 monorepo 分层约定，防止 AI 越界写入或破坏依赖方向。</p>
+        <table>
+          <tr><th>约束</th><th>内容</th></tr>
+          <tr><td>包依赖</td><td><code>shared ← server</code> · <code>shared ← client</code>（禁止反向）</td></tr>
+          <tr><td>后端分层</td><td><code>router(Zod) → service(SQL) → shared 类型</code>，router 不写 SQL</td></tr>
+          <tr><td>前端数据流</td><td><code>trpc.useQuery/useMutation</code> → mutation 后 <code>invalidate</code></td></tr>
+          <tr><td>双通道</td><td>tRPC 结构化 CRUD · REST/SSE 长连接（如 <code>/api/chat</code>）</td></tr>
+          <tr><td>类型引用</td><td>client 仅可 import server router <strong>类型</strong>，不可引运行时代码</td></tr>
+        </table>
+        <h3>改动定位速查</h3>
+        <pre>新 tRPC 能力   → shared(类型?) → service → router → client hook + invalidate
+实体字段       → shared → schema → service map → router Zod → client 展示
+新页面         → pages/* + App.tsx Route + tRPC 消费
+REST/SSE 协议  → routes/* + shared 事件类型 + client handler
+纯 UI          → client 组件与 css</pre>
+        <p><strong>验证</strong>：改代码后 <code>pnpm build</code>；改 schema 删 DB；全栈任务跑 <code>agent:scope:*</code> + <code>agent:gate:dev</code></p>
+        <p><strong>延伸阅读</strong>：<code>AGENTS.md</code> · 各包 <code>AGENTS.md</code> · <code>server/src/assistant/ARCHITECTURE.md</code></p>
+      </div>
+
+      <div class="skill-card">
+        <h3><span class="skill-tag">todo-knowledge-rag</span>待办知识库 RAG 实现指南</h3>
+        <p class="skill-path">路径：<code>.cursor/skills/todo-knowledge-rag/SKILL.md</code> · 附 <code>reference.md</code> · <code>examples.md</code></p>
+        <p><strong>用途</strong>：改待办 AI 生成/多轮修订、检索策略、snippet 溯源、RAG 验收前，对齐 Internal RAG 与 ContextRetriever 的边界。</p>
+        <table>
+          <tr><th>体系</th><th>入口</th><th>消费者</th></tr>
+          <tr><td><strong>Internal RAG</strong></td><td><code>retrieveForTodo(todoId, { intent })</code></td><td><code>ai-result-service</code> → LLM 生成/修订</td></tr>
+          <tr><td><strong>ContextRetriever</strong></td><td><code>mcpContextRetriever.retrieve(...)</code></td><td><code>personal-orchestrator</code> 助手对话上下文</td></tr>
+        </table>
+        <p><strong>降级铁律</strong>：LLM 不可用或检索 0 条时，仍须完成待办流转（规则模板 / 关键词修订）。</p>
+        <h3>任务决策树</h3>
+        <pre>新 resultType 检索策略  → internal-knowledge-retriever switch
+调整召回规则/窗/上限    → internal-knowledge-retriever 常量与 SQL
+改 LLM prompt/结构      → llm-ai-result-generator
+改降级/异步调度         → ai-result-service
+叠加飞书外部文档        → mcp-context-retriever + mergeExternalSnippetsIntoKnowledge
+助手会话上下文（非 AI） → context-retriever / personal-orchestrator</pre>
+        <p><strong>明确不做</strong>：NL 意图 RAG、Soul 向量库、E4 embedding（规划中）、用 MCP 替代内部 RAG。</p>
+        <p><strong>验证</strong>：<code>pnpm --filter @project-manager/server test</code> · 验收 K1–K5（见 RAG 方案文档）</p>
+        <p><strong>延伸阅读</strong>：<code>docs/个人工作台/待办知识库-RAG方案.md</code></p>
+      </div>
+    </section>
+
+    <section>
+      <h2>5. Skill 与 Rules 配合</h2>
+      <p>打开本仓库时，Cursor 自动加载 <code>.cursor/rules/</code>；Skill 在任务匹配时额外注入步骤。推荐组合如下：</p>
+      <table>
+        <tr><th>任务类型</th><th>推荐 Skill</th><th>自动生效 Rules</th></tr>
+        <tr><td>首次 clone 后跑起来</td><td><code>start-project</code></td><td><code>project-core.mdc</code></td></tr>
+        <tr><td>跨包新功能</td><td><code>workflow-driven-requirements</code> + <code>project-manager-architecture</code></td><td><code>agent-autonomy-s2-s4.mdc</code> · 包级 <code>*.mdc</code></td></tr>
+        <tr><td>只改 server 助手</td><td><code>project-manager-architecture</code></td><td><code>server.mdc</code> · <code>worktree.mdc</code></td></tr>
+        <tr><td>改待办 AI / RAG</td><td><code>todo-knowledge-rag</code></td><td><code>server.mdc</code></td></tr>
+        <tr><td>多 worktree 并行</td><td>按域选 Skill</td><td><code>worktree.mdc</code>（禁止越界写入）</td></tr>
+      </table>
+      <h3>5.1 项目 Rules 索引</h3>
+      <table>
+        <tr><th>规则文件</th><th>作用</th></tr>
+        <tr><td><code>project-core.mdc</code></td><td>Monorepo 依赖方向、数据流、tRPC 约定</td></tr>
+        <tr><td><code>client.mdc</code> / <code>server.mdc</code> / <code>shared.mdc</code></td><td>各包写入边界与编码约束</td></tr>
+        <tr><td><code>agent-autonomy-s2-s4.mdc</code></td><td>S3/S4 门禁与 scope 校验</td></tr>
+        <tr><td><code>worktree.mdc</code></td><td>多 worktree 路径写入权限</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>6. 场景选型矩阵</h2>
+      <table>
+        <tr><th>你说什么</th><th>应加载的 Skill</th><th>Agent 会做什么</th></tr>
+        <tr class="matrix-ok"><td>「启动项目」</td><td>start-project</td><td>pnpm install → pnpm dev → curl /health</td></tr>
+        <tr class="matrix-ok"><td>「按工作流实现定时任务物化」</td><td>workflow-driven-requirements + architecture</td><td>S0–S5 推进，按 TL4 改 recurring-task-service</td></tr>
+        <tr class="matrix-ok"><td>「新增 todos.updateStatus tRPC」</td><td>project-manager-architecture</td><td>shared → service → router → client invalidate</td></tr>
+        <tr class="matrix-ok"><td>「纪要待办 RAG 多召回一天日程」</td><td>todo-knowledge-rag</td><td>改 internal-knowledge-retriever 时间窗 + 补单测</td></tr>
+        <tr class="matrix-warn"><td>「帮我随便改改 UI」</td><td>architecture（可选）</td><td>仅 client 范围；仍须 G.2 确认路径</td></tr>
+        <tr class="matrix-warn"><td>「重构整个项目架构」</td><td>workflow-driven-requirements</td><td>强制 S1/S2 暂停等人确认 T0 边界</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>7. 共享与迁移</h2>
+      <table>
+        <tr><th>方式</th><th>操作</th><th>说明</th></tr>
+        <tr><td>整仓交付</td><td>clone / 拷贝仓库</td><td><code>.cursor/skills/</code> 与 <code>.cursor/rules/</code> 随项目生效</td></tr>
+        <tr><td>仅复制 Skill</td><td>复制 <code>&lt;skill-name&gt;/</code> 目录</td><td>到目标仓库 <code>.cursor/skills/</code>；需按需改路径引用</td></tr>
+        <tr><td>全局 Skill</td><td>复制到 <code>~/.cursor/skills/&lt;skill-name&gt;/</code></td><td>对所有 workspace 可用；<code>start-project</code> 含硬编码路径须改写</td></tr>
+        <tr><td>复制 Rules</td><td>复制 <code>.cursor/rules/</code></td><td>非 monorepo 项目须删减包级规则</td></tr>
+      </table>
+      <p><strong>注意</strong>：<code>project-manager-architecture</code> 与 <code>todo-knowledge-rag</code> 强绑定本仓库目录与表结构；迁移到其他项目时需重写 reference 与示例路径。</p>
+    </section>
+
+    <section>
+      <h2>8. 编写新 Skill（维护者）</h2>
+      <ol>
+        <li>在 <code>.cursor/skills/&lt;skill-name&gt;/</code> 新建 <code>SKILL.md</code></li>
+        <li>YAML frontmatter 填写 <code>name</code>（与目录名一致）和 <code>description</code>（含触发语，Agent 靠此匹配）</li>
+        <li>正文写清：触发场景、前置条件、标准步骤、验证清单、常见问题、延伸阅读（链接到 SSOT 文档，勿重复粘贴全文）</li>
+        <li>复杂 Skill 可拆 <code>reference.md</code>（参数表）与 <code>examples.md</code>（任务示例）</li>
+        <li>在本 HTML 与 <code>交付说明.html</code> §8 同步索引</li>
+      </ol>
+      <pre>---
+name: my-skill
+description: 一句话说明 + 用户说什么时触发（中文触发语写进 description）
+---
+
+# 标题
+
+## 触发场景
+...
+
+## 标准流程
+1. ...
+2. ...
+
+## Agent 执行清单
+- [ ] ...</pre>
+    </section>
+
+    <section>
+      <h2>9. 相关文档</h2>
+      <table>
+        <tr><th>文档</th><th>说明</th></tr>
+        <tr><td><a href="交付说明.html">交付说明.html</a> §8</td><td>Skill 与 Rules 交付摘要</td></tr>
+        <tr><td><a href="AI协作复盘.html">AI协作复盘.html</a></td><td>实际协作中 Skill 使用回顾</td></tr>
+        <tr><td><a href="AI原生-技术实现.html">AI原生-技术实现.html</a></td><td>T0–T4 工程工作流与 Skill 角色</td></tr>
+        <tr><td><code>../../../agents/workflow.md</code></td><td>S0–S5 状态机定义</td></tr>
+        <tr><td><code>../../../agents/commands-checklist.md</code></td><td>门禁与 scope 命令</td></tr>
+        <tr><td><code>../../../AGENTS.md</code></td><td>Monorepo 文档索引</td></tr>
+      </table>
+    </section>
+
+    <footer>个人 AI 助手工作台 · Skill 使用说明 · 2026-07-09</footer>
+  </div>
+</body>
+</html>
