@@ -1,5 +1,4 @@
 import type { FastifyInstance } from 'fastify';
-import { resolveAssistantIntent } from '../services/assistant-service.js';
 import {
   isGuardrailBlocked,
   resolvePersonalAssistantIntent,
@@ -9,13 +8,12 @@ export async function registerChatRoutes(server: FastifyInstance) {
   server.post('/api/chat', async (request, reply) => {
     const body = request.body as {
       message?: string;
-      context?: 'personal' | 'dev';
+      context?: 'personal';
       modifyTodoId?: number;
       sessionId?: number;
       skipReviseCache?: boolean;
     };
     const message = body.message?.trim() ?? '';
-    const context = body.context ?? 'dev';
 
     reply.raw.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -33,31 +31,25 @@ export async function registerChatRoutes(server: FastifyInstance) {
         return;
       }
 
-      if (context === 'personal') {
-        const result = await resolvePersonalAssistantIntent(message, {
-          modifyTodoId: body.modifyTodoId,
-          sessionId: body.sessionId,
-          skipReviseCache: body.skipReviseCache,
-        });
+      const result = await resolvePersonalAssistantIntent(message, {
+        modifyTodoId: body.modifyTodoId,
+        sessionId: body.sessionId,
+        skipReviseCache: body.skipReviseCache,
+      });
 
-        if (isGuardrailBlocked(result)) {
-          reply.raw.write(
-            `data: ${JSON.stringify({
-              type: 'blocked',
-              code: result.code,
-              message: result.message,
-            })}\n\n`,
-          );
-          reply.raw.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
-          reply.raw.end();
-          return;
-        }
-
-        await streamAssistantResult(reply, result);
+      if (isGuardrailBlocked(result)) {
+        reply.raw.write(
+          `data: ${JSON.stringify({
+            type: 'blocked',
+            code: result.code,
+            message: result.message,
+          })}\n\n`,
+        );
+        reply.raw.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+        reply.raw.end();
         return;
       }
 
-      const result = resolveAssistantIntent(message);
       await streamAssistantResult(reply, result);
     } catch (error) {
       const errMessage = error instanceof Error ? error.message : '助手处理失败';

@@ -1,7 +1,6 @@
 import type { PersonalAssistantRefresh } from '@project-manager/shared';
 import dayjs from 'dayjs';
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import PersonalAssistantPanel from '../components/personal-workbench/PersonalAssistantPanel';
 import RecurringTaskPanel from '../components/personal-workbench/RecurringTaskPanel';
 import ScheduleTimeline from '../components/personal-workbench/ScheduleTimeline';
@@ -81,9 +80,6 @@ export default function PersonalWorkbenchPage() {
             >
               定时任务
             </button>
-            <Link to="/dev-dashboard" className="pw-page-tab">
-              开发域
-            </Link>
           </div>
 
           <div className={`pw-tab-panel${tab === 'workspace' ? ' is-active' : ''}`}>

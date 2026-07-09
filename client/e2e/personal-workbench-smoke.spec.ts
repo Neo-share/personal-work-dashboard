@@ -24,12 +24,4 @@ test.describe('个人工作台 · 首页 smoke', () => {
     await expect(page.getByText('我的日程')).toBeVisible();
   });
 
-  test('开发域入口可跳转', async ({ page }) => {
-    await gotoPersonalWorkbench(page);
-
-    await page.getByRole('link', { name: '开发域' }).click();
-    await expect(page).toHaveURL(/\/dev-dashboard/);
-    await expect(page.getByText('个人驾驶舱')).toBeVisible();
-    await expect(page.getByRole('link', { name: '工作列表' })).toBeVisible();
-  });
 });

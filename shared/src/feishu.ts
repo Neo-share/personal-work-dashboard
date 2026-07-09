@@ -1,5 +1,3 @@
-import type { Person } from './types.js';
-
 /** 飞书 open_id 前缀（ou_） */
 const FEISHU_OPEN_ID_PATTERN = /^ou_[a-zA-Z0-9]+$/;
 
@@ -18,9 +16,10 @@ function extractOpenIdFromUrl(value: string): string | null {
 }
 
 /** 解析人员对应的飞书 open_id（优先 feishuOpenId，其次从 contact 解析） */
-export function resolveFeishuOpenId(
-  person: Pick<Person, 'feishuOpenId' | 'contact'>,
-): string | null {
+export function resolveFeishuOpenId(person: {
+  feishuOpenId: string | null;
+  contact: string | null;
+}): string | null {
   if (person.feishuOpenId?.trim()) {
     return person.feishuOpenId.trim();
   }
