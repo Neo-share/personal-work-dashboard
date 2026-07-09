@@ -46,9 +46,10 @@ function insertTodoRow(input: {
   title: string;
   status?: 'active' | 'completed' | 'cancelled';
   dueAt?: string | null;
+  createdAt?: string;
 }): number {
   const db = getDb();
-  const now = new Date().toISOString();
+  const now = input.createdAt ?? new Date().toISOString();
   const result = db
     .prepare(
       `INSERT INTO todos (title, description, due_at, source, status, is_urgent, ai_status, ai_result_type, created_at, updated_at, completed_at)
@@ -130,6 +131,18 @@ describe('todo-service.listTodos 筛选（L1-02）', () => {
     const id = insertTodoRow({ title: '已完成逾期', status: 'completed', dueAt: past });
 
     expect(getTodoById(id)?.isOverdue).toBe(false);
+  });
+
+  it('active 按创建时间由新到旧排列', () => {
+    const older = new Date(Date.now() - 86_400_000).toISOString();
+    const newer = new Date(Date.now() - 3_600_000).toISOString();
+    const olderId = insertTodoRow({ title: '较早', createdAt: older });
+    const newerId = insertTodoRow({ title: '较新', createdAt: newer });
+
+    const list = listTodos('active');
+    const ids = list.map((t) => t.id);
+
+    expect(ids.indexOf(newerId)).toBeLessThan(ids.indexOf(olderId));
   });
 });
 

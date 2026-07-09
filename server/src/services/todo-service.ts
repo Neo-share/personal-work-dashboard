@@ -74,20 +74,18 @@ export function listTodos(filter: TodoFilter = 'active'): TodoItem[] {
     case 'overdue':
       rows = db
         .prepare(
-          `SELECT * FROM todos WHERE status = 'active' AND due_at IS NOT NULL AND due_at < ? ORDER BY due_at ASC`,
+          `SELECT * FROM todos WHERE status = 'active' AND due_at IS NOT NULL AND due_at < ? ORDER BY created_at DESC`,
         )
         .all(now) as TodoRow[];
       break;
     case 'all':
       rows = db
-        .prepare(`SELECT * FROM todos WHERE status != 'cancelled' ORDER BY status ASC, due_at ASC`)
+        .prepare(`SELECT * FROM todos WHERE status != 'cancelled' ORDER BY created_at DESC`)
         .all() as TodoRow[];
       break;
     default:
       rows = db
-        .prepare(
-          `SELECT * FROM todos WHERE status = 'active' ORDER BY is_urgent DESC, due_at ASC`,
-        )
+        .prepare(`SELECT * FROM todos WHERE status = 'active' ORDER BY created_at DESC`)
         .all() as TodoRow[];
   }
 
