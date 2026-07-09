@@ -54,7 +54,7 @@
           <div class="value"><span class="badge badge-ok">PASS</span></div>
         </div>
       </div>
-      <p><span class="badge badge-ok">结论</span> 个人工作台与助手核心模块自动化测试全部通过；纳入范围行覆盖率 <strong>76.53%</strong>（<code>assistant/</code> 93.45% · <code>routes/chat.ts</code> 75% · 个人工作台 <code>services/</code> 63.92%），开发域 service 不计入分母。</p>
+      <p><span class="badge badge-ok">结论</span> 个人工作台与助手核心模块自动化测试全部通过；纳入范围行覆盖率 <strong>76.53%</strong>（<code>assistant/</code> 93.45% · <code>routes/chat.ts</code> 75% · 个人工作台 <code>services/</code> 63.92%）。</p>
     </section>
 
     <section>
@@ -84,7 +84,7 @@
 
     <section>
       <h2>3. 代码覆盖率</h2>
-      <p>工具：Vitest + @vitest/coverage-v8 · 范围：<code>src/assistant/**</code> + <code>src/routes/chat.ts</code> + 个人工作台 9 个 <code>services/</code> 文件（开发域 requirement/repository 等<strong>不纳入</strong>）</p>
+      <p>工具：Vitest + @vitest/coverage-v8 · 范围：<code>src/assistant/**</code> + <code>src/routes/chat.ts</code> + 个人工作台 9 个 <code>services/</code> 文件</p>
 
       <h3>3.1 汇总</h3>
       <table>
@@ -107,7 +107,7 @@
         <tr>
           <td>个人工作台 services/ 合计</td>
           <td class="cov-mid">63.92%</td><td>70.96%</td><td>64.00%</td>
-          <td>9 个 service；开发域文件不在分母内</td>
+          <td>9 个 service</td>
         </tr>
       </table>
 
@@ -160,10 +160,9 @@
       <table>
         <tr><th>项</th><th>状态</th><th>说明</th></tr>
         <tr><td>浏览器 E2E</td><td><span class="badge badge-warn">未做</span></td><td>核心链路由服务端单测 + HTTP/SSE 集成 + 黄金话术双层覆盖</td></tr>
-        <tr><td>chat.ts 未覆盖分支</td><td>已知</td><td><code>context=dev</code>、<code>modifyMode</code> SSE、异常 catch（开发域/异常路径）</td></tr>
+        <tr><td>chat.ts 未覆盖分支</td><td>已知</td><td>异常 catch、部分 SSE 边界路径</td></tr>
         <tr><td>RAG E4 embedding</td><td><span class="badge badge-warn">未做</span></td><td>可选增强</td></tr>
         <tr><td>LLM 在线评测</td><td><span class="badge badge-warn">未做</span></td><td>无 Key 时规则模板降级已测</td></tr>
-        <tr><td>开发域 service</td><td>范围外</td><td>requirement / repository 等已从覆盖率分母排除</td></tr>
         <tr><td>mcp-feishu-tools execute</td><td>可选</td><td>桥接层已测；Tool 注册已测</td></tr>
       </table>
     </section>

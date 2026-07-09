@@ -16,7 +16,7 @@
 
 ## Router 写业务逻辑
 
-后端 router 只做 Zod input、调用 service 和必要的 `touchRequirement`。SQL 和业务逻辑放在 service。
+后端 router 只做 Zod input 并调用 service。SQL 和业务逻辑放在 service。
 
 ## Shared 放运行时逻辑
 

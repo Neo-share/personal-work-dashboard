@@ -23,10 +23,9 @@ alwaysApply: false
 ## 数据与文案
 
 - mutation 成功后：`trpc.useUtils()` → `utils.xxx.invalidate()`
-- UI 文案用中文；枚举标签优先 `shared` 常量或 `client/src/utils/labels.ts`
+- UI 文案用中文；枚举标签优先 `shared` 常量
 
 ## 新增页面
 
 1. `client/src/pages/XxxPage.tsx`
-2. `client/src/App.tsx` 注册 `navItems` + `<Route>`
-3. 若需助手导航：扩展 `NavigationActionType`、`assistant-service.ts`、`useNavigationAction.ts`
+2. `client/src/App.tsx` 注册 `<Route>`

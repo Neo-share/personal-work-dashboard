@@ -4,7 +4,7 @@
 
 ## 项目定位
 
-本项目是本地 Web 应用「个人驾驶舱」。它以工作项为中心，管理个人工作域，并在开发域关联 Git 仓库、协作人员、里程碑和外部链接。数据存储在 SQLite。
+本项目是本地 Web 应用「个人工作台」：待办、日程、定时任务与个人 AI 助手；数据存储在 SQLite。
 
 ## 技术栈
 
@@ -36,7 +36,7 @@
 | `shared` | `shared/` |
 | `all` | 全仓库 |
 
-任何 scope 都允许修改控制层与项目级文档：`agents/`、`docs/`、`ops/`、`.github/workflows/`、`.cursor/rules/`、`.cursor/skills/workflow-driven-requirements/`、`AGENTS.md`、`CLAUDE.md`、`CODEX.md`、`ARCHITECTURE.md`、`package.json`、`pnpm-workspace.yaml`。
+任何 scope 都允许修改控制层与项目级文档：`agents/`、`docs/`、`ops/`、`.github/workflows/`、`.cursor/rules/`、`.cursor/skills/workflow-driven-requirements/`、`AGENTS.md`、`CLAUDE.md`、`CODEX.md`、`package.json`、`pnpm-workspace.yaml`。
 
 ## 默认验证
 

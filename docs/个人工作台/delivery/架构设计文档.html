@@ -52,7 +52,7 @@
       <h3>2.1 Monorepo 包结构</h3>
       <table>
         <tr><th>包</th><th>职责</th></tr>
-        <tr><td><code>client/</code></td><td>React + Vite + Ant Design；个人工作台与开发域 UI</td></tr>
+        <tr><td><code>client/</code></td><td>React + Vite + Ant Design；个人工作台 UI</td></tr>
         <tr><td><code>server/</code></td><td>Fastify + tRPC + SQLite；助手五层与业务 service</td></tr>
         <tr><td><code>shared/</code></td><td>领域类型、<code>assistant-contract.ts</code> 助手协议</td></tr>
       </table>
@@ -62,7 +62,7 @@
       <h2>3. 前端架构（个人工作台）</h2>
       <table>
         <tr><th>模块</th><th>路径</th><th>说明</th></tr>
-        <tr><td>页面壳</td><td><code>PersonalWorkbenchPage.tsx</code></td><td>三 Tab：日程与事项 / 定时任务 / 开发域</td></tr>
+        <tr><td>页面壳</td><td><code>PersonalWorkbenchPage.tsx</code></td><td>两 Tab：日程与事项 / 定时任务</td></tr>
         <tr><td>待办</td><td><code>TodoPanel</code></td><td>四态筛选、AI 入口条、历史区</td></tr>
         <tr><td>日程</td><td><code>ScheduleTimeline</code> · <code>MiniCalendar</code></td><td>0–24h 时间轴、渠道开关</td></tr>
         <tr><td>定时任务</td><td><code>RecurringTaskPanel</code></td><td>规则 CRUD、物化预览</td></tr>
@@ -175,7 +175,7 @@
 └── tools/                     todo / schedule / recurring / mcp
 
 server/src/routes/
-└── chat.ts                    SSE 对话（个人/开发域）
+└── chat.ts                    SSE 对话（个人助手）
 
 server/src/test/
 ├── setup.ts                   内存 SQLite 隔离

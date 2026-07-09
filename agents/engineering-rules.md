@@ -15,7 +15,6 @@
 - TypeScript strict + ESM。
 - 包依赖方向：`shared` ← `server`、`client`；`client` 仅可类型引用 `server/src/trpc/router`。
 - 数据流：router Zod 校验 → service 业务与 SQL → shared 返回形状；前端通过 tRPC 消费并 invalidate 相关 query。
-- 关联类 mutation 必须在 router 内调用 `touchRequirement(requirementId)`。
 - 不自动 commit。只有用户明确要求提交时才执行 git commit。
 
 ## Scope 命名

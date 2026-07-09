@@ -1,6 +1,6 @@
 # 技术参考（无业务）
 
-> 业务向 Router 树、Service 索引、表结构、SSE 载荷定义见各包 `ARCHITECTURE.md`。
+> 业务向 Router 树、Service 索引、表结构、SSE 载荷定义见 `server/AGENTS.md` 与 `server/src/assistant/ARCHITECTURE.md`。
 
 ---
 
@@ -68,7 +68,7 @@ await utils.example.list.invalidate();
 | GET | `/health/*` | 可选子系统探测（如 LLM） |
 | POST | `/api/*` | 非 tRPC 能力（常见为 SSE） |
 
-SSE 事件形状与 `context` 分支：见 [server/ARCHITECTURE.md §4.2](../../server/ARCHITECTURE.md) 与 `shared/src/types.ts`。
+SSE 事件形状：见 `server/src/assistant/ARCHITECTURE.md` 与 `shared/src/types.ts`。
 
 ---
 

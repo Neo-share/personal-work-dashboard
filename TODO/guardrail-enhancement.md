@@ -6,7 +6,7 @@
 > - 技术功能点 TL1-05 / TL1-09：[个人工作台-技术功能点.md](../docs/个人工作台/个人工作台-技术功能点.md)
 > - 接口契约（`GuardrailEngine`、`GuardrailVerdict`、SSE `blocked`）：[server/src/assistant/ARCHITECTURE.md §3.3](../server/src/assistant/ARCHITECTURE.md#33-guardrailengine)
 > - 实现：`server/src/assistant/guardrail-engine.ts`（**F3 + F3+ 增强已落地**）
-> - 实现状态：[IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md)
+> - 实现状态：[个人工作台-功能点.md](../docs/个人工作台/个人工作台-功能点.md) §实现状态总览
 
 ---
 

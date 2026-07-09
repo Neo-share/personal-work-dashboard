@@ -6,7 +6,7 @@
 > - 技术功能点对照：[个人工作台-技术功能点.md](../../../docs/个人工作台/个人工作台-技术功能点.md) §TL1-05 · §附录 C
 > - 护栏**规则细则**（非接口）：[TODO/guardrail-enhancement.md](../../../TODO/guardrail-enhancement.md)
 > - MCP 运行时配置与验收：[个人工作台-交付说明.md §9](../../../docs/个人工作台/个人工作台-交付说明.md#9-mcp-配置说明)
-> - 实现状态：[IMPLEMENTATION_STATUS.md](../../../IMPLEMENTATION_STATUS.md) §13
+> - 实现状态：[个人工作台-功能点.md](../../../docs/个人工作台/个人工作台-功能点.md) §实现状态总览
 >
 > 状态：**F0 契约已冻结（2026-06-23）**；**F1–F4 已落地**。类型见 `shared/src/assistant-contract.ts`，实现目录见 §4。
 

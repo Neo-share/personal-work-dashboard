@@ -11,7 +11,6 @@ tasks:
     risk_level: medium
     inputs:
       - client/AGENTS.md
-      - client/ARCHITECTURE.md
       - client/src/
     outputs:
       - client/src/

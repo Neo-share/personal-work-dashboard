@@ -9,7 +9,7 @@ alwaysApply: false
 
 ## 分层
 
-- `server/src/trpc/router.ts`：**仅** Zod input + 调 service + 必要时 `touchRequirement`
+- `server/src/trpc/router.ts`：**仅** Zod input + 调 service
 - 业务逻辑：`server/src/services/*-service.ts`
 - SQL / 连接：`server/src/db/`
 
@@ -20,8 +20,7 @@ alwaysApply: false
 ## 数据库映射
 
 - SQLite 列 **snake_case** → TS **camelCase**（在 service 的 `mapXxx()` 转换）
-- JSON 列（`tech_tags`, `env_scripts`, `payload`）：写 `JSON.stringify`，读 `JSON.parse`
-- `is_dirty`：INTEGER 0/1 ↔ boolean
+- JSON 列（`payload` 等）：写 `JSON.stringify`，读 `JSON.parse`
 
 ## Schema 变更
 
@@ -32,8 +31,7 @@ alwaysApply: false
 
 1. 在对应 `*-service.ts` 实现
 2. 在 `router.ts` 注册 procedure
-3. 关联 mutation 后调用 `touchRequirement`
 
 ## 助手
 
-- `assistant-service.ts` 为规则引擎，**非 LLM**；勿引入 LLM 调用除非用户明确要求
+- 个人助手意图路由为规则引擎；待办 AI 结果可走 LLM（见 `llm/`）

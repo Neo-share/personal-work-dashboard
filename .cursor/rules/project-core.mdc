@@ -1,5 +1,5 @@
 ---
-description: 个人驾驶舱 monorepo 通用硬性约束
+description: 个人工作台 monorepo 通用硬性约束
 alwaysApply: true
 ---
 
@@ -26,8 +26,6 @@ alwaysApply: true
 router (Zod 校验) → service (业务 + SQL) → shared types (返回形状)
 前端: trpc.*.useQuery/useMutation → invalidate 相关 query
 ```
-
-- 关联类 mutation（add/remove Repository/Person/Milestone/Link）在 router 内须调用 `touchRequirement(requirementId)`；新增同类接口时同样调用
 
 ## Git 提交信息
 

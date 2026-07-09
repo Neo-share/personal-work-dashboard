@@ -72,7 +72,7 @@ const { data, isLoading } = trpc.example.summary.useQuery({ from });
 2. **server** — `routes/*.ts` 按协议推送 SSE 帧
 3. **client** — 在 SSE parser 中分支处理；若事件携带「刷新某 query」语义，则 `utils.<ns>.<proc>.invalidate()`
 
-协议定义以 `shared` 与 `server/ARCHITECTURE.md` 为准，本 Skill 不维护具体事件名。
+协议定义以 `shared` 与 `server/src/assistant/ARCHITECTURE.md` 为准，本 Skill 不维护具体事件名。
 
 ---
 

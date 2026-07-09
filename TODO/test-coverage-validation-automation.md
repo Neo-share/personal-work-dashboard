@@ -8,7 +8,7 @@
 > - 门禁命令与 DoD：[agents/commands-checklist.md](../agents/commands-checklist.md)
 > - 个人工作台验收回归：[个人工作台-功能点.md §实现状态总览](../docs/个人工作台/个人工作台-功能点.md#实现状态总览)
 > - TL4 测试范围对照：[个人工作台-技术功能点.md](../docs/个人工作台/个人工作台-技术功能点.md)
-> - 实现状态：[IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md)
+> - 实现状态：[个人工作台-功能点.md](../docs/个人工作台/个人工作台-功能点.md) §实现状态总览
 
 ---
 
@@ -25,8 +25,8 @@
 | 纳入 | 不纳入 |
 |------|--------|
 | 测试框架选型与根脚本 | E2E 浏览器全量（可后续单独待办） |
-| 五层 `assistant/` 与个人工作台相关 `services/` 单测 | 开发域 service 单测与覆盖率（`requirement-service` 等） |
-| 覆盖率报告（分母不含开发域 service；见 `vitest.config.ts`） | 生产监控告警 |
+| 五层 `assistant/` 与个人工作台相关 `services/` 单测 | 浏览器 E2E 全量（可后续单独待办） |
+| 覆盖率报告（见 `vitest.config.ts` 中 `PERSONAL_WORKBENCH_SERVICES`） | 生产监控告警 |
 | 黄金话术清单自动化（接 gate） | LLM 在线评测 |
 | F4 MCP HTTP 桥接单测 | 业务仓库扫描器全量回归 |
 
@@ -85,7 +85,7 @@
 ### T3 — 覆盖率与门禁
 
 - [x] 覆盖率：Vitest v8，输出至 `server/coverage/`（`text` + `json-summary`）
-- [x] 覆盖范围：`src/assistant/**` + 个人工作台 `services/`（见 `vitest.config.ts` 中 `PERSONAL_WORKBENCH_SERVICES`；**不含** `requirement-service`、`repository-service` 等开发域文件）
+- [x] 覆盖范围：`src/assistant/**` + 个人工作台 `services/`（见 `vitest.config.ts` 中 `PERSONAL_WORKBENCH_SERVICES`）
 - [x] 阈值：lines/functions/branches/statements 均为 **0**（初版宽松，见 `vitest.config.ts`）
 - [x] 交付门禁：`pnpm agent:gate` 失败阻断；DoD 见 [commands-checklist.md](../agents/commands-checklist.md)
 
@@ -97,12 +97,10 @@
 
 | 范围 | 行覆盖 | 说明 |
 |------|--------|------|
-| **纳入范围合计** | **~76%** | `assistant/` + 个人工作台 `services/`（开发域不计入分母） |
+| **纳入范围合计** | **~76%** | `assistant/` + 个人工作台 `services/` |
 | `assistant/` 合计 | **~93%** | 五层 + MCP + tools |
 | 个人工作台 `services/` 合计 | **~63%** | 9 个 service 文件（见 `vitest.config.ts`） |
 | `guardrail-engine.ts` | **~95%** | F3+ 归一化、扩展注入/敏感动作模式 |
-
-**开发域排除清单**（`vitest.config.ts` 未纳入 include）：`requirement-service`、`repository-service`、`people-service`、`association-service`、`graph-service`、`weekly-report-service`、`assistant-service`、`cursor-service`、`feishu-service`。
 
 **范围内已补强**（2026-06-23）：`personal-orchestrator.test.ts` · `context-retriever.test.ts` · `tools/todo-tools.test.ts` · `guardrail-engine.test.ts`（13 条）。
 
@@ -137,7 +135,7 @@
 | RAG E4 embedding 单测 | ❌ | 见 [功能点 §待完成](../docs/个人工作台/个人工作台-功能点.md#待完成明细) |
 | E2E 浏览器全量 | ❌ | 交付说明 §5 已标注未做 |
 | `mcp-feishu-tools` execute 单测 | ❌ 可选 | F4 桥接已测，ToolRegistry 注册已测 |
-| 收紧 coverage thresholds | ❌ 可选 | 开发域已从分母排除；可按模块逐步设阈值 |
+| 收紧 coverage thresholds | ❌ 可选 | 可按模块逐步设阈值 |
 
 ---
 

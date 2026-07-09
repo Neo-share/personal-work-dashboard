@@ -3,19 +3,19 @@ name: project-manager-architecture
 description: >-
   project-manager 全栈技术架构模式：pnpm monorepo 三件套、router→service→DB 分层、
   React+tRPC 前端、Fastify+SQLite 后端、shared 契约层、tRPC+SSE 双通道。
-  在新增页面/API/字段、排查包边界与数据流时使用。不含具体业务域，业务细节见各包 ARCHITECTURE.md。
+  在新增页面/API/字段、排查包边界与数据流时使用。
 ---
 
 # 全栈技术架构（无业务）
 
-本 Skill 只描述 **技术分层与数据流模式**；实体、路由树、Service 清单等业务内容见各包文档，不在此重复。
+本 Skill 只描述 **技术分层与数据流模式**；业务内容见 [AGENTS.md](../../AGENTS.md) 与各包 `AGENTS.md`。
 
 | 层级 | 操作指南 | 架构详述 |
 |------|----------|----------|
-| 全栈 | [AGENTS.md](../../AGENTS.md) | [ARCHITECTURE.md](../../ARCHITECTURE.md) |
-| 前端 | [client/AGENTS.md](../../client/AGENTS.md) | [client/ARCHITECTURE.md](../../client/ARCHITECTURE.md) |
-| 后端 | [server/AGENTS.md](../../server/AGENTS.md) | [server/ARCHITECTURE.md](../../server/ARCHITECTURE.md) |
-| 契约 | [shared/AGENTS.md](../../shared/AGENTS.md) | [shared/ARCHITECTURE.md](../../shared/ARCHITECTURE.md) |
+| 全栈 | [AGENTS.md](../../AGENTS.md) | — |
+| 前端 | [client/AGENTS.md](../../client/AGENTS.md) | — |
+| 后端 | [server/AGENTS.md](../../server/AGENTS.md) | [server/src/assistant/ARCHITECTURE.md](../../server/src/assistant/ARCHITECTURE.md) |
+| 契约 | [shared/AGENTS.md](../../shared/AGENTS.md) | `shared/src/types.ts` |
 
 ---
 
