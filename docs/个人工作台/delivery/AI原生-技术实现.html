@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>个人 AI 助手工作台 — AI 原生说明 · 技术实现</title>
+  <link rel="stylesheet" href="_shared.css" />
+  <style>
+    .tier { border-left: 4px solid var(--accent); padding-left: 16px; margin: 20px 0; }
+    .tier-label {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+    }
+    .tier-human { border-left-color: #059669; }
+    .tier-human .tier-label { background: var(--ok); }
+    .flow-arrow { text-align: center; color: var(--muted); font-size: 20px; margin: 8px 0; }
+    .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+    @media (max-width: 720px) { .compare-grid { grid-template-columns: 1fr; } }
+    .compare-box { border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+    .compare-box h4 { font-size: 13px; margin-bottom: 6px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="doc-header">
+      <h1>AI 原生说明 · 技术实现篇</h1>
+      <p class="meta">如何通过 AI 生成代码、落地产品 · 个人 AI 助手工作台 · 核对日期 2026-07-09</p>
+      <nav class="doc-nav">
+        <a href="交付说明.html">交付说明</a>
+        <a href="架构设计文档.html">架构设计</a>
+        <a href="测试用例文档.html">测试用例</a>
+        <a href="测试报告.html">测试报告</a>
+        <a class="is-current" href="AI原生-技术实现.html">AI原生·技术</a>
+        <a href="AI原生-产品功能.html">AI原生·产品</a>
+      </nav>
+    </header>
+
+    <section>
+      <h2>1. 文档定位</h2>
+      <p>本文说明<strong>工程侧</strong>如何用 AI 辅助，把产品需求变成可运行、可验收的代码。聚焦「人定边界 → AI 分解 → AI 实现 → AI 测例 → 门禁交付」五段链路，不涉及终端用户如何使用 AI 功能（见 <a href="AI原生-产品功能.html">AI原生·产品功能篇</a>）。</p>
+      <table>
+        <tr><th>维度</th><th>本文（技术实现）</th><th>姊妹篇（产品功能）</th></tr>
+        <tr><td>读者</td><td>开发者、架构师、AI Agent</td><td>产品、验收、业务方</td></tr>
+        <tr><td>核心问题</td><td>AI 如何写代码、测代码、过门禁</td><td>无 AI 时产品怎么做、引入 AI 后如何重构</td></tr>
+        <tr><td>分档依据</td><td>工作流阶段 T0–T4</td><td>能力层级 P0–P3</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>2. 总览：五档工作流</h2>
+      <pre>┌─────────┐   ┌─────────┐   ┌─────────┐   ┌─────────┐   ┌─────────┐
+│ T0 架构 │ → │ T1 产品 │ → │ T2 技术 │ → │ T3 测试 │ → │ T4 门禁 │
+│ 人定界  │   │ AI 分解 │   │ AI 映射 │   │ AI 用例 │   │ 交付    │
+└─────────┘   └─────────┘   └─────────┘   └─────────┘   └─────────┘
+     ↑              ↑              ↑              ↑              ↑
+  经验设计      L4 功能点      TL4 对照表     Vitest 回归    agent:gate</pre>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="label">档0 人主导</div><div class="value">T0</div></div>
+        <div class="stat-card"><div class="label">档1–2 AI 文档化</div><div class="value">T1–T2</div></div>
+        <div class="stat-card"><div class="label">档3 AI 验证</div><div class="value">T3</div></div>
+        <div class="stat-card"><div class="label">档4 循环修复</div><div class="value">T4</div></div>
+      </div>
+    </section>
+
+    <!-- T0 -->
+    <section>
+      <h2>3. 档 T0：架构定界（人主导，AI 实现）</h2>
+      <div class="tier tier-human">
+        <span class="tier-label">T0 · 人定架构</span>
+        <p>开发者凭经验先冻结<strong>不可由 AI 随意改动的边界</strong>，再交给 AI 写具体代码。本项目的 T0 决策如下：</p>
+      </div>
+      <table>
+        <tr><th>决策项</th><th>内容</th><th>为何人定</th></tr>
+        <tr><td>能力三层</td><td>定时任务（调度）→ 物化待办（工作单元）→ AI（待办层）</td><td>防止 AI 在调度 Tab 直接调 LLM，成本与职责混乱</td></tr>
+        <tr><td>Monorepo</td><td><code>client</code> / <code>server</code> / <code>shared</code>；依赖单向</td><td>包边界错误会导致循环依赖与类型泄漏</td></tr>
+        <tr><td>数据流</td><td><code>router(Zod) → service(SQL) → shared 类型</code></td><td>分层一旦打破，后续 AI 补丁会越改越乱</td></tr>
+        <tr><td>助手五层</td><td>护栏 → 意图 → Tool → 上下文 → 指标</td><td>NL 入口必须有确定性安全层</td></tr>
+        <tr><td>AI 边界</td><td>分流/护栏/CRUD 用规则；LLM 仅生成/修订 HTML</td><td>无 Key 时主链路仍须可用</td></tr>
+        <tr><td>持久化</td><td>SQLite，无完整 migration</td><td>改 schema 策略须人工知晓</td></tr>
+      </table>
+      <h3>3.1 T0 交付物（人写或人审）</h3>
+      <table>
+        <tr><th>文档 / 配置</th><th>路径</th></tr>
+        <tr><td>产品需求原文</td><td><code>docs/个人工作台/个人工作台.md</code></td></tr>
+        <tr><td>架构设计</td><td><a href="架构设计文档.html">架构设计文档.html</a></td></tr>
+        <tr><td>Agent 工作流</td><td><code>agents/workflow.md</code> · <code>AGENTS.md</code></td></tr>
+        <tr><td>工程硬约束</td><td><code>agents/engineering-rules.md</code> · <code>.cursor/rules/*.mdc</code></td></tr>
+      </table>
+      <h3>3.2 AI 在 T0 的角色</h3>
+      <p>AI <strong>不</strong>重新定义架构，而是读取 T0 约束后批量生成：</p>
+      <ul>
+        <li><code>server/src/db/schema.ts</code> 表结构</li>
+        <li><code>shared/src/types.ts</code> 领域类型</li>
+        <li><code>server/src/trpc/router.ts</code> procedure 骨架</li>
+        <li><code>client/src/components/personal-workbench/*</code> 页面与组件</li>
+        <li><code>server/src/assistant/*</code> 五层编排实现</li>
+      </ul>
+      <div class="flow-arrow">↓</div>
+    </section>
+
+    <!-- T1 -->
+    <section>
+      <h2>4. 档 T1：需求 → 产品功能点（AI 生成 L4）</h2>
+      <div class="tier">
+        <span class="tier-label">T1 · AI 分解产品</span>
+        <p><strong>输入</strong>：<code>个人工作台.md</code>（考题需求原文）<br />
+        <strong>输出</strong>：<code>个人工作台-功能点.md</code>（L1→L4 验收级功能点 + 实现状态）</p>
+      </div>
+      <table>
+        <tr><th>粒度</th><th>说明</th><th>示例</th></tr>
+        <tr><td>L1 模块</td><td>9 大模块</td><td>页面框架、待办、日程、定时任务、助手、AI 结果…</td></tr>
+        <tr><td>L2 功能域</td><td>模块内子域</td><td>工具栏、卡片展示、AI 面板</td></tr>
+        <tr><td>L3 子功能</td><td>可独立描述的行为</td><td>四态筛选、逾期标记</td></tr>
+        <tr><td>L4 功能点</td><td><strong>验收级</strong>，可写测试</td><td>02.05：已逾期筛选项仅展示带标签的进行中项</td></tr>
+      </table>
+      <h3>4.1 AI 生成规则</h3>
+      <ul>
+        <li>每条 L4 必须可判定 ✅ / ⚠️ / ❌，禁止模糊表述</li>
+        <li>标注能力分层约束（如 L1-04 定时任务不得直接调模型）</li>
+        <li>与产品文档章节建立对照表，避免重复粘贴需求全文</li>
+        <li>反向对照代码，产出「实现状态总览」</li>
+      </ul>
+      <h3>4.2 本项目产出规模</h3>
+      <table>
+        <tr><th>L1 模块</th><th>L4 数量</th><th>状态</th></tr>
+        <tr><td>L1-01 页面框架</td><td>7</td><td><span class="badge badge-ok">均 ✅</span></td></tr>
+        <tr><td>L1-02 待办管理</td><td>20</td><td><span class="badge badge-ok">均 ✅</span></td></tr>
+        <tr><td>L1-03 日程管理</td><td>13</td><td><span class="badge badge-ok">均 ✅</span></td></tr>
+        <tr><td>L1-04 定时任务</td><td>13</td><td><span class="badge badge-ok">均 ✅</span></td></tr>
+        <tr><td>L1-05 个人助手</td><td>28</td><td><span class="badge badge-ok">均 ✅</span></td></tr>
+        <tr><td>L1-06 AI 结果</td><td>15</td><td><span class="badge badge-ok">均 ✅</span></td></tr>
+        <tr><td>L1-07 流程联动</td><td>6</td><td><span class="badge badge-ok">均 ✅</span></td></tr>
+        <tr><td>L1-08 交互与非功能</td><td>12</td><td><span class="badge badge-ok">均 ✅</span></td></tr>
+        <tr><td>L1-09 RAG（规划）</td><td>5</td><td><span class="badge badge-ok">4 ✅</span> <span class="badge badge-warn">1 ❌ 可选</span></td></tr>
+      </table>
+      <div class="flow-arrow">↓</div>
+    </section>
+
+    <!-- T2 -->
+    <section>
+      <h2>5. 档 T2：产品功能点 → 技术功能点（AI 生成 TL4）</h2>
+      <div class="tier">
+        <span class="tier-label">T2 · AI 映射技术</span>
+        <p><strong>输入</strong>：L4 功能点 + T0 架构<br />
+        <strong>输出</strong>：<code>个人工作台-技术功能点.md</code>（L4 编号 → 模块 / API / 文件 / DB 表）</p>
+      </div>
+      <pre>client: PersonalWorkbenchPage / personal-workbench/*
+  → tRPC (todos / schedule / recurringTasks / personalWorkbench / assistant)
+  → POST /api/chat (context=personal) → personal-orchestrator → ToolRegistry → *-service
+server: router (Zod) → *-service → SQLite
+shared: types.ts · assistant-contract.ts</pre>
+      <h3>5.1 映射示例</h3>
+      <table>
+        <tr><th>L4 编号</th><th>产品描述</th><th>TL4 技术落点</th></tr>
+        <tr><td>02.19</td><td>创建待办后触发 AI 生成</td><td><code>createTodo</code> → <code>detectCapability</code> → <code>scheduleAiResultGeneration</code></td></tr>
+        <tr><td>05.22–05.28</td><td>11 条考核话术</td><td><code>personal-assistant-golden.test.ts</code></td></tr>
+        <tr><td>06.04</td><td>AI 结果全屏预览</td><td><code>AiResultPanel</code> · <code>todos.aiResults</code></td></tr>
+        <tr><td>04.08</td><td>定时任务物化待办</td><td><code>recurring-task-service.materializeRecurringTask</code></td></tr>
+      </table>
+      <h3>5.2 AI 实现时的文件清单（按 TL1）</h3>
+      <table>
+        <tr><th>TL1</th><th>client</th><th>server</th><th>shared / DB</th></tr>
+        <tr><td>01 页面框架</td><td><code>PersonalWorkbenchPage.tsx</code></td><td><code>getPersonalWorkbenchSummary</code></td><td><code>PersonalWorkbenchSummary</code></td></tr>
+        <tr><td>02 待办</td><td><code>TodoPanel</code> · <code>AiResultPanel</code></td><td><code>todo-service</code> · <code>ai-result-service</code></td><td><code>todos</code> · <code>todo_ai_results</code></td></tr>
+        <tr><td>05 助手</td><td><code>PersonalAssistantPanel</code></td><td><code>assistant/*</code></td><td><code>assistant-contract.ts</code></td></tr>
+        <tr><td>06 AI 结果</td><td><code>AiResultPanel</code></td><td><code>llm-ai-result-generator</code></td><td><code>TodoAiResult</code></td></tr>
+        <tr><td>09 RAG</td><td>—</td><td><code>internal-knowledge-retriever</code></td><td>SQLite 多表检索</td></tr>
+      </table>
+      <div class="flow-arrow">↓</div>
+    </section>
+
+    <!-- T3 -->
+    <section>
+      <h2>6. 档 T3：测试用例（AI 生成 + 人工审阅）</h2>
+      <div class="tier">
+        <span class="tier-label">T3 · AI 验证</span>
+        <p><strong>输入</strong>：L4 验收描述 + TL4 技术对照<br />
+        <strong>输出</strong>：Vitest 单测 / 集成测 / 黄金话术回归（详见 <a href="测试用例文档.html">测试用例文档</a>）</p>
+      </div>
+      <table>
+        <tr><th>测试分层</th><th>覆盖策略</th><th>代表文件</th><th>为何优先</th></tr>
+        <tr><td>规则引擎单测</td><td>无 LLM 可跑</td><td><code>ai-result-service.test.ts</code></td><td>验证降级路径与能力判定</td></tr>
+        <tr><td>护栏单测</td><td>确定性拦截</td><td><code>guardrail-engine.test.ts</code></td><td>安全层不依赖模型</td></tr>
+        <tr><td>编排集成</td><td>DB + refresh 契约</td><td><code>personal-orchestrator.test.ts</code></td><td>端到端副作用</td></tr>
+        <tr><td>黄金话术</td><td>11 条 NL 回归</td><td><code>personal-assistant-golden.test.ts</code></td><td>对齐 L1-05 验收</td></tr>
+        <tr><td>HTTP/SSE 集成</td><td>Fastify inject</td><td><code>chat.integration.test.ts</code></td><td>护栏 + 话术黑盒</td></tr>
+        <tr><td>物化/调度</td><td>定时规则</td><td><code>recurring-task-service.test.ts</code></td><td>调度层确定性</td></tr>
+        <tr><td>前端组件</td><td>RTL 交互</td><td><code>AiResultPanel.test.tsx</code></td><td>面板状态机</td></tr>
+      </table>
+      <h3>6.1 AI 生成用例的约束</h3>
+      <ul>
+        <li>每条用例须能追溯到 L4 编号或 TL4 模块</li>
+        <li>优先覆盖<strong>规则路径</strong>与<strong>降级路径</strong>（无 <code>LLM_API_KEY</code>）</li>
+        <li>LLM 相关用例 mock HTTP，禁止 CI 依赖外部 API</li>
+        <li>集成测使用内存 SQLite（<code>server/src/test/setup.ts</code>）保证隔离</li>
+      </ul>
+      <div class="flow-arrow">↓</div>
+    </section>
+
+    <!-- T4 -->
+    <section>
+      <h2>7. 档 T4：门禁交付（Agent 控制层）</h2>
+      <div class="tier">
+        <span class="tier-label">T4 · 循环修复至通过</span>
+        <p>代码写入后执行 scope 校验与质量门禁；失败则 AI 认知修验，上限 15 轮。</p>
+      </div>
+      <table>
+        <tr><th>步骤</th><th>命令</th><th>说明</th></tr>
+        <tr><td>Scope 自动检测</td><td><code>pnpm agent:scope:auto</code></td><td>识别改动域（server / client / shared）</td></tr>
+        <tr><td>Scope 校验</td><td><code>pnpm agent:scope:&lt;scope&gt;</code></td><td>禁止越界写入</td></tr>
+        <tr><td>日常门禁</td><td><code>pnpm agent:gate:dev</code></td><td>日常开发，exit 0 方可宣称完成</td></tr>
+        <tr><td>PR/CI 门禁</td><td><code>pnpm agent:gate</code></td><td>含 build + test:coverage</td></tr>
+        <tr><td>机械修复循环</td><td><code>pnpm agent:s4:mechanical-loop</code></td><td>优先自动修 lint / 类型错误</td></tr>
+      </table>
+      <h3>7.1 完成判定（DoD）</h3>
+      <ol>
+        <li><code>pnpm agent:gate:dev</code> 至少一次 exit 0</li>
+        <li>改动范围与 G.2 确认的路径一致</li>
+        <li>L4 对应功能点状态已同步（若涉及验收项）</li>
+        <li>提 PR 前另跑 <code>pnpm agent:gate</code></li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>8. 无 AI 辅助 vs AI 辅助：工程侧对照</h2>
+      <div class="compare-grid">
+        <div class="compare-box">
+          <h4>传统开发（无 AI 辅助）</h4>
+          <ul>
+            <li>人读需求，手写功能清单与技术方案</li>
+            <li>人逐文件编码，CRUD + 规则引擎手工实现</li>
+            <li>人补测试，覆盖率靠自觉</li>
+            <li>文档与代码易脱节</li>
+          </ul>
+        </div>
+        <div class="compare-box">
+          <h4>AI 原生开发（本项目实践）</h4>
+          <ul>
+            <li>人只定 T0 架构边界；AI 生成 L4 / TL4 文档链</li>
+            <li>AI 按 TL4 批量写 service / 组件 / 助手五层</li>
+            <li>AI 按 L4 生成 Vitest 用例 + 黄金话术回归</li>
+            <li>Agent 控制层强制 scope + gate，文档编号可追溯</li>
+          </ul>
+        </div>
+      </div>
+      <p><strong>关键原则</strong>：AI 负责<strong>吞吐与一致性</strong>；人负责<strong>边界、安全与验收口径</strong>。二者分工通过 T0 冻结、T1–T3 文档链、T4 门禁串联。</p>
+    </section>
+
+    <section>
+      <h2>9. 相关文档</h2>
+      <table>
+        <tr><th>文档</th><th>路径</th></tr>
+        <tr><td>产品功能 AI 原生说明</td><td><a href="AI原生-产品功能.html">AI原生-产品功能.html</a></td></tr>
+        <tr><td>架构设计</td><td><a href="架构设计文档.html">架构设计文档.html</a></td></tr>
+        <tr><td>L4 产品功能点</td><td><code>../个人工作台-功能点.md</code></td></tr>
+        <tr><td>TL4 技术功能点</td><td><code>../个人工作台-技术功能点.md</code></td></tr>
+        <tr><td>Agent 工作流</td><td><code>../../../agents/workflow.md</code></td></tr>
+        <tr><td>测试用例清单</td><td><a href="测试用例文档.html">测试用例文档.html</a></td></tr>
+      </table>
+    </section>
+
+    <footer>个人 AI 助手工作台 · AI 原生说明 · 技术实现篇 · 2026-07-09</footer>
+  </div>
+</body>
+</html>

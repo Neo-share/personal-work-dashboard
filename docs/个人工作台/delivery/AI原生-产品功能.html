@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>个人 AI 助手工作台 — AI 原生说明 · 产品功能</title>
+  <link rel="stylesheet" href="_shared.css" />
+  <style>
+    .tier { border-left: 4px solid var(--accent); padding-left: 16px; margin: 20px 0; }
+    .tier-label {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+    }
+    .tier-base { border-left-color: #64748b; }
+    .tier-base .tier-label { background: #64748b; }
+    .tier-ai { border-left-color: #7c3aed; }
+    .tier-rag { border-left-color: #2563eb; }
+    .tier-rag .tier-label { background: #2563eb; }
+    .tier-ext { border-left-color: #d97706; }
+    .tier-ext .tier-label { background: var(--warn); }
+    .summary-box {
+      background: var(--accent-bg);
+      border: 1px solid #ddd6fe;
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin: 16px 0;
+      font-size: 14px;
+      line-height: 1.75;
+    }
+    .module-row-unchanged { background: #f8fafc; }
+    .module-row-ai { background: #faf5ff; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="doc-header">
+      <h1>AI 原生说明 · 产品功能篇</h1>
+      <p class="meta">无 AI 时如何实现 · 引入 AI 后如何重构 · 个人 AI 助手工作台 · 核对日期 2026-07-09</p>
+      <nav class="doc-nav">
+        <a href="交付说明.html">交付说明</a>
+        <a href="架构设计文档.html">架构设计</a>
+        <a href="测试用例文档.html">测试用例</a>
+        <a href="测试报告.html">测试报告</a>
+        <a href="AI原生-技术实现.html">AI原生·技术</a>
+        <a class="is-current" href="AI原生-产品功能.html">AI原生·产品</a>
+      </nav>
+    </header>
+
+    <section>
+      <h2>1. 一段话说明</h2>
+      <div class="summary-box">
+        <strong>无 AI 时</strong>，个人工作台是一套本地 CRUD 应用：用户通过表单和筛选管理待办与日程，定时任务到期后物化为待办；自然语言入口退化为关键词规则（「会议纪要→待办」「明天开会→日程」），所谓「AI 结果」只是按类型填充的固定 HTML 模板，与用户当日日程、历史纪要毫无关联。<strong>引入 AI 后</strong>，产品骨架不变（调度层→工作单元→待办层三层不变），但待办层被重构为「能力判定 → 内部知识检索 → LLM 生成/修订 → 版本回溯」的闭环：创建待办时从 SQLite 召回相关日程块与历史已确认结果作为上下文，LLM 产出有依据的结构化 HTML；多轮修改时追加对话线程与 RAG 片段；意图分流、定时调度、护栏拦截仍由确定性规则引擎承担，LLM 仅在高价值生成环节介入，且未配置 Key 或调用失败时自动降级回规则模板——因此 AI 不是外挂插件，而是嵌入待办工作流的可选增强层，主链路在无 AI 环境下仍可完整运行。
+      </div>
+      <p>工程侧如何用 AI 写代码落地，见 <a href="AI原生-技术实现.html">AI原生·技术实现篇</a>。</p>
+    </section>
+
+    <section>
+      <h2>2. 能力分档总览（P0–P3）</h2>
+      <table>
+        <tr><th>档位</th><th>名称</th><th>用户感知</th><th>是否依赖 LLM</th></tr>
+        <tr class="module-row-unchanged"><td><strong>P0</strong></td><td>基线能力</td><td>待办/日程/定时 CRUD、筛选、归档、统计胶囊</td><td>否</td></tr>
+        <tr class="module-row-unchanged"><td><strong>P0</strong></td><td>规则分流</td><td>自然语言创建待办/日程/定时；7 类能力判定</td><td>否</td></tr>
+        <tr class="module-row-unchanged"><td><strong>P0</strong></td><td>模板结果</td><td>7 类固定 HTML 模板（minutes/review/audit…）</td><td>否（降级态）</td></tr>
+        <tr class="module-row-ai"><td><strong>P1</strong></td><td>LLM 生成/修订</td><td>上下文相关的结构化 HTML；多轮修改；版本历史</td><td>是（可降级 P0）</td></tr>
+        <tr class="module-row-ai"><td><strong>P2</strong></td><td>内部 RAG</td><td>生成/修订前检索日程、历史结果、对话片段</td><td>增强 P1</td></tr>
+        <tr class="module-row-ai"><td><strong>P3</strong></td><td>可选扩展</td><td>Soul 语气偏好、飞书 MCP 外部文档片段</td><td>增强 P1</td></tr>
+      </table>
+      <pre>用户操作
+  │
+  ├─ P0 基线 ───────────── 表单 CRUD · 规则 NL 分流 · 模板 HTML
+  │
+  └─ P1 AI 增强 ────────── 能力判定(canAuto) → P2 RAG 检索 → LLM 生成/修订
+                              │                      │
+                              └─ 失败/无 Key ────────┴→ 降级回 P0 模板</pre>
+    </section>
+
+    <!-- P0 -->
+    <section>
+      <h2>3. 档 P0：无 AI 基线（产品完整可用）</h2>
+      <div class="tier tier-base">
+        <span class="tier-label">P0 · 确定性产品</span>
+        <p>即使完全不配置 <code>LLM_API_KEY</code>，以下产品能力<strong>全部可用</strong>，满足考题 Demo 与日常管理需求。</p>
+      </div>
+
+      <h3>3.1 待办管理（L1-02）</h3>
+      <table>
+        <tr><th>能力</th><th>无 AI 实现</th></tr>
+        <tr><td>四态筛选</td><td>进行中 / 全部 / 已完成 / 已逾期；SQL 条件查询</td></tr>
+        <tr><td>手动添加</td><td>弹窗表单 → <code>todos.create</code></td></tr>
+        <tr><td>完成归档</td><td>勾选移入历史区；支持恢复与删除</td></tr>
+        <tr><td>逾期标记</td><td>服务端比较 <code>due_at</code> 与当前时间</td></tr>
+        <tr><td>AI 入口条</td><td>展示「已生成结果 / 正在生成」；内容为<strong>规则模板</strong></td></tr>
+      </table>
+
+      <h3>3.2 日程管理（L1-03）</h3>
+      <table>
+        <tr><th>能力</th><th>无 AI 实现</th></tr>
+        <tr><td>0–24h 时间轴</td><td>按日查询 <code>schedule_events</code></td></tr>
+        <tr><td>四渠道开关</td><td>飞书/钉钉/Outlook/本地 seed mock</td></tr>
+        <tr><td>15 分钟去重</td><td>同标题同时段合并展示</td></tr>
+        <tr><td>NL 写入日程</td><td>规则识别「会议/面试/出差」→ 只写日程，<strong>不建待办</strong></td></tr>
+      </table>
+
+      <h3>3.3 定时任务（L1-04）</h3>
+      <table>
+        <tr><th>能力</th><th>无 AI 实现</th></tr>
+        <tr><td>重复规则</td><td>每天 / 每周 / 每月 CRUD</td></tr>
+        <tr><td>物化待办</td><td>调度器 60s tick → 创建 <code>source=recurring</code> 待办</td></tr>
+        <tr><td>日滚动</td><td>同一规则每日最多物化 5 条</td></tr>
+        <tr><td>与 AI 关系</td><td><strong>调度层不调模型</strong>；物化后可触发 P0 模板或 P1 LLM</td></tr>
+      </table>
+
+      <h3>3.4 个人助手（L1-05）— 规则引擎</h3>
+      <table>
+        <tr><th>能力</th><th>无 AI 实现</th></tr>
+        <tr><td>NL 三分流</td><td><code>IntentRouter</code> 关键词 → 待办 / 日程 / 定时</td></tr>
+        <tr><td>能力判定</td><td><code>detectCapability</code> 正则：「纪要→minutes」「复盘→review」等</td></tr>
+        <tr><td>需人工拦截</td><td>含「电话/回访/线下/见面/签字」→ 不自动生成</td></tr>
+        <tr><td>四层护栏</td><td>注入检测、敏感动作、路径脱敏 — <strong>确定性代码</strong></td></tr>
+        <tr><td>修改模式</td><td>进入 revise 线程；无 LLM 时修订仍走模板替换逻辑</td></tr>
+      </table>
+
+      <h3>3.5 AI 结果（L1-06）— 模板态</h3>
+      <table>
+        <tr><th>结果类型</th><th>无 AI 模板内容</th></tr>
+        <tr><td>minutes</td><td>固定进度/要点/结论占位 HTML</td></tr>
+        <tr><td>review</td><td>固定统计卡片 + 结论文案</td></tr>
+        <tr><td>audit</td><td>固定合规清单 checkbox 列表</td></tr>
+        <tr><td>plan / report / analysis / pick</td><td>各类型预设 HTML 骨架</td></tr>
+      </table>
+      <p>模板由 <code>generateAiHtml()</code> 产出；Soul 语气（正式/友好）仅影响模板前缀，不涉及 LLM。</p>
+    </section>
+
+    <!-- P1 -->
+    <section>
+      <h2>4. 档 P1：引入 AI 后的待办层重构</h2>
+      <div class="tier tier-ai">
+        <span class="tier-label">P1 · LLM 生成/修订</span>
+        <p>配置 <code>LLM_API_KEY</code> 后，<strong>仅待办层</strong>的「AI 初步结果」与「多轮修改」从模板升级为 LLM 驱动；其余 P0 能力不变。</p>
+      </div>
+
+      <h3>4.1 触发链路</h3>
+      <pre>待办创建（手动 / NL / 定时物化）
+  → detectCapability(title) → canAuto ?
+       ├─ false → aiStatus=manual，无生成
+       └─ true  → aiStatus=pending → scheduleAiResultGeneration（异步 1.5s）
+            → retrieveForTodo（P2 RAG，可无）
+            → generateAiResultWithLlm
+            → todo_ai_results v1 + aiStatus=ready
+            → 前端轮询 / refresh 展示 AiResultPanel</pre>
+
+      <h3>4.2 与 P0 的差异</h3>
+      <table>
+        <tr><th>环节</th><th>P0 模板</th><th>P1 LLM</th></tr>
+        <tr><td>内容来源</td><td>硬编码占位数据</td><td>待办标题 + RAG 片段 + Soul 偏好</td></tr>
+        <tr><td>纪要类</td><td>通用「讨论进行中 60%」</td><td>引用当日相关<strong>日程块</strong>与历史纪要</td></tr>
+        <tr><td>多轮修改</td><td>简单字符串替换</td><td><code>reviseAiResultWithLlm</code> 全量修订 + 版本递增</td></tr>
+        <tr><td>确认完成</td><td>标记 confirmed → 待办 completed</td><td>同左，逻辑不变</td></tr>
+        <tr><td>失败处理</td><td>—</td><td>自动降级 <code>generateAiHtml</code>，provider 记为 rule-template</td></tr>
+      </table>
+
+      <h3>4.3 七类 AI 结果（P1 生成目标）</h3>
+      <table>
+        <tr><th>类型</th><th>典型待办标题</th><th>P1 生成侧重</th></tr>
+        <tr><td>minutes</td><td>做会议纪要</td><td>进度 + 要点 + 结论；引用当日会议日程</td></tr>
+        <tr><td>review</td><td>周复盘</td><td>统计卡片 + 周期内已完成待办摘要</td></tr>
+        <tr><td>audit</td><td>合规审核</td><td>清单式 checkbox 结构</td></tr>
+        <tr><td>plan</td><td>UI 改版方案</td><td>背景 / 步骤 / 风险</td></tr>
+        <tr><td>report</td><td>月度报告</td><td>摘要 + 指标列表</td></tr>
+        <tr><td>analysis</td><td>数据分析</td><td>表格化指标对比</td></tr>
+        <tr><td>pick</td><td>基金选品</td><td>选品分析结构化输出</td></tr>
+      </table>
+    </section>
+
+    <!-- P2 -->
+    <section>
+      <h2>5. 档 P2：内部 RAG 知识闭环</h2>
+      <div class="tier tier-rag">
+        <span class="tier-label">P2 · 有依据的 AI</span>
+        <p>RAG 不改变产品交互，但让 P1 生成从「看起来像 AI」变为「有内部依据的 AI」。数据均在 SQLite 内闭环，不依赖外部 OAuth。</p>
+      </div>
+
+      <h3>5.1 检索源（R0 规则检索，已实现 E1–E3）</h3>
+      <table>
+        <tr><th>数据表</th><th>检索用途</th></tr>
+        <tr><td><code>schedule_events</code></td><td>纪要类：截止日前后日程块（「会议发生了什么」）</td></tr>
+        <tr><td><code>todo_ai_results</code></td><td>同主题历史已确认版本；同类型 few-shot 参考</td></tr>
+        <tr><td><code>todos</code></td><td>同周期已完成待办；主题聚类</td></tr>
+        <tr><td><code>assistant_messages</code></td><td>多轮修改：当前线程最近 N 条对话</td></tr>
+        <tr><td><code>recurring_tasks</code></td><td>定时来源说明、物化历史</td></tr>
+      </table>
+
+      <h3>5.2 两条高价值链路</h3>
+      <table>
+        <tr><th>链路</th><th>触发</th><th>RAG → 产出</th></tr>
+        <tr><td>初步生成</td><td>待办创建且 canAuto</td><td>召回日程 + 历史纪要 → LLM HTML v1</td></tr>
+        <tr><td>多轮修订</td><td>助手修改模式 + revise 指令</td><td>v1 全文 + 对话 + 日程 → LLM HTML v2…</td></tr>
+      </table>
+
+      <h3>5.3 明确不做 RAG 的产品能力</h3>
+      <table>
+        <tr><th>能力</th><th>原因</th></tr>
+        <tr><td>NL 意图分流</td><td>分类问题，继续规则引擎</td></tr>
+        <tr><td>定时任务调度</td><td>确定性逻辑</td></tr>
+        <tr><td>Soul 偏好向量库</td><td>体量小，prompt 注入即可</td></tr>
+      </table>
+    </section>
+
+    <!-- P3 -->
+    <section>
+      <h2>6. 档 P3：可选扩展</h2>
+      <div class="tier tier-ext">
+        <span class="tier-label">P3 · 增强项（非考题必交）</span>
+        <p>未配置时不影响 P0–P2 主链路。</p>
+      </div>
+      <table>
+        <tr><th>扩展</th><th>产品表现</th><th>配置</th></tr>
+        <tr><td>Soul 偏好</td><td>语气（正式/友好/默认）+ 自定义说明写入 prompt</td><td>工作台 Soul 设置 Modal</td></tr>
+        <tr><td>飞书 MCP</td><td>消息含飞书文档 URL 时，摘要注入生成上下文</td><td><code>FEISHU_MCP_HTTP_URL</code></td></tr>
+        <tr><td>修订缓存</td><td>相同修订意见命中缓存，跳过重复 LLM 调用</td><td>助手面板「使用缓存」开关</td></tr>
+        <tr><td>分用途模型</td><td>标题提取用小模型，生成/修订用大模型</td><td><code>LLM_MODEL_TITLE</code> / <code>LLM_MODEL_GENERATE</code></td></tr>
+        <tr><td>本地 embedding（E4）</td><td>向量检索替代部分规则匹配</td><td>规划中，当前 ❌</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>7. 分模块：无 AI vs 引入 AI 对照表</h2>
+      <table>
+        <tr><th>模块</th><th>P0 无 AI</th><th>P1+ 引入 AI 后</th><th>是否变化</th></tr>
+        <tr class="module-row-unchanged"><td>待办 CRUD</td><td>SQLite + tRPC 全套</td><td>不变</td><td>—</td></tr>
+        <tr class="module-row-unchanged"><td>日程管理</td><td>时间轴 + 去重 + 渠道</td><td>不变；成为 RAG 知识源</td><td>数据源扩展</td></tr>
+        <tr class="module-row-unchanged"><td>定时任务</td><td>调度器物化待办</td><td>不变；物化后可选触发 AI</td><td>—</td></tr>
+        <tr class="module-row-unchanged"><td>NL 分流</td><td>IntentRouter 规则</td><td>不变（不用 LLM 分类）</td><td>—</td></tr>
+        <tr class="module-row-unchanged"><td>能力判定</td><td>正则关键词</td><td>不变</td><td>—</td></tr>
+        <tr class="module-row-unchanged"><td>四层护栏</td><td>确定性拦截</td><td>不变</td><td>—</td></tr>
+        <tr class="module-row-ai"><td>AI 初步结果</td><td>7 类固定模板</td><td>RAG + LLM 上下文 HTML；模板作 fallback</td><td><strong>核心重构</strong></td></tr>
+        <tr class="module-row-ai"><td>多轮修改</td><td>字符串替换 / 有限模板</td><td>LLM 全量修订 + 版本链 + 对话线程</td><td><strong>核心重构</strong></td></tr>
+        <tr class="module-row-ai"><td>个人助手回复</td><td>规则 Tool 执行 + 固定话术</td><td>同左 + 可选 MCP 外部片段 enrich</td><td>增强</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>8. 端到端用户场景对比</h2>
+      <h3>8.1 场景 A：「帮我做会议纪要」</h3>
+      <table>
+        <tr><th>步骤</th><th>P0 无 AI</th><th>P1+P2 有 AI</th></tr>
+        <tr><td>1. 用户输入</td><td>个人助手 NL</td><td>同左</td></tr>
+        <tr><td>2. 分流</td><td>规则 → 创建待办「做会议纪要」</td><td>同左</td></tr>
+        <tr><td>3. 能力判定</td><td>命中 minutes → canAuto=true</td><td>同左</td></tr>
+        <tr><td>4. 生成</td><td>1.5s 后展示<strong>固定模板</strong> HTML</td><td>RAG 召回当日「产品需求评审」日程 + 上次纪要 v2 → LLM 生成</td></tr>
+        <tr><td>5. 修改</td><td>「补充结论」→ 模板字符串替换</td><td>召回 v1 + 对话 → LLM 写 v2</td></tr>
+        <tr><td>6. 确认</td><td>待办自动完成</td><td>同左</td></tr>
+      </table>
+
+      <h3>8.2 场景 B：「明天下午三点产品评审」</h3>
+      <table>
+        <tr><th>步骤</th><th>P0 / P1 均相同</th></tr>
+        <tr><td>分流</td><td>规则识别为<strong>日程</strong>，不创建待办</td></tr>
+        <tr><td>写入</td><td><code>schedule.create_local</code> → 时间轴展示</td></tr>
+        <tr><td>AI 参与</td><td><strong>无</strong> — 会议类只写日历</td></tr>
+      </table>
+
+      <h3>8.3 场景 C：定时「每周一写周报」</h3>
+      <table>
+        <tr><th>步骤</th><th>P0</th><th>P1</th></tr>
+        <tr><td>调度</td><td>周一 tick → 物化待办</td><td>同左</td></tr>
+        <tr><td>AI</td><td>模板 report HTML</td><td>LLM + 检索本周已完成待办片段</td></tr>
+        <tr><td>原则</td><td colspan="2">定时任务 Tab 本身<strong>不调模型</strong>，AI 仅在物化后的待办层触发</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>9. 设计原则（AI 原生 vs AI 附加）</h2>
+      <ol>
+        <li><strong>AI 原生 ≠ 处处调模型</strong>：分流、调度、护栏、CRUD 保持 P0 确定性；LLM 只负责待办层高价值生成。</li>
+        <li><strong>降级即契约</strong>：无 Key、超时、失败均回退 P0 模板，Demo 与生产同一套代码路径。</li>
+        <li><strong>RAG 先于 Prompt</strong>：P2 先检索 SQLite 内知识，再调 LLM，避免「裸生成」。</li>
+        <li><strong>三层能力分层不可打破</strong>：调度 → 工作单元 → AI，防止职责与成本失控。</li>
+        <li><strong>用户无感切换</strong>：同一 UI（AI 入口条、面板、修改模式）；P0/P1 差异仅在内容质量与 provider 标识。</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>10. 相关文档</h2>
+      <table>
+        <tr><th>文档</th><th>路径</th></tr>
+        <tr><td>技术实现 AI 原生说明</td><td><a href="AI原生-技术实现.html">AI原生-技术实现.html</a></td></tr>
+        <tr><td>产品需求原文</td><td><code>../个人工作台.md</code></td></tr>
+        <tr><td>L4 产品功能点</td><td><code>../个人工作台-功能点.md</code></td></tr>
+        <tr><td>RAG 方案</td><td><code>../待办知识库-RAG方案.md</code></td></tr>
+        <tr><td>实现交付说明</td><td><a href="交付说明.html">交付说明.html</a></td></tr>
+      </table>
+    </section>
+
+    <footer>个人 AI 助手工作台 · AI 原生说明 · 产品功能篇 · 2026-07-09</footer>
+  </div>
+</body>
+</html>
